@@ -7,12 +7,14 @@
 
 /// A protocol for resolving registered dependencies.
 ///
-/// Conforming types provide thread-safe access to previously registered dependencies.
-/// This protocol is `Sendable`, allowing the resolver to be safely shared across concurrency domains.
+/// Resolution is isolated to the `MainActor`: dependencies are resolved from UI composition roots
+/// (coordinator views, factories), so the compiler guarantees that factories run on the main thread
+/// and can construct `MainActor`-isolated types directly.
 ///
 /// Use this protocol when a component only needs to **consume** dependencies, not register them.
-public protocol DependencyResolving: Sendable {
-    
+@MainActor
+public protocol DependencyResolving {
+
     /// Resolves a dependency of the specified type.
     ///
     /// - Parameters:
@@ -29,27 +31,34 @@ public protocol DependencyResolving: Sendable {
 /// specifying how and when instances should be created.
 ///
 /// Use this protocol when a component only needs to **register** dependencies (e.g., during app setup).
+@MainActor
 public protocol DependencyRegistering {
-    
+
     /// Registers a dependency with the specified lifetime.
     ///
     /// - Parameters:
     ///   - type: The type to register.
     ///   - name: An optional string identifier to distinguish between multiple registrations of the same type.
     ///   - lifetime: The lifetime strategy for the dependency (`.singleton`, `.transient`, or `.weak`).
-    ///   - factory: A closure that creates an instance of the type.
+    ///   - factory: A `MainActor`-isolated closure that creates an instance of the type.
     ///              Receives a `DependencyResolving` parameter to resolve other nested dependencies.
-    func register<T>(_ type: T.Type, name: String?, lifetime: DependencyLifetime, factory: @escaping @Sendable (DependencyResolving) -> T)
+    func register<T>(
+        _ type: T.Type,
+        name: String?,
+        lifetime: DependencyLifetime,
+        factory: @escaping @MainActor (DependencyResolving) -> T
+    )
 }
 
 /// A unified dependency container protocol that supports both registration and resolution.
 ///
 /// Use this protocol when a component needs full access to the container,
 /// for example during initial app configuration.
+@MainActor
 public protocol DependencyContaining: DependencyResolving, DependencyRegistering {}
 
 public extension DependencyRegistering {
-    
+
     /// Registers a dependency with the specified lifetime, without an associated name.
     ///
     /// This is a convenience method that calls the primary `register` method, defaulting the `name` to `nil`.
@@ -58,19 +67,19 @@ public extension DependencyRegistering {
     /// - Parameters:
     ///   - type: The type to register.
     ///   - lifetime: The lifetime strategy for the dependency (e.g., `.singleton`, `.transient`, or `.weak`).
-    ///   - factory: A closure that creates an instance of the type.
+    ///   - factory: A `MainActor`-isolated closure that creates an instance of the type.
     ///              Receives a `DependencyResolving` instance to resolve other nested dependencies.
     func register<T>(
         _ type: T.Type,
         lifetime: DependencyLifetime,
-        factory: @escaping @Sendable (DependencyResolving) -> T
+        factory: @escaping @MainActor (DependencyResolving) -> T
     ) {
         register(type, name: nil, lifetime: lifetime, factory: factory)
     }
 }
 
 public extension DependencyResolving {
-    
+
     /// Resolves a dependency of the specified type without an associated name.
     ///
     /// This is a convenience method that calls the primary `resolve` method, defaulting the `name` to `nil`.

@@ -20,7 +20,14 @@ struct AirRaidApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppRootView()
+            AppRootView(
+                factory: AppRootFactory(
+                    appContainer: delegate.appContainer
+                ),
+                viewModel: AppRootViewModel(
+                    userAccessService: delegate.appContainer.services.userAccessService
+                )
+            )
         }
     }
 }

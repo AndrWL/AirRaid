@@ -39,6 +39,7 @@ final class DIServiceContainer {
 extension DIServiceContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
+        registerUserAccessService()
         registerRealtimeService()
     }
 }
@@ -46,6 +47,10 @@ extension DIServiceContainer: DIAssembling {
 // MARK: - DIServiceContaining
 
 extension DIServiceContainer: DIServiceContaining {
+
+    var userAccessService: UserAccessServiceProtocol {
+        return container.resolve(UserAccessServiceProtocol.self)
+    }
 
     var realtimeService: RealtimeServiceProtocol {
         return container.resolve(RealtimeServiceProtocol.self)
@@ -55,6 +60,12 @@ extension DIServiceContainer: DIServiceContaining {
 // MARK: - Configuration
 
 private extension DIServiceContainer {
+
+    func registerUserAccessService() {
+        container.register(UserAccessServiceProtocol.self, lifetime: .singleton) { _ in
+            UserAccessService()
+        }
+    }
 
     func registerRealtimeService() {
         container.register(RealtimeServiceProtocol.self, lifetime: .singleton) { _ in
@@ -68,10 +79,7 @@ private extension DIServiceContainer {
                     headersProvider: { [:] }
                 )
             )
-            // Factories are nonisolated; services are resolved from the main thread (CoordinatorViews, Factories).
-            return MainActor.assumeIsolated {
-                RealtimeService(client: client)
-            }
+            return RealtimeService(client: client)
         }
     }
 }

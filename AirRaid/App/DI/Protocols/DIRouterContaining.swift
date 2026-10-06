@@ -22,4 +22,15 @@
 /// ```
 protocol DIRouterContaining {
 
+    /// The global router managing the active state of the main application tab bar.
+    var tabBarRouter: TabBarRouter { get }
+
+    /// The stack router managing navigation within the Map tab.
+    var mapStackRouter: StackRouter { get }
+
+    /// The stack router managing navigation within the Alerts tab.
+    var alertsStackRouter: StackRouter { get }
+
+    /// The stack router managing navigation within the Settings tab.
+    var settingsStackRouter: StackRouter { get }
 }

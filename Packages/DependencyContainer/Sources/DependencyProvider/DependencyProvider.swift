@@ -8,7 +8,8 @@
 /// An internal protocol for objects that provide dependency instances.
 ///
 /// Each implementation defines its own strategy for instance creation and caching.
-/// Thread safety is guaranteed by the container — providers are never accessed directly from outside.
+/// Providers are `MainActor`-isolated and only accessed through the container.
+@MainActor
 protocol DependencyProvider {
 
     /// Creates or returns a cached instance of the dependency.

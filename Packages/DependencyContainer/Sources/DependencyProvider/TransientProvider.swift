@@ -8,16 +8,17 @@
 /// A provider that creates a new instance of the dependency on every resolve.
 ///
 /// No caching is performed — each call to `provide(using:)` invokes the factory closure.
+@MainActor
 struct TransientProvider {
     
     /// The closure responsible for instantiating the dependency.
-    private let factory: @Sendable (DependencyResolving) -> Any
+    private let factory: @MainActor (DependencyResolving) -> Any
     
     /// Initializes a new transient provider.
     ///
-    /// - Parameter factory: A `@Sendable` closure used to instantiate a new dependency object.
+    /// - Parameter factory: A `MainActor`-isolated closure used to instantiate a new dependency object.
     init(
-        factory: @escaping @Sendable (DependencyResolving) -> Any
+        factory: @escaping @MainActor (DependencyResolving) -> Any
     ) {
         self.factory = factory
     }

@@ -11,7 +11,7 @@ import Testing
 /// Covers:
 /// - Resolving a transient multiple times returns a new instance each time (`!==`).
 /// - The factory is called on every resolve.
-@Suite
+@Suite @MainActor
 struct TransientLifetimeTests {
 
     // MARK: - Tests

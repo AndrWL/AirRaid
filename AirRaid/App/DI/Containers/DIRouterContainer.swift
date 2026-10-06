@@ -45,7 +45,10 @@ final class DIRouterContainer {
 extension DIRouterContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
-
+        registerMapStackRouter()
+        registerAlertsStackRouter()
+        registerSettingsStackRouter()
+        registerTabBarRouter()
     }
 }
 
@@ -53,4 +56,64 @@ extension DIRouterContainer: DIAssembling {
 
 extension DIRouterContainer: DIRouterContaining {
 
+    var tabBarRouter: TabBarRouter {
+        return container.resolve(TabBarRouter.self)
+    }
+
+    var mapStackRouter: StackRouter {
+        return container.resolve(StackRouter.self, name: Constants.map)
+    }
+
+    var alertsStackRouter: StackRouter {
+        return container.resolve(StackRouter.self, name: Constants.alerts)
+    }
+
+    var settingsStackRouter: StackRouter {
+        return container.resolve(StackRouter.self, name: Constants.settings)
+    }
+}
+
+// MARK: - Configuration
+
+private extension DIRouterContainer {
+
+    func registerMapStackRouter() {
+        container.register(StackRouter.self, name: Constants.map, lifetime: .weak) { _ in
+            StackRouter()
+        }
+    }
+
+    func registerAlertsStackRouter() {
+        container.register(StackRouter.self, name: Constants.alerts, lifetime: .weak) { _ in
+            StackRouter()
+        }
+    }
+
+    func registerSettingsStackRouter() {
+        container.register(StackRouter.self, name: Constants.settings, lifetime: .weak) { _ in
+            StackRouter()
+        }
+    }
+
+    /// Registers the main tab bar router.
+    ///
+    /// Holds references to all tab stack routers to coordinate cross-tab deep links and resets.
+    func registerTabBarRouter() {
+        container.register(TabBarRouter.self, lifetime: .weak) { resolver in
+            TabBarRouter(
+                mapStackRouter: resolver.resolve(StackRouter.self, name: Constants.map),
+                alertsStackRouter: resolver.resolve(StackRouter.self, name: Constants.alerts),
+                settingsStackRouter: resolver.resolve(StackRouter.self, name: Constants.settings)
+            )
+        }
+    }
+}
+
+// MARK: - Constants
+
+/// Unique names for named `StackRouter` registrations.
+private enum Constants {
+    static let map = "map"
+    static let alerts = "alerts"
+    static let settings = "settings"
 }
