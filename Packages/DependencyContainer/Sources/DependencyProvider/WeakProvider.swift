@@ -17,20 +17,21 @@ import Foundation
 ///
 /// - Note: This provider is strictly for reference types (classes). Attempting to use it
 ///   with value types (structs or enums) will result in a runtime crash.
+@MainActor
 final class WeakProvider {
     
     /// A weak reference to the currently cached instance, if it is still alive in memory.
     private weak var weakInstance: AnyObject?
     
     /// The factory closure responsible for instantiating the dependency.
-    private let factory: @Sendable (DependencyResolving) -> Any
+    private let factory: @MainActor (DependencyResolving) -> Any
     
     /// Initializes a new weak provider with the specified factory closure.
     ///
-    /// - Parameter factory: A thread-safe closure that takes a `DependencyResolving` instance
+    /// - Parameter factory: A `MainActor`-isolated closure that takes a `DependencyResolving` instance
     ///                      and returns the newly created dependency.
     init(
-        factory: @escaping @Sendable (DependencyResolving) -> Any
+        factory: @escaping @MainActor (DependencyResolving) -> Any
     ) {
         self.factory = factory
     }

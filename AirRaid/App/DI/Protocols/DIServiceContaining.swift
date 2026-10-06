@@ -32,6 +32,10 @@
 ///    ```
 protocol DIServiceContaining {
 
+    /// The service responsible for tracking and managing the user's access state
+    /// (e.g., authenticated, unauthenticated, requires onboarding).
+    var userAccessService: UserAccessServiceProtocol { get }
+
     /// The live WebSocket connection to the backend.
     var realtimeService: RealtimeServiceProtocol { get }
 }

@@ -11,7 +11,7 @@ import Testing
 /// Covers:
 /// - Resolving a previously registered dependency returns the expected instance.
 /// - Registering the same type twice overwrites the first registration.
-@Suite
+@Suite @MainActor
 struct RegistrationTests {
 
     // MARK: - Tests

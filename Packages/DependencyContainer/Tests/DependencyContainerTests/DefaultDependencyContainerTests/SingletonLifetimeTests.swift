@@ -11,7 +11,7 @@ import Testing
 /// Covers:
 /// - Resolving a singleton multiple times returns the same instance (`===`).
 /// - The factory is called lazily — only on first resolve, not at registration time.
-@Suite
+@Suite @MainActor
 struct SingletonLifetimeTests {
 
     // MARK: - Tests

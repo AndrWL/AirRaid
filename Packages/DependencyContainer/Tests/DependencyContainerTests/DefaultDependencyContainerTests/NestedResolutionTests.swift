@@ -11,7 +11,7 @@ import Testing
 /// Covers:
 /// - A factory can call `resolver.resolve()` to obtain its own dependencies.
 /// - A singleton resolved through multiple transient consumers is the same instance.
-@Suite
+@Suite @MainActor
 struct NestedResolutionTests {
 
     // MARK: - Tests

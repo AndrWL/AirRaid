@@ -8,19 +8,20 @@
 /// A provider that creates the dependency once and caches it for all subsequent resolves.
 ///
 /// The instance is created lazily on the first call to `provide(using:)`.
-/// Thread safety is guaranteed by the container's lock — this class does not synchronize access internally.
+/// Isolated to the `MainActor`, so no internal synchronization is needed.
+@MainActor
 final class SingletonProvider {
     
     /// The closure responsible for creating the dependency instance.
-    private let factory: @Sendable (DependencyResolving) -> Any
+    private let factory: @MainActor (DependencyResolving) -> Any
     
     /// The cached instance of the dependency, stored after the initial creation.
     private var cachedInstance: Any?
     
     /// Initializes a new singleton provider.
     ///
-    /// - Parameter factory: A `@Sendable` closure used to instantiate the dependency.
-    init(factory: @escaping @Sendable (DependencyResolving) -> Any) {
+    /// - Parameter factory: A `MainActor`-isolated closure used to instantiate the dependency.
+    init(factory: @escaping @MainActor (DependencyResolving) -> Any) {
         self.factory = factory
     }
 }
