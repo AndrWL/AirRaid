@@ -1,0 +1,138 @@
+# SwiftLint configuration for AirRaid
+
+# ──────────────────────────────────────────────
+# Excluded paths
+# ──────────────────────────────────────────────
+
+excluded:
+  - Pods
+  - vendor
+  - SourcePackages
+  - DerivedData
+  - Packages
+  - .build
+
+# ──────────────────────────────────────────────
+# Disabled default rules
+# ──────────────────────────────────────────────
+
+disabled_rules:
+  - large_tuple
+  - void_function_in_ternary
+  - redundant_discardable_let
+  - private_over_fileprivate
+
+# ──────────────────────────────────────────────
+# Opt-in rules
+# ──────────────────────────────────────────────
+
+opt_in_rules:
+  # Code style
+  - closure_spacing
+  - collection_alignment
+  - multiline_arguments
+  - multiline_parameters
+  - operator_usage_whitespace
+
+  # Safety & correctness
+  - empty_count
+  - empty_string
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - discouraged_optional_boolean
+  - fatal_error_message
+  - last_where
+  - first_where
+  - contains_over_first_not_nil
+  - flatmap_over_map_reduce
+  - array_init
+
+  # Readability
+  - modifier_order
+  - sorted_first_last
+  - toggle_bool
+  - joined_default_parameter
+  - redundant_type_annotation
+  - yoda_condition
+  - file_name_no_space
+
+# ──────────────────────────────────────────────
+# Rule configuration
+# ──────────────────────────────────────────────
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_urls: true
+  ignores_comments: false
+  ignores_function_declarations: false
+
+type_body_length:
+  warning: 300
+  error: 500
+
+function_body_length:
+  warning: 50
+  error: 100
+
+file_length:
+  warning: 500
+  error: 800
+  ignore_comment_only_lines: true
+
+function_parameter_count:
+  warning: 6
+  error: 8
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - i
+    - j
+    - k
+    - x
+    - y
+    - z
+    - id
+    - to
+    - at
+
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 50
+    error: 60
+
+nesting:
+  type_level: 2
+  function_level: 3
+
+force_unwrapping:
+  severity: warning
+
+implicitly_unwrapped_optional:
+  severity: warning
+  mode: all_except_iboutlets
+
+multiline_arguments:
+  only_enforce_after_first_closure_on_first_line: true
+
+vertical_whitespace:
+  max_empty_lines: 1
+
+trailing_whitespace:
+  ignores_empty_lines: true
+  ignores_comments: true
+
+# ──────────────────────────────────────────────
+# Strictness
+# ──────────────────────────────────────────────
+
+strict: false
+lenient: false

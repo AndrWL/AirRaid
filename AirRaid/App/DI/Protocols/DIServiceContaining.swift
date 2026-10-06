@@ -1,0 +1,35 @@
+//
+//  DIServiceContaining.swift
+//  AirRaid
+//
+//  Created by ANDRII LEBEDIEV on 06.10.2026.
+//
+
+/// Public API for resolving service-layer dependencies.
+///
+/// Consumers (ViewModels, UseCases) depend on this protocol — not on `DIServiceContainer` directly.
+/// This ensures that `assemble(with:)` is hidden and only resolved dependencies are accessible.
+///
+/// ## Adding a new service dependency
+///
+/// 1. Register the dependency in `DIServiceContainer.assemble(with:)`:
+///    ```swift
+///    container.register(AnalyticsServiceProtocol.self, lifetime: .singleton) { _ in
+///        AnalyticsService()
+///    }
+///    ```
+/// 2. Expose it as a computed property in this protocol:
+///    ```swift
+///    protocol DIServiceContaining {
+///        var analyticsService: AnalyticsServiceProtocol { get }
+///    }
+///    ```
+/// 3. Implement the property in `DIServiceContainer`:
+///    ```swift
+///    var analyticsService: AnalyticsServiceProtocol {
+///        container.resolve(AnalyticsServiceProtocol.self)
+///    }
+///    ```
+protocol DIServiceContaining {
+
+}
