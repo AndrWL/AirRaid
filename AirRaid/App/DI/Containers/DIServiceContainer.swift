@@ -6,6 +6,8 @@
 //
 
 import DependencyContainer
+import Foundation
+import WebSocketClient
 
 /// DI container for service-layer dependencies (network, keychain, analytics, etc.).
 ///
@@ -37,7 +39,7 @@ final class DIServiceContainer {
 extension DIServiceContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
-
+        registerRealtimeService()
     }
 }
 
@@ -45,4 +47,31 @@ extension DIServiceContainer: DIAssembling {
 
 extension DIServiceContainer: DIServiceContaining {
 
+    var realtimeService: RealtimeServiceProtocol {
+        return container.resolve(RealtimeServiceProtocol.self)
+    }
+}
+
+// MARK: - Configuration
+
+private extension DIServiceContainer {
+
+    func registerRealtimeService() {
+        container.register(RealtimeServiceProtocol.self, lifetime: .singleton) { _ in
+            guard let url = URL(string: AppEnvironment.webSocketURLString) else {
+                fatalError("[RealtimeService] Invalid WebSocket URL: \(AppEnvironment.webSocketURLString)")
+            }
+            let client = WebSocketClient(
+                configuration: WebSocketClientConfiguration(
+                    url: url,
+                    // TODO: Add the `Authorization` header from the keychain service once auth exists.
+                    headersProvider: { [:] }
+                )
+            )
+            // Factories are nonisolated; services are resolved from the main thread (CoordinatorViews, Factories).
+            return MainActor.assumeIsolated {
+                RealtimeService(client: client)
+            }
+        }
+    }
 }

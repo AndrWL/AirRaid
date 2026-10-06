@@ -32,4 +32,6 @@
 ///    ```
 protocol DIServiceContaining {
 
+    /// The live WebSocket connection to the backend.
+    var realtimeService: RealtimeServiceProtocol { get }
 }

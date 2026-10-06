@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7F201C013074FAB600A5F804 /* DependencyContainer in Frameworks */ = {isa = PBXBuildFile; productRef = 7F201C033074FAB600A5F804 /* DependencyContainer */; };
+		7F201C043074FAB600A5F804 /* WebSocketClient in Frameworks */ = {isa = PBXBuildFile; productRef = 7F201C063074FAB600A5F804 /* WebSocketClient */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F201C013074FAB600A5F804 /* DependencyContainer in Frameworks */,
+				7F201C043074FAB600A5F804 /* WebSocketClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = AirRaid;
 			packageProductDependencies = (
 				7F201C033074FAB600A5F804 /* DependencyContainer */,
+				7F201C063074FAB600A5F804 /* WebSocketClient */,
 			);
 			productName = AirRaid;
 			productReference = 7F201B443074FAB600A5F804 /* AirRaid.app */;
@@ -102,6 +105,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7F201C023074FAB600A5F804 /* XCLocalSwiftPackageReference "Packages/DependencyContainer" */,
+				7F201C053074FAB600A5F804 /* XCLocalSwiftPackageReference "Packages/WebSocketClient" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7F201B453074FAB600A5F804 /* Products */;
@@ -347,12 +351,20 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/DependencyContainer;
 		};
+		7F201C053074FAB600A5F804 /* XCLocalSwiftPackageReference "Packages/WebSocketClient" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WebSocketClient;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		7F201C033074FAB600A5F804 /* DependencyContainer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DependencyContainer;
+		};
+		7F201C063074FAB600A5F804 /* WebSocketClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WebSocketClient;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
