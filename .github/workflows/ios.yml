@@ -16,3 +16,13 @@ jobs:
 
       - name: Xcode version
         run: xcodebuild -version
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project AirRaid.xcodeproj \
+            -scheme AirRaid \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 17' \
+            build
