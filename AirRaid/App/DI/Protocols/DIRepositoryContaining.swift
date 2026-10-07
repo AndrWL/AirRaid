@@ -38,4 +38,12 @@
 ///   to access service-layer dependencies.
 protocol DIRepositoryContaining {
 
+    /// Outlines of the regions that alerts can cover.
+    var regionBoundaryRepository: RegionBoundaryRepositoryProtocol { get }
+
+    /// Cities labelled on the map.
+    var cityRepository: CityRepositoryProtocol { get }
+
+    /// The live air situation: active alerts and spotted threats.
+    var airSituationRepository: AirSituationRepositoryProtocol { get }
 }
