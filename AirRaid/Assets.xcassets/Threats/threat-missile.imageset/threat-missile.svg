@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Missile without further detail, top view. Original artwork for AirRaid. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <path d="M18 2 C19.2 3.5 19.6 6 19.6 8 L19.6 14 L23 17 L23 18.5 L19.6 18 L19.6 28 L23.5 32 L23.5 34 L18 32.5 L12.5 34 L12.5 32 L16.4 28 L16.4 18 L13 18.5 L13 17 L16.4 14 L16.4 8 C16.4 6 16.8 3.5 18 2 Z" fill="#FFFFFF" stroke="#000000" stroke-opacity="0.6" stroke-linejoin="round" stroke-width="1"/>
+</svg>

@@ -16,4 +16,10 @@ nonisolated enum AppEnvironment {
 
     /// The realtime WebSocket endpoint.
     static let webSocketURLString = "wss://example.com/ws"
+
+    /// The MapLibre style for the base map. OpenFreeMap: free, no API key.
+    ///
+    /// - Note: `AirRaidMapView` restyles labels by OpenMapTiles layer IDs (`place_*`), so another
+    ///   OpenMapTiles-based style keeps working; a style with a different schema loses those tweaks.
+    static let mapStyleURLString = "https://tiles.openfreemap.org/styles/dark"
 }

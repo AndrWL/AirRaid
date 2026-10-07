@@ -58,7 +58,9 @@ final class DIRepositoryContainer {
 extension DIRepositoryContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
-        
+        registerRegionBoundaryRepository()
+        registerCityRepository()
+        registerAirSituationRepository()
     }
 }
 
@@ -66,12 +68,43 @@ extension DIRepositoryContainer: DIAssembling {
 
 extension DIRepositoryContainer: DIRepositoryContaining {
 
+    var regionBoundaryRepository: RegionBoundaryRepositoryProtocol {
+        return container.resolve(RegionBoundaryRepositoryProtocol.self)
+    }
+
+    var cityRepository: CityRepositoryProtocol {
+        return container.resolve(CityRepositoryProtocol.self)
+    }
+
+    var airSituationRepository: AirSituationRepositoryProtocol {
+        return container.resolve(AirSituationRepositoryProtocol.self)
+    }
 }
 
 // MARK: - Configuration
 
 private extension DIRepositoryContainer {
-    
+
+    func registerRegionBoundaryRepository() {
+        container.register(RegionBoundaryRepositoryProtocol.self, lifetime: .transient) { _ in
+            RegionBoundaryRepository()
+        }
+    }
+
+    func registerCityRepository() {
+        container.register(CityRepositoryProtocol.self, lifetime: .transient) { _ in
+            CityRepository()
+        }
+    }
+
+    /// A singleton so every subscriber sees the same situation.
+    func registerAirSituationRepository() {
+        // TODO: Replace with a repository over `RealtimeServiceProtocol` once the backend message format exists.
+        container.register(AirSituationRepositoryProtocol.self, lifetime: .singleton) { _ in
+            DemoAirSituationRepository()
+        }
+    }
+
     /* Usage exemple
     func registerUserRepository(with appContainer: DIAppContaining) {
         container.register(UserRepositoryProtocol.self, lifetime: .transient) { _ in
