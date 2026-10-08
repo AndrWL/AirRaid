@@ -17,6 +17,13 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
+      # AppSecrets.swift is git-ignored (API address and key); CI builds with the empty template.
+      - name: Create AppSecrets from template
+        run: cp AppSecrets.swift.example AirRaid/App/Configuration/AppSecrets.swift
+
+      - name: Test WebSocketClient package
+        run: swift test --package-path Packages/WebSocketClient
+
       - name: Build
         run: |
           xcodebuild \
