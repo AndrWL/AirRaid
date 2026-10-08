@@ -14,7 +14,9 @@ import SwiftUI
 /// to handle global tab-level business logic, such as badge counts, tab visibility rules,
 /// or handling deep link business rules before delegating to the router.
 protocol TabBarViewModelProtocol: BaseViewModelProtocol {
-    
+
+    /// Called when the tab bar appears: starts the live connection.
+    func onAppear()
 }
 
 /// A protocol defining the navigation actions for the main tab bar.

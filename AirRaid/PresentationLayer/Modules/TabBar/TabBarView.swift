@@ -58,11 +58,16 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
                 .tag(AppTab.settings)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
+        .onAppear {
+            viewModel.onAppear()
+        }
     }
 }
 
 #Preview {
     @Previewable @State var selectedTab: AppTab = .map
+    let container = DIAppContainer()
+    let _ = container.setup()
 
     TabBarView(
         viewModel: TabBarViewModel(
@@ -70,9 +75,10 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
                 mapStackRouter: StackRouter(),
                 alertsStackRouter: StackRouter(),
                 settingsStackRouter: StackRouter()
-            )
+            ),
+            realtimeService: container.services.realtimeService
         ),
-        factory: TabBarFactory(appContainer: DIAppContainer()),
+        factory: TabBarFactory(appContainer: container),
         selectedTab: $selectedTab
     )
 }

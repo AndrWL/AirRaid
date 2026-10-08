@@ -42,7 +42,12 @@ enum BaseMapRestyler {
 private extension BaseMapRestyler {
 
     static func restylePlaceLabel(_ label: MLNSymbolStyleLayer) {
-        label.text = NSExpression(format: "mgl_coalesce({%K, %K})", Constants.ukrainianNameKey, localNameKey)
+        // Built from style JSON: Foundation refuses custom functions such as `mgl_coalesce:` in format strings.
+        label.text = NSExpression(mglJSONObject: [
+            "coalesce",
+            ["get", Constants.ukrainianNameKey],
+            ["get", localNameKey]
+        ])
         label.textTransform = NSExpression(forConstantValue: Constants.noTextTransform)
         if Constants.cityLabelLayerIDs.contains(label.identifier) {
             label.textColor = NSExpression(forConstantValue: UIColor.white)

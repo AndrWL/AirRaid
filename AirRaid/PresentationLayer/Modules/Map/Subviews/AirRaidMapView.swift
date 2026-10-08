@@ -8,7 +8,8 @@
 import MapLibre
 import SwiftUI
 
-/// A MapLibre map of Ukraine with alerted regions filled, regional centers labelled, and threats shown as pins.
+/// A MapLibre map of Ukraine with air raid alerts filled by oblast or raion (color by alert level),
+/// regional centers labelled, and threats shown as pins.
 ///
 /// Regions, cities, and threats are style layers over GeoJSON sources rather than annotations: the GPU draws
 /// them, and an update replaces one source instead of diffing views.
@@ -19,8 +20,9 @@ struct AirRaidMapView: UIViewRepresentable {
 
     let styleURL: URL
     let boundaries: [RegionBoundary]
+    let districts: [DistrictBoundary]
     let cities: [City]
-    let alertedRegionIDs: Set<String>
+    let alertCoverage: AirRaidCoverage
     let threats: [Threat]
 
     // MARK: - UIViewRepresentable
@@ -40,8 +42,9 @@ struct AirRaidMapView: UIViewRepresentable {
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.update(
             boundaries: boundaries,
+            districts: districts,
             cities: cities,
-            alertedRegionIDs: alertedRegionIDs,
+            alertCoverage: alertCoverage,
             threats: threats
         )
     }
@@ -60,6 +63,7 @@ extension AirRaidMapView {
         // MARK: - Variables
 
         private var regionSource: MLNShapeSource?
+        private var districtSource: MLNShapeSource?
         private var citySource: MLNShapeSource?
         private var threatSource: MLNShapeSource?
 
@@ -67,27 +71,34 @@ extension AirRaidMapView {
         private var baseCityLabels: [(layer: MLNSymbolStyleLayer, predicate: NSPredicate?)] = []
 
         private var boundaries: [RegionBoundary] = []
+        private var districts: [DistrictBoundary] = []
         private var cities: [City] = []
-        private var alertedRegionIDs: Set<String> = []
+        private var alertCoverage: AirRaidCoverage = .none
         private var threats: [Threat] = []
 
         /// Region features by region ID, rebuilt only when the outlines change.
         private var regionFeatures: [String: MLNMultiPolygonFeature] = [:]
 
+        /// Raion features by how alerts name them, rebuilt only when the outlines change.
+        private var districtFeatures: [DistrictKey: MLNMultiPolygonFeature] = [:]
+
         func update(
             boundaries: [RegionBoundary],
+            districts: [DistrictBoundary],
             cities: [City],
-            alertedRegionIDs: Set<String>,
+            alertCoverage: AirRaidCoverage,
             threats: [Threat]
         ) {
             let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
+            let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
             let citiesChanged = cities != self.cities
-            let alertsChanged = alertedRegionIDs != self.alertedRegionIDs
+            let alertsChanged = alertCoverage != self.alertCoverage
             let threatsChanged = threats != self.threats
 
             self.boundaries = boundaries
+            self.districts = districts
             self.cities = cities
-            self.alertedRegionIDs = alertedRegionIDs
+            self.alertCoverage = alertCoverage
             self.threats = threats
 
             if boundariesChanged {
@@ -95,6 +106,12 @@ extension AirRaidMapView {
             }
             if boundariesChanged || alertsChanged {
                 applyRegions()
+            }
+            if districtsChanged {
+                districtFeatures = Self.makeDistrictFeatures(from: districts)
+            }
+            if districtsChanged || alertsChanged {
+                applyDistricts()
             }
             if citiesChanged {
                 applyCities()
@@ -120,6 +137,7 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         )
         installLayers(in: style)
         applyRegions()
+        applyDistricts()
         applyCities()
         applyThreats()
     }
@@ -131,39 +149,64 @@ private extension AirRaidMapView.Coordinator {
 
     func installLayers(in style: MLNStyle) {
         let regionSource = MLNShapeSource(identifier: Constants.regionSourceID, shape: nil)
+        let districtSource = MLNShapeSource(identifier: Constants.districtSourceID, shape: nil)
         let citySource = MLNShapeSource(identifier: Constants.citySourceID, shape: nil)
         let threatSource = MLNShapeSource(identifier: Constants.threatSourceID, shape: nil)
-        [regionSource, citySource, threatSource].forEach(style.addSource)
+        [regionSource, districtSource, citySource, threatSource].forEach(style.addSource)
         self.regionSource = regionSource
+        self.districtSource = districtSource
         self.citySource = citySource
         self.threatSource = threatSource
 
         BaseMapRestyler.restyle(style)
         baseCityLabels = BaseMapRestyler.cityLabelLayers(in: style).map { ($0, $0.predicate) }
 
-        installRegionLayers(in: style, source: regionSource)
+        installRegionLayers(in: style, regionSource: regionSource, districtSource: districtSource)
         installCityLayer(in: style, source: citySource)
         installThreatLayer(in: style, source: threatSource)
     }
 
-    func installRegionLayers(in style: MLNStyle, source: MLNShapeSource) {
+    func installRegionLayers(
+        in style: MLNStyle,
+        regionSource: MLNShapeSource,
+        districtSource: MLNShapeSource
+    ) {
         // Tints the whole country, so Ukraine stands out from the dark base map.
-        let territoryFill = MLNFillStyleLayer(identifier: Constants.territoryFillLayerID, source: source)
+        let territoryFill = MLNFillStyleLayer(identifier: Constants.territoryFillLayerID, source: regionSource)
         territoryFill.fillColor = NSExpression(forConstantValue: Constants.territoryColor)
         territoryFill.fillOpacity = NSExpression(forConstantValue: Constants.territoryFillOpacity)
 
-        let alertFill = MLNFillStyleLayer(identifier: Constants.alertFillLayerID, source: source)
-        alertFill.predicate = NSPredicate(format: "%K == YES", Constants.isAlertedKey)
-        alertFill.fillColor = NSExpression(forConstantValue: Constants.alertColor)
-        alertFill.fillOpacity = NSExpression(forConstantValue: Constants.alertFillOpacity)
+        let regionAlertFill = Self.makeAlertFill(
+            identifier: Constants.regionAlertFillLayerID,
+            source: regionSource,
+            opacity: NSExpression(forConstantValue: Constants.wholeAlertFillOpacity)
+        )
+        // A raion alert is filled as strongly as an oblast one; a hromada inside the raion only faintly.
+        let districtAlertFill = Self.makeAlertFill(
+            identifier: Constants.districtAlertFillLayerID,
+            source: districtSource,
+            opacity: NSExpression(
+                forMLNMatchingKey: NSExpression(forKeyPath: Constants.alertExtentKey),
+                in: [
+                    NSExpression(forConstantValue: Constants.wholeExtent): NSExpression(forConstantValue: Constants.wholeAlertFillOpacity)
+                ],
+                default: NSExpression(forConstantValue: Constants.partialAlertFillOpacity)
+            )
+        )
 
-        let outline = MLNLineStyleLayer(identifier: Constants.outlineLayerID, source: source)
+        // Raion borders only inside alerted raions, so the alerted part reads as such without cluttering the map.
+        let districtOutline = MLNLineStyleLayer(identifier: Constants.districtOutlineLayerID, source: districtSource)
+        districtOutline.lineColor = NSExpression(forConstantValue: UIColor.white)
+        districtOutline.lineOpacity = NSExpression(forConstantValue: Constants.districtOutlineOpacity)
+        districtOutline.lineWidth = NSExpression(forConstantValue: Constants.districtOutlineWidth)
+
+        let outline = MLNLineStyleLayer(identifier: Constants.outlineLayerID, source: regionSource)
         outline.lineColor = NSExpression(forConstantValue: UIColor.white)
         outline.lineOpacity = NSExpression(forConstantValue: Constants.outlineOpacity)
         outline.lineWidth = NSExpression(forConstantValue: Constants.outlineWidth)
 
         // Below the first label layer, so the base map's names stay readable over the fill.
-        let regionLayers = [territoryFill, alertFill, outline]
+        let regionLayers = [territoryFill, regionAlertFill, districtAlertFill, districtOutline, outline]
         if let firstLabelLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
             regionLayers.forEach { style.insertLayer($0, below: firstLabelLayer) }
         } else {
@@ -199,7 +242,8 @@ private extension AirRaidMapView.Coordinator {
     func applyRegions() {
         guard let regionSource else { return }
         for (regionID, feature) in regionFeatures {
-            feature.attributes[Constants.isAlertedKey] = alertedRegionIDs.contains(regionID)
+            let level = alertCoverage.regions[regionID]
+            feature.attributes[Constants.alertLevelKey] = level.map(Self.value) ?? Constants.noAlert
         }
         regionSource.shape = MLNShapeCollectionFeature(shapes: Array(regionFeatures.values))
     }
@@ -224,9 +268,11 @@ private extension AirRaidMapView.Coordinator {
 
     func applyThreats() {
         guard let threatSource else { return }
-        threatSource.shape = MLNShapeCollectionFeature(shapes: threats.map { threat in
+        // Country-wide reports have no place on the map.
+        threatSource.shape = MLNShapeCollectionFeature(shapes: threats.compactMap { threat -> MLNPointFeature? in
+            guard let coordinate = threat.markerCoordinate else { return nil }
             let feature = MLNPointFeature()
-            feature.coordinate = CLLocationCoordinate2D(threat.coordinate)
+            feature.coordinate = CLLocationCoordinate2D(coordinate)
             feature.identifier = threat.id
             let icon = ThreatIcon(threat)
             feature.attributes = [
@@ -236,6 +282,60 @@ private extension AirRaidMapView.Coordinator {
             ]
             return feature
         })
+    }
+
+    /// Only alerted raions go into the source: drawing all 137 just to hide them would cost for nothing.
+    func applyDistricts() {
+        guard let districtSource else { return }
+        let alerted = alertCoverage.districts.compactMap { key, coverage -> MLNMultiPolygonFeature? in
+            guard let feature = districtFeatures[key] else { return nil }
+            feature.attributes[Constants.alertLevelKey] = Self.value(of: coverage.level)
+            feature.attributes[Constants.alertExtentKey] = Self.value(of: coverage.extent)
+            return feature
+        }
+        districtSource.shape = MLNShapeCollectionFeature(shapes: alerted)
+    }
+
+    /// A fill colored by the official level.
+    static func makeAlertFill(
+        identifier: String,
+        source: MLNShapeSource,
+        opacity: NSExpression
+    ) -> MLNFillStyleLayer {
+        let fill = MLNFillStyleLayer(identifier: identifier, source: source)
+        fill.predicate = NSPredicate(format: "%K != %@", Constants.alertLevelKey, Constants.noAlert)
+        fill.fillColor = NSExpression(
+            forMLNMatchingKey: NSExpression(forKeyPath: Constants.alertLevelKey),
+            in: [NSExpression(forConstantValue: Constants.yellowLevel): NSExpression(forConstantValue: Constants.yellowAlertColor)],
+            default: NSExpression(forConstantValue: Constants.redAlertColor)
+        )
+        fill.fillOpacity = opacity
+        return fill
+    }
+
+    static func makeDistrictFeatures(from districts: [DistrictBoundary]) -> [DistrictKey: MLNMultiPolygonFeature] {
+        Dictionary(
+            districts.map { district in
+                let feature = MLNMultiPolygonFeature(polygons: district.polygons.map(makePolygon))
+                feature.identifier = district.id
+                return (district.key, feature)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    static func value(of level: RegionAlertLevel) -> String {
+        switch level {
+        case .yellow: return Constants.yellowLevel
+        case .red: return Constants.redLevel
+        }
+    }
+
+    static func value(of extent: RegionAlertExtent) -> String {
+        switch extent {
+        case .partial: return Constants.partialExtent
+        case .whole: return Constants.wholeExtent
+        }
     }
 
     static func makeRegionFeatures(from boundaries: [RegionBoundary]) -> [String: MLNMultiPolygonFeature] {
@@ -276,15 +376,24 @@ private enum Constants {
     static let ukraineEdgePadding = UIEdgeInsets(top: 60, left: 8, bottom: 8, right: 8)
 
     static let regionSourceID = "regions"
+    static let districtSourceID = "districts"
     static let citySourceID = "cities"
     static let threatSourceID = "threats"
     static let territoryFillLayerID = "regions-territory-fill"
-    static let alertFillLayerID = "regions-alert-fill"
+    static let regionAlertFillLayerID = "regions-alert-fill"
+    static let districtAlertFillLayerID = "districts-alert-fill"
+    static let districtOutlineLayerID = "districts-outline"
     static let outlineLayerID = "regions-outline"
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
 
-    static let isAlertedKey = "isAlerted"
+    static let alertLevelKey = "alertLevel"
+    static let alertExtentKey = "alertExtent"
+    static let noAlert = "none"
+    static let yellowLevel = "yellow"
+    static let redLevel = "red"
+    static let partialExtent = "partial"
+    static let wholeExtent = "whole"
     static let nameKey = "name"
     static let iconNameKey = "iconName"
     static let headingKey = "heading"
@@ -292,10 +401,14 @@ private enum Constants {
 
     static let territoryColor = UIColor(red: 0.29, green: 0.31, blue: 0.20, alpha: 1)
     static let territoryFillOpacity: Double = 0.55
-    static let alertColor = UIColor(red: 0.72, green: 0.34, blue: 0.28, alpha: 1)
-    static let alertFillOpacity: Double = 0.7
+    static let redAlertColor = UIColor(red: 0.72, green: 0.34, blue: 0.28, alpha: 1)
+    static let yellowAlertColor = UIColor(red: 0.80, green: 0.66, blue: 0.24, alpha: 1)
+    static let wholeAlertFillOpacity: Double = 0.7
+    static let partialAlertFillOpacity: Double = 0.35
     static let outlineOpacity: Double = 0.35
     static let outlineWidth: Double = 0.8
+    static let districtOutlineOpacity: Double = 0.2
+    static let districtOutlineWidth: Double = 0.5
 
     /// A font the OpenFreeMap glyph server provides.
     static let cityFontNames = ["Noto Sans Bold"]
@@ -310,8 +423,9 @@ private enum Constants {
         AirRaidMapView(
             styleURL: styleURL,
             boundaries: [],
+            districts: [],
             cities: [],
-            alertedRegionIDs: [],
+            alertCoverage: .none,
             threats: []
         )
     }

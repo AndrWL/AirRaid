@@ -16,6 +16,9 @@ import WebSocketClient
 /// The single consumer of the client's event stream: fans events out into Combine subjects for any number
 /// of subscribers. Disconnects when the app goes to the background — iOS suspends sockets there anyway —
 /// and reconnects when it returns, as long as the service is started.
+///
+/// A rejected key (`401`/`403`) stops the client; the service then reports ``RealtimeConnectionState/unauthorized``
+/// instead of a plain `disconnected` until the next ``start()``.
 final class RealtimeService {
 
     // MARK: - Variables
@@ -27,6 +30,7 @@ final class RealtimeService {
 
     private var isStarted = false
     private var isInBackground = false
+    private var isRejected = false
     private var eventsTask: Task<Void, Never>?
     /// The last queued `connect`/`disconnect` call; each new call awaits it so they reach the client in order.
     private var lastCommand: Task<Void, Never>?
@@ -63,8 +67,11 @@ extension RealtimeService: RealtimeServiceProtocol {
     }
 
     func start() {
-        guard !isStarted else { return }
+        // A preview's view model calls `start()` on appear; a canvas refresh must not open a real connection
+        // (and count toward the server's 12-connections-per-minute limit).
+        guard !isStarted, !Self.isRunningForPreviews else { return }
         isStarted = true
+        isRejected = false
         if !isInBackground {
             enqueue { await $0.connect() }
         }
@@ -73,11 +80,13 @@ extension RealtimeService: RealtimeServiceProtocol {
     func stop() {
         guard isStarted else { return }
         isStarted = false
+        isRejected = false
         enqueue { await $0.disconnect() }
     }
 
-    func send(_ payload: Data) async throws {
-        try await client.send(.data(payload))
+    func send(_ text: String) async throws {
+        logger.debug("⬆︎ \(text, privacy: .public)")
+        try await client.send(.text(text))
     }
 }
 
@@ -129,18 +138,42 @@ private extension RealtimeService {
         }
     }
 
+    static var isRunningForPreviews: Bool {
+        ProcessInfo.processInfo.environment[Constants.previewsEnvironmentKey] == "1"
+    }
+
+    /// The payload as text, cut to ``Constants/maxLoggedPayloadLength`` — a snapshot can be tens of kilobytes.
+    static func preview(of payload: Data) -> String {
+        let text = String(bytes: payload, encoding: .utf8) ?? "<\(payload.count) B binary>"
+        guard text.count > Constants.maxLoggedPayloadLength else { return "\(payload.count) B \(text)" }
+        return "\(payload.count) B \(text.prefix(Constants.maxLoggedPayloadLength))…"
+    }
+
     func handle(_ event: WebSocketEvent) {
         switch event {
         case .stateChanged(let state):
-            let mappedState = RealtimeConnectionStateMapper.map(state)
+            logger.info("State: \(String(describing: state), privacy: .public)")
+            // A new attempt (e.g. on returning to the foreground) gets a fresh verdict on the key.
+            if state == .connecting {
+                isRejected = false
+            }
+            let mappedState = isRejected && state == .disconnected
+                ? .unauthorized
+                : RealtimeConnectionStateMapper.map(state)
             if mappedState != connectionStateSubject.value {
                 connectionStateSubject.send(mappedState)
             }
         case .message(.data(let data)):
+            logger.debug("⬇︎ \(Self.preview(of: data), privacy: .public)")
             messageSubject.send(data)
         case .message(.text(let text)):
-            messageSubject.send(Data(text.utf8))
+            let data = Data(text.utf8)
+            logger.debug("⬇︎ \(Self.preview(of: data), privacy: .public)")
+            messageSubject.send(data)
         case .failure(let error):
+            if case .handshakeFailed(let statusCode) = error, Constants.rejectedKeyStatusCodes.contains(statusCode) {
+                isRejected = true
+            }
             logger.error("WebSocket failure: \(String(describing: error), privacy: .public)")
         }
     }
@@ -151,4 +184,8 @@ private extension RealtimeService {
 private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Realtime"
+    /// Must match the client's `nonRetryableStatusCodes`, so `unauthorized` is reported only when the client stopped.
+    static let rejectedKeyStatusCodes: Set<Int> = [401, 403]
+    static let maxLoggedPayloadLength = 1_000
+    static let previewsEnvironmentKey = "XCODE_RUNNING_FOR_PREVIEWS"
 }

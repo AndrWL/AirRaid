@@ -41,6 +41,9 @@ protocol DIRepositoryContaining {
     /// Outlines of the regions that alerts can cover.
     var regionBoundaryRepository: RegionBoundaryRepositoryProtocol { get }
 
+    /// Outlines of the raions inside the regions, for raion-level alerts.
+    var districtBoundaryRepository: DistrictBoundaryRepositoryProtocol { get }
+
     /// Cities labelled on the map.
     var cityRepository: CityRepositoryProtocol { get }
 

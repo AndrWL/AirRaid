@@ -9,13 +9,20 @@ import Foundation
 
 /// Backend endpoints and other per-environment values.
 ///
-/// - Warning: Placeholder values. Replace with the real backend before calling `RealtimeService.start()`,
-///   and move to per-configuration `.xcconfig` files once there is more than one environment.
 /// - Note: `nonisolated` because the target defaults to MainActor and DI factories read these off the main actor.
 nonisolated enum AppEnvironment {
 
-    /// The realtime WebSocket endpoint.
-    static let webSocketURLString = "wss://example.com/ws"
+    /// The «Небо» API server, `https://<server>`. The WebSocket address is derived from it.
+    ///
+    /// - Warning: Comes from the git-ignored `AppSecrets.swift` (template: `AppSecrets.swift.example` in the repo
+    ///   root). The server currently runs behind a temporary Cloudflare tunnel whose address changes on restart.
+    static let apiServerURLString = AppSecrets.apiServerURLString
+
+    /// The app key for the «Небо» API (`APP_KEYS` on the server), from `AppSecrets.swift`.
+    ///
+    /// - Warning: A key compiled into the app can be extracted. Move it to Keychain behind a settings screen
+    ///   (or a short-lived token) before a public release.
+    static let apiKey = AppSecrets.apiKey
 
     /// The MapLibre style for the base map. OpenFreeMap: free, no API key.
     ///

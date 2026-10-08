@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 /// Bridges `URLSessionWebSocketTask` to ``WebSocketTaskProtocol``.
 struct URLSessionWebSocketTaskAdapter {
@@ -27,6 +28,16 @@ extension URLSessionWebSocketTaskAdapter: WebSocketTaskProtocol {
 
     var httpStatusCode: Int? {
         (task.response as? HTTPURLResponse)?.statusCode
+    }
+
+    var retryAfter: Duration? {
+        // Only the delay-seconds form; servers that rate-limit WebSocket upgrades do not send HTTP dates.
+        guard let value = (task.response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After"),
+              let seconds = Int(value.trimmingCharacters(in: .whitespaces)),
+              seconds >= 0 else {
+            return nil
+        }
+        return .seconds(seconds)
     }
 
     func resume() {
@@ -58,9 +69,16 @@ extension URLSessionWebSocketTaskAdapter: WebSocketTaskProtocol {
     }
 
     func sendPing() async throws {
-        // `URLSession` calls the handler exactly once: on pong, or with an error when the task fails or is cancelled.
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            // `URLSession` may call the handler more than once when the connection aborts (e.g. POSIX 53
+            // "Software caused connection abort") — the first call wins, later ones are dropped.
+            let isResumed = OSAllocatedUnfairLock(initialState: false)
             task.sendPing { error in
+                let isFirstCall = isResumed.withLock { isResumed in
+                    defer { isResumed = true }
+                    return !isResumed
+                }
+                guard isFirstCall else { return }
                 if let error {
                     continuation.resume(throwing: error)
                 } else {

@@ -19,8 +19,11 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Regional centers to label; empty until loaded.
     var cities: [City] { get }
 
-    /// ISO 3166-2 codes of the regions that have an active alert.
-    var alertedRegionIDs: Set<String> { get }
+    /// Raion outlines for raion-level alerts; empty until loaded.
+    var districts: [DistrictBoundary] { get }
+
+    /// Which oblasts and raions are under an air raid alert.
+    var alertCoverage: AirRaidCoverage { get }
 
     /// Threats to show as pins.
     var threats: [Threat] { get }

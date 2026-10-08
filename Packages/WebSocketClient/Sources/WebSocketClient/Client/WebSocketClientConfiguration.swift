@@ -12,8 +12,13 @@ public struct WebSocketClientConfiguration: Sendable {
 
     // MARK: - Variables
 
-    /// The `ws://` or `wss://` endpoint.
-    public let url: URL
+    /// Supplies the `ws://` or `wss://` endpoint.
+    ///
+    /// Called before **every** connection attempt, so query items that change between attempts — an API key
+    /// passed as `?key=`, a `since` cursor for resuming — are picked up on reconnect.
+    /// Throwing counts as a failed attempt and goes through the reconnect policy, unless the error is a
+    /// ``WebSocketNonRetryableError``.
+    public let urlProvider: @Sendable () async throws -> URL
 
     /// Supplies HTTP headers for the upgrade request (e.g. `Authorization`).
     ///
@@ -21,11 +26,14 @@ public struct WebSocketClientConfiguration: Sendable {
     /// Throwing counts as a failed attempt and goes through the reconnect policy.
     public let headersProvider: @Sendable () async throws -> [String: String]
 
+    /// How the handshake is confirmed and liveness is checked.
+    public let heartbeat: WebSocketHeartbeat
+
     /// How often to send a ping on an idle-or-not connection, or `nil` to disable heartbeats.
     public let pingInterval: Duration?
 
-    /// How long to wait for a pong (including the one that confirms the handshake) before
-    /// treating the connection as dead.
+    /// How long to wait for the heartbeat's answer — a pong, or any frame for ``WebSocketHeartbeat/message(_:)`` —
+    /// including the one that confirms the handshake, before treating the connection as dead.
     public let pongTimeout: Duration
 
     /// Timeout for the HTTP upgrade request.
@@ -34,19 +42,53 @@ public struct WebSocketClientConfiguration: Sendable {
     /// Backoff rules for reconnecting after a failure.
     public let reconnectPolicy: ReconnectPolicy
 
+    /// Upgrade-response statuses that stop reconnecting: retrying cannot fix them without new credentials.
+    ///
+    /// The client reports ``WebSocketClientError/handshakeFailed(statusCode:)`` and ends in `disconnected`;
+    /// call `connect()` again once the credentials change.
+    public let nonRetryableStatusCodes: Set<Int>
+
+    /// - Parameter urlProvider: Called before every attempt; see ``urlProvider``.
     public init(
-        url: URL,
+        urlProvider: @escaping @Sendable () async throws -> URL,
         headersProvider: @escaping @Sendable () async throws -> [String: String] = { [:] },
+        heartbeat: WebSocketHeartbeat = .controlFrame,
         pingInterval: Duration? = .seconds(25),
         pongTimeout: Duration = .seconds(10),
         requestTimeout: TimeInterval = 15,
-        reconnectPolicy: ReconnectPolicy = .default
+        reconnectPolicy: ReconnectPolicy = .default,
+        nonRetryableStatusCodes: Set<Int> = [401, 403]
     ) {
-        self.url = url
+        self.urlProvider = urlProvider
         self.headersProvider = headersProvider
+        self.heartbeat = heartbeat
         self.pingInterval = pingInterval
         self.pongTimeout = pongTimeout
         self.requestTimeout = requestTimeout
         self.reconnectPolicy = reconnectPolicy
+        self.nonRetryableStatusCodes = nonRetryableStatusCodes
+    }
+
+    /// - Parameter url: A fixed endpoint, used for every attempt.
+    public init(
+        url: URL,
+        headersProvider: @escaping @Sendable () async throws -> [String: String] = { [:] },
+        heartbeat: WebSocketHeartbeat = .controlFrame,
+        pingInterval: Duration? = .seconds(25),
+        pongTimeout: Duration = .seconds(10),
+        requestTimeout: TimeInterval = 15,
+        reconnectPolicy: ReconnectPolicy = .default,
+        nonRetryableStatusCodes: Set<Int> = [401, 403]
+    ) {
+        self.init(
+            urlProvider: { url },
+            headersProvider: headersProvider,
+            heartbeat: heartbeat,
+            pingInterval: pingInterval,
+            pongTimeout: pongTimeout,
+            requestTimeout: requestTimeout,
+            reconnectPolicy: reconnectPolicy,
+            nonRetryableStatusCodes: nonRetryableStatusCodes
+        )
     }
 }

@@ -24,8 +24,9 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         AirRaidMapView(
             styleURL: viewModel.styleURL,
             boundaries: viewModel.boundaries,
+            districts: viewModel.districts,
             cities: viewModel.cities,
-            alertedRegionIDs: viewModel.alertedRegionIDs,
+            alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats
         )
         .ignoresSafeArea(edges: .top)
@@ -39,6 +40,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             viewModel: MapViewModel(
                 router: MapRouter(stackRouter: StackRouter()),
                 regionBoundaryRepository: RegionBoundaryRepository(),
+                districtBoundaryRepository: DistrictBoundaryRepository(),
                 cityRepository: CityRepository(),
                 airSituationRepository: DemoAirSituationRepository(),
                 styleURL: styleURL

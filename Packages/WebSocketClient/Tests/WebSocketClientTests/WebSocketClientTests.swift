@@ -9,7 +9,8 @@ import WebSocketClient
 
 /// Tests for ``WebSocketClient``.
 ///
-/// Covers the handshake, message flow, backoff and its reset, attempt exhaustion, heartbeat timeouts,
+/// Covers the handshake, message flow, backoff and its reset, non-retryable rejections, `Retry-After`,
+/// attempt exhaustion, heartbeat timeouts,
 /// network-path changes, and disconnect. Timers run through ``StubSleeper``, so no test waits for real time.
 @Suite(.timeLimit(.minutes(1)))
 struct WebSocketClientTests {
@@ -58,6 +59,43 @@ struct WebSocketClientTests {
         let request = factory.requests.first
         #expect(request?.url == Constants.url)
         #expect(request?.value(forHTTPHeaderField: Constants.authorizationHeader) == Constants.bearerToken)
+    }
+
+    @Test
+    func connect_whenReconnecting_asksURLProviderForEveryAttempt() async {
+        let urlCalls = LockIsolated(0)
+        let failingTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)])
+        let factory = StubWebSocketTaskFactory(tasks: [failingTask])
+        let sut = makeSUT(factory: factory, urlProvider: {
+            let call = urlCalls.withValue { calls in
+                calls += 1
+                return calls
+            }
+            return Constants.url.appending(queryItems: [URLQueryItem(name: "since", value: "\(call)")])
+        })
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        _ = await collect(&events, untilState: .connected)
+
+        #expect(factory.requests.map(\.url?.query) == ["since=1", "since=2"])
+    }
+
+    @Test
+    func connect_whenURLProviderThrowsNonRetryableError_stopsWithoutRetrying() async {
+        let factory = StubWebSocketTaskFactory()
+        let sut = makeSUT(factory: factory, urlProvider: { throw StubConfigurationError.missingKey })
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .disconnected)
+
+        #expect(received == [
+            .stateChanged(.connecting),
+            .failure(.transportFailure(StubConfigurationError.missingKey as NSError)),
+            .stateChanged(.disconnected)
+        ])
+        #expect(factory.createdTasks.isEmpty)
     }
 
     @Test
@@ -122,7 +160,7 @@ struct WebSocketClientTests {
 
     @Test
     func connect_whenHandshakeRejected_reportsStatusCodeAndReconnects() async {
-        let rejectedTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)], httpStatusCode: 401)
+        let rejectedTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)], httpStatusCode: 500)
         let factory = StubWebSocketTaskFactory(tasks: [rejectedTask])
         let sut = makeSUT(factory: factory)
         var events = sut.events.makeAsyncIterator()
@@ -132,13 +170,85 @@ struct WebSocketClientTests {
 
         #expect(received == [
             .stateChanged(.connecting),
-            .failure(.handshakeFailed(statusCode: 401)),
+            .failure(.handshakeFailed(statusCode: 500)),
             .stateChanged(.reconnecting(attempt: 1, delay: .seconds(1))),
             .stateChanged(.connecting),
             .stateChanged(.connected)
         ])
         #expect(rejectedTask.isCancelled)
         #expect(factory.createdTasks.count == 2)
+    }
+
+    @Test(arguments: [401, 403])
+    func connect_whenHandshakeRejectedWithNonRetryableStatus_stopsReconnecting(statusCode: Int) async {
+        let rejectedTask = StubWebSocketTask(
+            pingResponses: [.failure(TestError.connectionReset)],
+            httpStatusCode: statusCode
+        )
+        let factory = StubWebSocketTaskFactory(tasks: [rejectedTask])
+        let sut = makeSUT(factory: factory)
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .disconnected)
+
+        #expect(received == [
+            .stateChanged(.connecting),
+            .failure(.handshakeFailed(statusCode: statusCode)),
+            .stateChanged(.disconnected)
+        ])
+        #expect(rejectedTask.isCancelled)
+        #expect(factory.createdTasks.count == 1)
+        #expect(await sut.connectionState == .disconnected)
+    }
+
+    @Test
+    func connect_afterNonRetryableRejection_connectsAgain() async {
+        let rejectedTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)], httpStatusCode: 401)
+        let factory = StubWebSocketTaskFactory(tasks: [rejectedTask])
+        let sut = makeSUT(factory: factory)
+        var events = sut.events.makeAsyncIterator()
+        await sut.connect()
+        _ = await collect(&events, untilState: .disconnected)
+
+        await sut.connect()
+        _ = await collect(&events, untilState: .connected)
+
+        #expect(factory.createdTasks.count == 2)
+    }
+
+    @Test
+    func connect_whenRateLimitedWithRetryAfter_waitsAtLeastThatLong() async {
+        let limitedTask = StubWebSocketTask(
+            pingResponses: [.failure(TestError.connectionReset)],
+            httpStatusCode: 429,
+            retryAfter: .seconds(30)
+        )
+        let sut = makeSUT(factory: StubWebSocketTaskFactory(tasks: [limitedTask]))
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .connected)
+
+        #expect(received.contains(.failure(.handshakeFailed(statusCode: 429))))
+        #expect(reconnectDelays(in: received) == [.seconds(30)])
+    }
+
+    @Test
+    func connect_whenRetryAfterShorterThanBackoff_usesBackoffDelay() async {
+        let failingTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)])
+        let limitedTask = StubWebSocketTask(
+            pingResponses: [.failure(TestError.connectionReset)],
+            httpStatusCode: 429,
+            retryAfter: .seconds(1)
+        )
+        let sut = makeSUT(factory: StubWebSocketTaskFactory(tasks: [failingTask, limitedTask]))
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .connected)
+
+        #expect(reconnectDelays(in: received) == [.seconds(1), .seconds(2)])
     }
 
     @Test
@@ -216,6 +326,83 @@ struct WebSocketClientTests {
         #expect(factory.createdTasks.count == 2)
     }
 
+    // MARK: - Message heartbeat
+
+    @Test
+    func connect_whenMessageHeartbeat_sendsPingAndConfirmsHandshakeWithFirstFrame() async {
+        let task = StubWebSocketTask()
+        task.deliver(.text(Constants.snapshot))
+        let sut = makeSUT(factory: StubWebSocketTaskFactory(tasks: [task]), heartbeat: Constants.messageHeartbeat)
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .connected)
+        let firstMessage = await events.next()
+
+        #expect(received == [.stateChanged(.connecting), .stateChanged(.connected)])
+        #expect(firstMessage == .message(.text(Constants.snapshot)))
+        #expect(task.sentMessages == [.text(Constants.pingMessage)])
+        #expect(task.pingCount == 0)
+    }
+
+    @Test
+    func connect_whenMessageHeartbeatGetsNoFrame_reportsPongTimeoutAndReconnects() async {
+        let silentTask = StubWebSocketTask()
+        let liveTask = StubWebSocketTask()
+        liveTask.deliver(.text(Constants.snapshot))
+        let factory = StubWebSocketTaskFactory(tasks: [silentTask, liveTask])
+        // The first handshake times out; the second one gets its frame first.
+        let sleeper = StubSleeper { duration, previousCalls in
+            duration == Constants.pongTimeout && previousCalls > 0 ? .suspend : .immediate
+        }
+        let sut = makeSUT(factory: factory, sleeper: sleeper, heartbeat: Constants.messageHeartbeat)
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        let received = await collect(&events, untilState: .connected)
+
+        #expect(received.contains(.failure(.pongTimeout)))
+        #expect(silentTask.isCancelled)
+        #expect(factory.createdTasks.count == 2)
+    }
+
+    @Test
+    func heartbeat_whenMessageHeartbeatGetsNoFrame_reportsPongTimeoutAndReconnects() async {
+        let deadTask = StubWebSocketTask()
+        deadTask.deliver(.text(Constants.snapshot))
+        let liveTask = StubWebSocketTask()
+        liveTask.deliver(.text(Constants.snapshot))
+        let factory = StubWebSocketTaskFactory(tasks: [deadTask, liveTask])
+        // Pong timeout: the handshake one loses to the queued frame, the heartbeat one fires, later ones idle.
+        // Ping interval: fire once, then idle so the replacement connection stays quiet.
+        let sleeper = StubSleeper { duration, previousCalls in
+            switch duration {
+            case Constants.pongTimeout:
+                return previousCalls == 1 ? .immediate : .suspend
+            case Constants.pingInterval:
+                return previousCalls == 0 ? .immediate : .suspend
+            default:
+                return .immediate
+            }
+        }
+        let sut = makeSUT(
+            factory: factory,
+            sleeper: sleeper,
+            heartbeat: Constants.messageHeartbeat,
+            pingInterval: Constants.pingInterval
+        )
+        var events = sut.events.makeAsyncIterator()
+        await sut.connect()
+        _ = await collect(&events, untilState: .connected)
+
+        let received = await collect(&events, untilState: .connected)
+
+        #expect(received.contains(.failure(.pongTimeout)))
+        #expect(deadTask.sentMessages == [.text(Constants.pingMessage), .text(Constants.pingMessage)])
+        #expect(deadTask.isCancelled)
+        #expect(factory.createdTasks.count == 2)
+    }
+
     // MARK: - Network path
 
     @Test
@@ -279,14 +466,17 @@ private extension WebSocketClientTests {
         factory: StubWebSocketTaskFactory = StubWebSocketTaskFactory(),
         sleeper: StubSleeper = StubSleeper { duration, _ in duration == Constants.pongTimeout ? .suspend : .immediate },
         pathMonitor: NetworkPathMonitoring? = nil,
+        urlProvider: @escaping @Sendable () async throws -> URL = { Constants.url },
         headersProvider: @escaping @Sendable () async throws -> [String: String] = { [:] },
+        heartbeat: WebSocketHeartbeat = .controlFrame,
         pingInterval: Duration? = nil,
         reconnectPolicy: ReconnectPolicy = ReconnectPolicy(jitter: 0)
     ) -> WebSocketClient {
         WebSocketClient(
             configuration: WebSocketClientConfiguration(
-                url: Constants.url,
+                urlProvider: urlProvider,
                 headersProvider: headersProvider,
+                heartbeat: heartbeat,
                 pingInterval: pingInterval,
                 pongTimeout: Constants.pongTimeout,
                 reconnectPolicy: reconnectPolicy
@@ -321,6 +511,13 @@ private extension WebSocketClientTests {
     }
 }
 
+// MARK: - StubConfigurationError
+
+/// A configuration error the client must not retry.
+private enum StubConfigurationError: WebSocketNonRetryableError {
+    case missingKey
+}
+
 // MARK: - Constants
 
 private enum Constants {
@@ -330,4 +527,7 @@ private enum Constants {
     static let authorizationHeader = "Authorization"
     static let bearerToken = "Bearer test-token"
     static let payload = "payload"
+    static let pingMessage = #"{"type":"ping"}"#
+    static let snapshot = #"{"type":"snapshot"}"#
+    static let messageHeartbeat = WebSocketHeartbeat.message(.text(pingMessage))
 }

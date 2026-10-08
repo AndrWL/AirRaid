@@ -38,4 +38,7 @@ protocol DIServiceContaining {
 
     /// The live WebSocket connection to the backend.
     var realtimeService: RealtimeServiceProtocol { get }
+
+    /// The last applied server version, for resuming the realtime stream with `since`.
+    var realtimeVersionStore: RealtimeVersionStore { get }
 }

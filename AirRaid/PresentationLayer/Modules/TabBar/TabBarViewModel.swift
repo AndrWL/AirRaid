@@ -17,19 +17,31 @@ final class TabBarViewModel: BaseViewModel {
     /// The router responsible for executing tab switching and managing global navigation state.
     @ObservationIgnored
     private let router: TabBarRouterProtocol
-    
+
+    /// The live connection, started once the main flow is on screen and kept for the rest of the session.
+    @ObservationIgnored
+    private let realtimeService: RealtimeServiceProtocol
+
     /// Initializes the view model with its required router.
     ///
-    /// - Parameter router: An object conforming to `TabBarRouterProtocol`.
+    /// - Parameters:
+    ///   - router: An object conforming to `TabBarRouterProtocol`.
+    ///   - realtimeService: The live connection every tab reads from.
     init(
-        router: TabBarRouterProtocol
+        router: TabBarRouterProtocol,
+        realtimeService: RealtimeServiceProtocol
     ) {
         self.router = router
+        self.realtimeService = realtimeService
     }
 }
 
 // MARK: - TabBarViewModelProtocol
 
 extension TabBarViewModel: TabBarViewModelProtocol {
-    
+
+    func onAppear() {
+        // Idempotent; the service pauses in the background on its own.
+        realtimeService.start()
+    }
 }

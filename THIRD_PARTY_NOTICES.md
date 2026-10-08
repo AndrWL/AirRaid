@@ -7,7 +7,8 @@ must show the credits below.
 
 | What | Where | Source | License |
 |---|---|---|---|
-| Oblast boundaries | `AirRaid/Resources/Map/ukraine-oblasts.geojson` | [geoBoundaries](https://www.geoboundaries.org) `gbOpen/UKR/ADM1` (simplified), built from OpenStreetMap data | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) — credit "© OpenStreetMap contributors" |
+| Oblast boundaries | `AirRaid/Resources/Map/ukraine-oblasts.geojson` | Union of the raion boundaries below (Kyiv and Sevastopol from the same dataset) | [CC BY-IGO 3.0](https://creativecommons.org/licenses/by/3.0/igo/) — credit "OCHA, Ukraine Subnational Administrative Boundaries" |
+| Raion boundaries | `AirRaid/Resources/Map/ukraine-raions.geojson` | [OCHA — Ukraine Subnational Administrative Boundaries](https://data.humdata.org/dataset/cod-ab-ukr) (COD-AB, ADM2, v05, valid on 2025-09-01), simplified (topology-preserving, 0.004°); Kyiv and Sevastopol moved to the oblast file | [CC BY-IGO 3.0](https://creativecommons.org/licenses/by/3.0/igo/) — credit "OCHA, Ukraine Subnational Administrative Boundaries" |
 | Regional centers | `AirRaid/Resources/Map/ukraine-regional-centers.json` | Compiled for AirRaid (names and approximate coordinates) | — |
 | Base map tiles and style | Loaded at runtime from `tiles.openfreemap.org` | [OpenFreeMap](https://openfreemap.org), OpenMapTiles schema, OpenStreetMap data | Credit "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" (shown by the map's ⓘ button) |
 
