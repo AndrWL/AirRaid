@@ -8,10 +8,9 @@
 import Combine
 import Foundation
 
-/// Cycles through hard-coded air situations so the map can be built before the backend exists.
+/// Cycles through hard-coded air situations — for previews and for working on the map without a server.
 ///
-/// - Warning: Demo data only. Replace with a repository that decodes ``RealtimeServiceProtocol`` messages
-///   once the backend message format is agreed.
+/// - Warning: Demo data only. The app uses ``RealtimeAirSituationRepository``.
 final class DemoAirSituationRepository {
 
     // MARK: - Variables
@@ -69,20 +68,20 @@ private extension DemoAirSituationRepository {
             heading: Double?,
             speedKmh: Double?
         ) -> Threat {
-            Threat(
+            makeThreat(
                 id: id,
                 kind: kind,
                 type: type,
                 coordinate: GeoCoordinate(latitude: position.latitude, longitude: position.longitude),
                 heading: heading,
-                speedKmh: speedKmh,
-                detectedAt: now
+                speedKmh: speedKmh ?? 0,
+                now: now
             )
         }
 
         return [
             AirSituation(
-                alerts: ["UA-30", "UA-32", "UA-74", "UA-59"].map { RegionAlert(regionID: $0, startedAt: now) },
+                alerts: ["UA-30", "UA-32", "UA-74", "UA-59"].map { demoAlert(regionID: $0, now: now) },
                 threats: [
                     threat("shahed-1", .drone, .shahed, at: (51.49, 31.29), heading: 200, speedKmh: 180),
                     threat("shahed-2", .drone, .shahed, at: (50.91, 34.80), heading: 235, speedKmh: 180),
@@ -91,7 +90,7 @@ private extension DemoAirSituationRepository {
                 ]
             ),
             AirSituation(
-                alerts: ["UA-30", "UA-63", "UA-12", "UA-23"].map { RegionAlert(regionID: $0, startedAt: now) },
+                alerts: ["UA-30", "UA-63", "UA-12", "UA-23"].map { demoAlert(regionID: $0, now: now) },
                 threats: [
                     threat("ballistic-1", .ballisticMissile, .ballisticMissile, at: (49.99, 36.23), heading: 230, speedKmh: nil),
                     threat("recon-1", .drone, .reconDrone, at: (48.46, 35.04), heading: 300, speedKmh: 120),
@@ -101,7 +100,7 @@ private extension DemoAirSituationRepository {
                 ]
             ),
             AirSituation(
-                alerts: ["UA-63", "UA-14"].map { RegionAlert(regionID: $0, startedAt: now) },
+                alerts: ["UA-63", "UA-14"].map { demoAlert(regionID: $0, now: now) },
                 threats: [
                     threat("uav-1", .drone, .drone, at: (49.70, 37.10), heading: 260, speedKmh: 160),
                     threat("missile-1", .missile, .missile, at: (49.20, 38.20), heading: 240, speedKmh: 750),
@@ -111,10 +110,68 @@ private extension DemoAirSituationRepository {
             )
         ]
     }
+
+    static func demoAlert(
+        regionID: String,
+        now: Date
+    ) -> RegionAlert {
+        RegionAlert(
+            id: regionID,
+            kind: .airRaid,
+            level: .red,
+            scope: .oblast,
+            name: regionID,
+            regionID: regionID,
+            district: nil,
+            startedAt: now
+        )
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    static func makeThreat(
+        id: String,
+        kind: ThreatKind,
+        type: ThreatType?,
+        coordinate: GeoCoordinate,
+        heading: Double?,
+        speedKmh: Double,
+        now: Date
+    ) -> Threat {
+        Threat(
+            id: id,
+            kind: kind,
+            type: type,
+            count: nil,
+            level: .high,
+            confidence: Constants.confidence,
+            sourceCount: Constants.sourceCount,
+            position: ThreatPlace(name: id, coordinate: coordinate),
+            target: nil,
+            trail: [],
+            area: ThreatArea(name: Constants.areaName, regionID: Constants.areaID, center: coordinate),
+            positionQuality: .confirmed,
+            accuracyKm: Constants.accuracyKm,
+            heading: heading,
+            approachBearing: nil,
+            speedKmh: speedKmh,
+            speedSource: .typical,
+            movedAt: now,
+            firstSeenAt: now,
+            updatedAt: now,
+            expiresAt: now.addingTimeInterval(Constants.lifetime),
+            summary: nil
+        )
+    }
 }
 
 // MARK: - Constants
 
 private enum Constants {
     static let defaultInterval: TimeInterval = 5
+    static let confidence = 0.95
+    static let sourceCount = 3
+    static let accuracyKm: Double = 5
+    static let lifetime: TimeInterval = 15 * 60
+    static let areaName = "Демо"
+    static let areaID = "UA-DEMO"
 }

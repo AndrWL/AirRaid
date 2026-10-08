@@ -13,13 +13,21 @@ import Foundation
 ///
 /// ```
 /// connect()
-///   → connecting → upgrade request (fresh headers) → first ping/pong confirms the handshake → connected
+///   → connecting → upgrade request (fresh URL and headers) → heartbeat answer confirms the handshake → connected
 ///   → receive loop ∥ heartbeat loop — the first one to fail tears the connection down
 ///   → failure event → reconnecting(attempt, delay) → backoff sleep → connecting → …
 /// ```
 ///
 /// A successful connection resets the attempt counter. Losing the network path stops the loop
 /// (`waitingForNetwork`); regaining it starts a fresh loop immediately, without backoff.
+///
+/// The heartbeat (``WebSocketHeartbeat``) is either a ping control frame answered by a pong, or an application
+/// message after which any incoming frame counts as the answer; the first frame then also confirms the handshake.
+///
+/// A rejected upgrade whose status is in ``WebSocketClientConfiguration/nonRetryableStatusCodes``
+/// (a bad key) ends the loop in `disconnected`. A `Retry-After` on the upgrade response (rate limiting)
+/// lengthens the next backoff delay to at least that long. A ``WebSocketNonRetryableError`` from the URL or headers
+/// provider (bad configuration) ends the loop too.
 ///
 /// ## Concurrency
 ///
@@ -168,17 +176,29 @@ private extension WebSocketClient {
 
     func runConnectionLoop(generation loopGeneration: Int) async {
         var attempt = 0
+        var serverRequestedDelay: Duration?
         while isCurrent(loopGeneration) {
             if attempt > 0 {
-                guard await waitBeforeReconnect(attempt: attempt, generation: loopGeneration) else { return }
+                guard await waitBeforeReconnect(
+                    attempt: attempt,
+                    minimumDelay: serverRequestedDelay,
+                    generation: loopGeneration
+                ) else { return }
             }
             updateState(.connecting)
+            serverRequestedDelay = nil
 
             do {
                 try await openConnection(generation: loopGeneration)
             } catch {
                 guard isCurrent(loopGeneration) else { return }
-                emit(.failure(mapError(error)))
+                let failure = mapError(error)
+                emit(.failure(failure))
+                if error is WebSocketNonRetryableError || isNonRetryable(failure) {
+                    finishConnectionLoop()
+                    return
+                }
+                serverRequestedDelay = activeTask?.retryAfter
             }
 
             // A connection that reached `connected` starts backoff from scratch.
@@ -190,18 +210,25 @@ private extension WebSocketClient {
 
     /// Sleeps according to the reconnect policy.
     ///
+    /// - Parameters:
+    ///   - attempt: The 1-based reconnect attempt number.
+    ///   - minimumDelay: The server's `Retry-After`, which wins over a shorter backoff delay.
+    ///   - loopGeneration: The generation of the loop that is waiting.
     /// - Returns: `false` if the loop must stop (cancelled, superseded, or attempts exhausted).
     func waitBeforeReconnect(
         attempt: Int,
+        minimumDelay: Duration?,
         generation loopGeneration: Int
     ) async -> Bool {
         let policy = configuration.reconnectPolicy
         if let maxAttempts = policy.maxAttempts, attempt > maxAttempts {
-            finishAfterExhaustingAttempts()
+            emit(.failure(.reconnectAttemptsExhausted))
+            finishConnectionLoop()
             return false
         }
 
-        let delay = policy.delay(forAttempt: attempt, randomUnit: randomUnit())
+        let backoffDelay = policy.delay(forAttempt: attempt, randomUnit: randomUnit())
+        let delay = max(backoffDelay, minimumDelay ?? .zero)
         updateState(.reconnecting(attempt: attempt, delay: delay))
         do {
             try await sleeper.sleep(for: delay)
@@ -212,10 +239,11 @@ private extension WebSocketClient {
     }
 
     func openConnection(generation loopGeneration: Int) async throws {
+        let url = try await configuration.urlProvider()
         let headers = try await configuration.headersProvider()
         guard isCurrent(loopGeneration) else { throw CancellationError() }
 
-        var request = URLRequest(url: configuration.url, timeoutInterval: configuration.requestTimeout)
+        var request = URLRequest(url: url, timeoutInterval: configuration.requestTimeout)
         for (field, value) in headers {
             request.setValue(value, forHTTPHeaderField: field)
         }
@@ -224,13 +252,17 @@ private extension WebSocketClient {
         activeTask = task
         task.resume()
 
-        // `URLSessionWebSocketTask` has no async "opened" signal; the first pong proves the upgrade succeeded.
-        try await Self.ping(task, timeout: configuration.pongTimeout, sleeper: sleeper)
+        // `URLSessionWebSocketTask` has no async "opened" signal; the heartbeat's answer proves the upgrade succeeded.
+        let firstFrame = try await confirmHandshake(task)
         guard isCurrent(loopGeneration) else { throw CancellationError() }
         updateState(.connected)
+        if let firstFrame {
+            emit(.message(firstFrame))
+        }
 
         try await Self.runConnection(
             task,
+            heartbeat: configuration.heartbeat,
             pingInterval: configuration.pingInterval,
             pongTimeout: configuration.pongTimeout,
             sleeper: sleeper,
@@ -238,25 +270,54 @@ private extension WebSocketClient {
         )
     }
 
+    /// Waits for the heartbeat's answer.
+    ///
+    /// - Returns: The first frame when it was the answer — it must still be delivered — or `nil` for a pong.
+    func confirmHandshake(_ task: WebSocketTaskProtocol) async throws -> WebSocketMessage? {
+        switch configuration.heartbeat {
+        case .controlFrame:
+            try await Self.ping(task, timeout: configuration.pongTimeout, sleeper: sleeper)
+            return nil
+        case .message(let ping):
+            try await task.send(ping)
+            return try await Self.receive(task, timeout: configuration.pongTimeout, sleeper: sleeper)
+        }
+    }
+
     /// Runs the receive and heartbeat loops until either fails, then cancels the transport so the other unblocks.
     nonisolated static func runConnection(
         _ task: WebSocketTaskProtocol,
+        heartbeat: WebSocketHeartbeat,
         pingInterval: Duration?,
         pongTimeout: Duration,
         sleeper: Sleeping,
         events: AsyncStream<WebSocketEvent>.Continuation
     ) async throws {
+        let receivedFrames = FrameCounter()
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 while true {
-                    events.yield(.message(try await task.receive()))
+                    let message = try await task.receive()
+                    receivedFrames.increment()
+                    events.yield(.message(message))
                 }
             }
             if let pingInterval {
                 group.addTask {
                     while true {
                         try await sleeper.sleep(for: pingInterval)
-                        try await ping(task, timeout: pongTimeout, sleeper: sleeper)
+                        switch heartbeat {
+                        case .controlFrame:
+                            try await ping(task, timeout: pongTimeout, sleeper: sleeper)
+                        case .message(let ping):
+                            let countBeforePing = receivedFrames.count
+                            try await task.send(ping)
+                            try await sleeper.sleep(for: pongTimeout)
+                            if receivedFrames.count == countBeforePing {
+                                task.cancel()
+                                throw WebSocketClientError.pongTimeout
+                            }
+                        }
                     }
                 }
             }
@@ -314,13 +375,45 @@ private extension WebSocketClient {
         }
     }
 
-    func finishAfterExhaustingAttempts() {
+    /// Ends the loop from inside it, as if `disconnect()` had been called, without cancelling the running task.
+    /// Waits for the next frame, failing with ``WebSocketClientError/pongTimeout`` if none arrives in time.
+    nonisolated static func receive(
+        _ task: WebSocketTaskProtocol,
+        timeout: Duration,
+        sleeper: Sleeping
+    ) async throws -> WebSocketMessage {
+        try await withThrowingTaskGroup(of: WebSocketMessage?.self) { group in
+            group.addTask {
+                try await task.receive()
+            }
+            group.addTask {
+                try await sleeper.sleep(for: timeout)
+                return nil
+            }
+            defer { group.cancelAll() }
+
+            guard let message = try await group.next() ?? nil else {
+                // Unblocks the pending `receive()` so the group can finish.
+                task.cancel()
+                throw WebSocketClientError.pongTimeout
+            }
+            return message
+        }
+    }
+
+    func finishConnectionLoop() {
         isConnectionRequested = false
         pathMonitoringLoop?.cancel()
         pathMonitoringLoop = nil
         connectionLoop = nil
-        emit(.failure(.reconnectAttemptsExhausted))
+        activeTask?.cancel()
+        activeTask = nil
         updateState(.disconnected)
+    }
+
+    func isNonRetryable(_ failure: WebSocketClientError) -> Bool {
+        guard case .handshakeFailed(let statusCode) = failure else { return false }
+        return configuration.nonRetryableStatusCodes.contains(statusCode)
     }
 
     // MARK: Events

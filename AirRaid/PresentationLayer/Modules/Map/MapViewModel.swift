@@ -17,8 +17,9 @@ final class MapViewModel: BaseViewModel {
 
     let styleURL: URL
     private(set) var boundaries: [RegionBoundary] = []
+    private(set) var districts: [DistrictBoundary] = []
     private(set) var cities: [City] = []
-    private(set) var alertedRegionIDs: Set<String> = []
+    private(set) var alertCoverage: AirRaidCoverage = .none
     private(set) var threats: [Threat] = []
 
     @ObservationIgnored
@@ -26,6 +27,9 @@ final class MapViewModel: BaseViewModel {
 
     @ObservationIgnored
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
+
+    @ObservationIgnored
+    private let districtBoundaryRepository: DistrictBoundaryRepositoryProtocol
 
     @ObservationIgnored
     private let cityRepository: CityRepositoryProtocol
@@ -39,12 +43,14 @@ final class MapViewModel: BaseViewModel {
     init(
         router: MapRouterProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
+        districtBoundaryRepository: DistrictBoundaryRepositoryProtocol,
         cityRepository: CityRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
         styleURL: URL
     ) {
         self.router = router
         self.regionBoundaryRepository = regionBoundaryRepository
+        self.districtBoundaryRepository = districtBoundaryRepository
         self.cityRepository = cityRepository
         self.airSituationRepository = airSituationRepository
         self.styleURL = styleURL
@@ -77,6 +83,13 @@ extension MapViewModel: MapViewModelProtocol {
                 reportBundledDataFailure(error, resource: "region boundaries")
             }
         }
+        if districts.isEmpty {
+            do {
+                districts = try await districtBoundaryRepository.fetchBoundaries()
+            } catch {
+                reportBundledDataFailure(error, resource: "raion boundaries")
+            }
+        }
         if cities.isEmpty {
             do {
                 cities = try await cityRepository.fetchRegionalCenters()
@@ -92,7 +105,7 @@ extension MapViewModel: MapViewModelProtocol {
 private extension MapViewModel {
 
     func apply(_ situation: AirSituation) {
-        alertedRegionIDs = Set(situation.alerts.map(\.regionID))
+        alertCoverage = situation.airRaidCoverage
         threats = situation.threats
     }
 

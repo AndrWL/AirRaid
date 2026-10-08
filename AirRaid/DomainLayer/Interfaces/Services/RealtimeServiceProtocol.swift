@@ -26,14 +26,14 @@ protocol RealtimeServiceProtocol {
     /// Emits every payload received from the server. Text frames are delivered as UTF-8 data.
     var messagePublisher: AnyPublisher<Data, Never> { get }
 
-    /// Starts the connection and keeps it alive until ``stop()``.
+    /// Starts the connection and keeps it alive until ``stop()``. Does nothing in Xcode previews.
     func start()
 
     /// Closes the connection and stops reconnecting.
     func stop()
 
-    /// Sends a payload to the server.
+    /// Sends a text message to the server — the API's commands are JSON text frames, not binary ones.
     ///
     /// - Throws: An error if the connection is not live or the send fails.
-    func send(_ payload: Data) async throws
+    func send(_ text: String) async throws
 }

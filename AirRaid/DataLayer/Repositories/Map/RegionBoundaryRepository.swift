@@ -9,8 +9,8 @@ import Foundation
 
 /// Reads region outlines from the GeoJSON file bundled with the app.
 ///
-/// The file is geoBoundaries `UKR ADM1` (simplified), built from OpenStreetMap data under ODbL —
-/// the map must show "© OpenStreetMap contributors".
+/// The file is the union of the raions in `ukraine-raions.geojson` (OCHA COD-AB Ukraine ADM2, CC BY-IGO), so oblast
+/// and raion borders match exactly and follow the coastline — no sea area is filled.
 struct RegionBoundaryRepository {
 
     // MARK: - Variables
@@ -40,7 +40,7 @@ extension RegionBoundaryRepository: RegionBoundaryRepositoryProtocol {
 
 private extension RegionBoundaryRepository {
 
-    /// Reads and decodes the file off the main actor: it is ~750 KB of coordinates.
+    /// Reads and decodes the file off the main actor: it is ~260 KB of coordinates.
     @concurrent
     nonisolated static func decodeBoundaries(at url: URL) async throws -> [RegionBoundary] {
         let data = try Data(contentsOf: url)

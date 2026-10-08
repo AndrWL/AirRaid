@@ -40,6 +40,7 @@ extension DIServiceContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
         registerUserAccessService()
+        registerRealtimeVersionStore()
         registerRealtimeService()
     }
 }
@@ -55,6 +56,10 @@ extension DIServiceContainer: DIServiceContaining {
     var realtimeService: RealtimeServiceProtocol {
         return container.resolve(RealtimeServiceProtocol.self)
     }
+
+    var realtimeVersionStore: RealtimeVersionStore {
+        return container.resolve(RealtimeVersionStore.self)
+    }
 }
 
 // MARK: - Configuration
@@ -67,16 +72,31 @@ private extension DIServiceContainer {
         }
     }
 
+    /// Shared by the WebSocket URL provider (reads) and the air situation repository (writes).
+    func registerRealtimeVersionStore() {
+        container.register(RealtimeVersionStore.self, lifetime: .singleton) { _ in
+            RealtimeVersionStore()
+        }
+    }
+
     func registerRealtimeService() {
-        container.register(RealtimeServiceProtocol.self, lifetime: .singleton) { _ in
-            guard let url = URL(string: AppEnvironment.webSocketURLString) else {
-                fatalError("[RealtimeService] Invalid WebSocket URL: \(AppEnvironment.webSocketURLString)")
-            }
+        container.register(RealtimeServiceProtocol.self, lifetime: .singleton) { resolver in
+            let versionStore = resolver.resolve(RealtimeVersionStore.self)
             let client = WebSocketClient(
                 configuration: WebSocketClientConfiguration(
-                    url: url,
-                    // TODO: Add the `Authorization` header from the keychain service once auth exists.
-                    headersProvider: { [:] }
+                    // Rebuilt for every attempt: the API takes the key only as `?key=`, and `since` moves on.
+                    urlProvider: {
+                        try RealtimeEndpoint.makeWebSocketURL(
+                            serverURLString: AppEnvironment.apiServerURLString,
+                            apiKey: AppEnvironment.apiKey,
+                            since: versionStore.version
+                        )
+                    },
+                    // Not WebSocket ping frames: `URLSessionWebSocketTask` holds the pong behind the unread snapshot
+                    // the server sends on connect. Any frame from the server proves the connection is alive.
+                    heartbeat: .message(.text(RealtimeEndpoint.pingMessage)),
+                    pingInterval: RealtimeEndpoint.pingInterval,
+                    pongTimeout: RealtimeEndpoint.pongTimeout
                 )
             )
             return RealtimeService(client: client)

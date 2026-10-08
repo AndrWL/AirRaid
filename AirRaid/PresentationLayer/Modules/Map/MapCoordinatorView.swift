@@ -22,6 +22,7 @@ struct MapCoordinatorView: View {
         let viewModel = MapViewModel(
             router: router,
             regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
+            districtBoundaryRepository: appContainer.repositories.districtBoundaryRepository,
             cityRepository: appContainer.repositories.cityRepository,
             airSituationRepository: appContainer.repositories.airSituationRepository,
             styleURL: Self.makeStyleURL()

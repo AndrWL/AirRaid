@@ -17,6 +17,9 @@ public protocol WebSocketTaskProtocol: Sendable {
     /// The HTTP status of the upgrade response, once one has been received.
     var httpStatusCode: Int? { get }
 
+    /// The upgrade response's `Retry-After` (e.g. with 429 or 503), or `nil` when absent.
+    var retryAfter: Duration? { get }
+
     /// Starts the handshake.
     func resume()
 

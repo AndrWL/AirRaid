@@ -22,4 +22,7 @@ enum RealtimeConnectionState: Equatable {
 
     /// The device is offline; the connection resumes automatically.
     case waitingForNetwork
+
+    /// The server rejected the API key. Reconnecting stops until the service is restarted with a new key.
+    case unauthorized
 }
