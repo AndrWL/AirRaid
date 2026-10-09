@@ -7,16 +7,19 @@
 
 import SwiftUI
 
-/// The coordinator view for the Map tab. Owns the tab's navigation stack.
-struct MapCoordinatorView: View {
+/// The coordinator view for the Map tab. Owns the tab's navigation stack and the threat details sheet.
+struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
 
     // MARK: - Variables
 
-    @State private var viewModel: MapViewModel
+    @State private var viewModel: MapViewModel<MapRouter>
     @State private var router: MapRouter
 
+    private let factory: Factory
+
     init(
-        appContainer: DIAppContaining
+        appContainer: DIAppContaining,
+        factory: Factory
     ) {
         let router = MapRouter(stackRouter: appContainer.routers.mapStackRouter)
         let viewModel = MapViewModel(
@@ -30,12 +33,22 @@ struct MapCoordinatorView: View {
 
         self._router = State(wrappedValue: router)
         self._viewModel = State(wrappedValue: viewModel)
+        self.factory = factory
     }
 
     var body: some View {
         NavigationStack(path: $router.path) {
             MapView(viewModel: viewModel)
                 .toolbar(.hidden, for: .navigationBar)
+        }
+        .sheet(item: $router.activeSheet) { route in
+            factory.sheet(for: route)
+                // Tapping another pin swaps the route of the sheet already on screen (see `MapSheetRoute.id`);
+                // a new identity rebuilds the module, whose view model would otherwise keep the old threat.
+                .id(route)
+                .presentationDetents(route.detents)
+                // The map stays usable under the half-height sheet, so another pin can be tapped right away.
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
     }
 }
@@ -56,5 +69,8 @@ private extension MapCoordinatorView {
     let container = DIAppContainer()
     container.setup()
 
-    return MapCoordinatorView(appContainer: container)
+    return MapCoordinatorView(
+        appContainer: container,
+        factory: MapFactory(appContainer: container)
+    )
 }

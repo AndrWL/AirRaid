@@ -27,7 +27,9 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             districts: viewModel.districts,
             cities: viewModel.cities,
             alertCoverage: viewModel.alertCoverage,
-            threats: viewModel.threats
+            threats: viewModel.threats,
+            selectedThreatID: viewModel.selectedThreatID,
+            onSelectThreat: viewModel.didSelectThreat
         )
         .ignoresSafeArea(edges: .top)
         .task { await viewModel.onAppear() }

@@ -11,7 +11,7 @@ import OSLog
 
 /// The view model that combines static region outlines with the live air situation.
 @Observable
-final class MapViewModel: BaseViewModel {
+final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
 
     // MARK: - Variables
 
@@ -23,7 +23,7 @@ final class MapViewModel: BaseViewModel {
     private(set) var threats: [Threat] = []
 
     @ObservationIgnored
-    private let router: MapRouterProtocol
+    private let router: Router
 
     @ObservationIgnored
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
@@ -41,7 +41,7 @@ final class MapViewModel: BaseViewModel {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     init(
-        router: MapRouterProtocol,
+        router: Router,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
         districtBoundaryRepository: DistrictBoundaryRepositoryProtocol,
         cityRepository: CityRepositoryProtocol,
@@ -75,6 +75,11 @@ final class MapViewModel: BaseViewModel {
 
 extension MapViewModel: MapViewModelProtocol {
 
+    var selectedThreatID: String? {
+        guard case .threatDetails(let id) = router.activeSheet else { return nil }
+        return id
+    }
+
     func onAppear() async {
         if boundaries.isEmpty {
             do {
@@ -97,6 +102,17 @@ extension MapViewModel: MapViewModelProtocol {
                 reportBundledDataFailure(error, resource: "regional centers")
             }
         }
+    }
+
+    func didSelectThreat(id: String?) {
+        guard let id else {
+            if selectedThreatID != nil {
+                router.dismissSheet()
+            }
+            return
+        }
+        guard id != selectedThreatID else { return }
+        router.presentSheet(.threatDetails(id: id))
     }
 }
 

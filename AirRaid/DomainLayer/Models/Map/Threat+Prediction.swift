@@ -35,6 +35,22 @@ nonisolated extension Threat {
         }
         return nil
     }
+
+    /// The estimated time left until the threat reaches its ``target``, or `nil` when it cannot be estimated:
+    /// no position or target, zero speed, or the forecast has run out (15 minutes after ``movedAt`` or at
+    /// ``expiresAt``) — past that the estimate would only be a guess about a lost track.
+    ///
+    /// Counts down from the moment the threat reached its ``position``, the same way ``predictedCoordinate(at:)``
+    /// moves it; `0` once the forecast says it has arrived.
+    func timeToTarget(at date: Date) -> TimeInterval? {
+        guard let position, let target, speedKmh > 0 else { return nil }
+
+        let elapsed = max(date.timeIntervalSince(movedAt), 0)
+        guard elapsed <= Constants.maxForecast, date < expiresAt else { return nil }
+
+        let totalTime = position.coordinate.distance(to: target.coordinate) / speedKmh * Constants.secondsPerHour
+        return max(totalTime - elapsed, 0)
+    }
 }
 
 // MARK: - GeoCoordinate
