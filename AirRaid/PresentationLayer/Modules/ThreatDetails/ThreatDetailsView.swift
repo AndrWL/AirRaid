@@ -231,7 +231,7 @@ private extension ThreatDetailsView {
         Button("Закрити", systemImage: "xmark", action: onClose)
             .labelStyle(.iconOnly)
             .font(.body.weight(.semibold))
-            .buttonStyle(.glass)
+            .closeButtonStyle()
             .buttonBorderShape(.circle)
             .padding()
     }
@@ -248,6 +248,21 @@ private extension ThreatDetailsView {
         switch level {
         case .yellow: return .yellow
         case .red: return .red
+        }
+    }
+}
+
+// MARK: - View
+
+private extension View {
+
+    /// Liquid Glass on iOS 26, a plain bordered circle before it.
+    @ViewBuilder
+    func closeButtonStyle() -> some View {
+        if #available(iOS 26, *) {
+            buttonStyle(.glass)
+        } else {
+            buttonStyle(.bordered)
         }
     }
 }
