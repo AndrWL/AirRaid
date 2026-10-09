@@ -35,6 +35,8 @@ final class StubWebSocketTask: @unchecked Sendable {
 
     let httpStatusCode: Int?
     let retryAfter: Duration?
+    let closeCode: Int?
+    let closeReason: String?
 
     // Unchecked Sendable: all mutable state is behind `LockIsolated`.
     private let state: LockIsolated<State>
@@ -42,10 +44,14 @@ final class StubWebSocketTask: @unchecked Sendable {
     init(
         pingResponses: [PingResponse] = [],
         httpStatusCode: Int? = 101,
-        retryAfter: Duration? = nil
+        retryAfter: Duration? = nil,
+        closeCode: Int? = nil,
+        closeReason: String? = nil
     ) {
         self.httpStatusCode = httpStatusCode
         self.retryAfter = retryAfter
+        self.closeCode = closeCode
+        self.closeReason = closeReason
         self.state = LockIsolated(State(pingResponses: pingResponses))
     }
 

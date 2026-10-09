@@ -5,6 +5,7 @@
 //  Created by ANDRII LEBEDIEV on 06.10.2026.
 //
 
+import CryptoKit
 import DependencyContainer
 import Foundation
 import WebSocketClient
@@ -41,6 +42,9 @@ extension DIServiceContainer: DIAssembling {
     func assemble(with appContainer: DIAppContaining) {
         registerUserAccessService()
         registerRealtimeVersionStore()
+        registerServerAddressProvider()
+        registerKeychainService()
+        registerAuthTokenProvider()
         registerRealtimeService()
     }
 }
@@ -79,27 +83,80 @@ private extension DIServiceContainer {
         }
     }
 
+    /// One instance, so every consumer sees the same address and concurrent attempts share one config fetch.
+    func registerServerAddressProvider() {
+        container.register(ServerAddressProviding.self, lifetime: .singleton) { _ in
+            guard let configURL = URL(string: AppEnvironment.serverConfigURLString),
+                  let keyData = Data(base64URLEncoded: AppEnvironment.serverConfigPublicKey),
+                  let publicKey = try? Curve25519.Signing.PublicKey(rawRepresentation: keyData) else {
+                fatalError("[DIServiceContainer] Invalid server config URL or public key in AppEnvironment")
+            }
+            return ServerConfigService(
+                remoteDataSource: ServerConfigRemoteDataSource(configURL: configURL),
+                publicKey: publicKey,
+                allowedHostSuffixes: AppEnvironment.allowedServerHostSuffixes
+            )
+        }
+    }
+
+    func registerKeychainService() {
+        container.register(KeychainServiceProtocol.self, lifetime: .singleton) { _ in
+            KeychainService()
+        }
+    }
+
+    /// One instance: it owns the single-flight token refresh that keeps App Attest counters in order.
+    func registerAuthTokenProvider() {
+        container.register(AuthTokenProviding.self, lifetime: .singleton) { resolver in
+            AuthService(
+                remoteDataSource: AuthRemoteDataSource(serverAddressProvider: resolver.resolve(ServerAddressProviding.self)),
+                appAttestClient: AppAttestClient(),
+                keychainService: resolver.resolve(KeychainServiceProtocol.self),
+                devKey: AppEnvironment.devKey
+            )
+        }
+    }
+
     func registerRealtimeService() {
         container.register(RealtimeServiceProtocol.self, lifetime: .singleton) { resolver in
             let versionStore = resolver.resolve(RealtimeVersionStore.self)
+            let serverAddressProvider = resolver.resolve(ServerAddressProviding.self)
+            let authTokenProvider = resolver.resolve(AuthTokenProviding.self)
             let client = WebSocketClient(
                 configuration: WebSocketClientConfiguration(
-                    // Rebuilt for every attempt: the API takes the key only as `?key=`, and `since` moves on.
+                    // Rebuilt for every attempt: the server may have moved, and `since` moves on.
                     urlProvider: {
                         try RealtimeEndpoint.makeWebSocketURL(
-                            serverURLString: AppEnvironment.apiServerURLString,
-                            apiKey: AppEnvironment.apiKey,
+                            serverURLString: try await serverAddressProvider.fetchServerURL().absoluteString,
                             since: versionStore.version
                         )
+                    },
+                    // Also per attempt, so a refreshed token is picked up on reconnect.
+                    headersProvider: {
+                        let token = try await authTokenProvider.fetchAccessToken()
+                        return AppInfoHeaders.make().merging([Constants.authorization: "Bearer \(token)"]) { _, new in new }
                     },
                     // Not WebSocket ping frames: `URLSessionWebSocketTask` holds the pong behind the unread snapshot
                     // the server sends on connect. Any frame from the server proves the connection is alive.
                     heartbeat: .message(.text(RealtimeEndpoint.pingMessage)),
                     pingInterval: RealtimeEndpoint.pingInterval,
-                    pongTimeout: RealtimeEndpoint.pongTimeout
+                    pongTimeout: RealtimeEndpoint.pongTimeout,
+                    nonRetryableStatusCodes: [RealtimeEndpoint.upgradeRequiredStatusCode],
+                    // Awaited before the retry, so the next attempt's headers carry new credentials.
+                    failureHandler: { failure in
+                        if let rejection = RealtimeAuthRejectionMapper.rejection(for: failure) {
+                            await authTokenProvider.handleRejection(rejection)
+                        }
+                    }
                 )
             )
             return RealtimeService(client: client)
         }
     }
+}
+
+// MARK: - Constants
+
+nonisolated private enum Constants {
+    static let authorization = "Authorization"
 }

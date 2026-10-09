@@ -17,8 +17,8 @@ import WebSocketClient
 /// of subscribers. Disconnects when the app goes to the background — iOS suspends sockets there anyway —
 /// and reconnects when it returns, as long as the service is started.
 ///
-/// A rejected key (`401`/`403`) stops the client; the service then reports ``RealtimeConnectionState/unauthorized``
-/// instead of a plain `disconnected` until the next ``start()``.
+/// An app version the server refuses (`426`) stops the client; the service then reports
+/// ``RealtimeConnectionState/upgradeRequired`` instead of a plain `disconnected` until the next ``start()``.
 final class RealtimeService {
 
     // MARK: - Variables
@@ -153,12 +153,12 @@ private extension RealtimeService {
         switch event {
         case .stateChanged(let state):
             logger.info("State: \(String(describing: state), privacy: .public)")
-            // A new attempt (e.g. on returning to the foreground) gets a fresh verdict on the key.
+            // A new attempt (e.g. on returning to the foreground) gets a fresh verdict.
             if state == .connecting {
                 isRejected = false
             }
             let mappedState = isRejected && state == .disconnected
-                ? .unauthorized
+                ? .upgradeRequired
                 : RealtimeConnectionStateMapper.map(state)
             if mappedState != connectionStateSubject.value {
                 connectionStateSubject.send(mappedState)
@@ -171,7 +171,7 @@ private extension RealtimeService {
             logger.debug("⬇︎ \(Self.preview(of: data), privacy: .public)")
             messageSubject.send(data)
         case .failure(let error):
-            if case .handshakeFailed(let statusCode) = error, Constants.rejectedKeyStatusCodes.contains(statusCode) {
+            if case .handshakeFailed(let statusCode) = error, Constants.rejectedVersionStatusCodes.contains(statusCode) {
                 isRejected = true
             }
             logger.error("WebSocket failure: \(String(describing: error), privacy: .public)")
@@ -184,8 +184,8 @@ private extension RealtimeService {
 private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Realtime"
-    /// Must match the client's `nonRetryableStatusCodes`, so `unauthorized` is reported only when the client stopped.
-    static let rejectedKeyStatusCodes: Set<Int> = [401, 403]
+    /// Must match the client's `nonRetryableStatusCodes`, so `upgradeRequired` is reported only when the client stopped.
+    static let rejectedVersionStatusCodes: Set<Int> = [RealtimeEndpoint.upgradeRequiredStatusCode]
     static let maxLoggedPayloadLength = 1_000
     static let previewsEnvironmentKey = "XCODE_RUNNING_FOR_PREVIEWS"
 }

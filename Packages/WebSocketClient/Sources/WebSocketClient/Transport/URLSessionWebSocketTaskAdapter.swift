@@ -40,6 +40,14 @@ extension URLSessionWebSocketTaskAdapter: WebSocketTaskProtocol {
         return .seconds(seconds)
     }
 
+    var closeCode: Int? {
+        task.closeCode == .invalid ? nil : task.closeCode.rawValue
+    }
+
+    var closeReason: String? {
+        task.closeReason.flatMap { String(bytes: $0, encoding: .utf8) }
+    }
+
     func resume() {
         task.resume()
     }
