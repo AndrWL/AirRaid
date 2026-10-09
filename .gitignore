@@ -32,3 +32,6 @@ fastlane/test_output
 
 # Local API address and key
 AirRaid/App/Configuration/AppSecrets.swift
+
+# Per-developer signing (template: Signing.local.xcconfig.example)
+Config/Signing.local.xcconfig
