@@ -47,10 +47,25 @@ extension StubSleeper: Sleeping {
 
         switch script(duration, previousCalls) {
         case .immediate:
-            await Task.yield()
             try Task.checkCancellation()
         case .suspend:
-            try await Task.sleep(for: .seconds(3_600))
+            try await Self.waitForCancellation()
         }
+    }
+}
+
+// MARK: - Private methods
+
+private extension StubSleeper {
+
+    /// Suspends until the task is cancelled — no timer involved, so the call can never "fire" on its own.
+    static func waitForCancellation() async throws {
+        let (stream, continuation) = AsyncStream<Never>.makeStream()
+        await withTaskCancellationHandler {
+            for await _ in stream {}
+        } onCancel: {
+            continuation.finish()
+        }
+        throw CancellationError()
     }
 }
