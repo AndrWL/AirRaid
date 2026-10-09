@@ -11,6 +11,8 @@ message schemas, or app logic.
 - **Network awareness** — `NWPathMonitor`: pauses in `waitingForNetwork`, reconnects immediately when the path returns
 - **Auth headers** — `headersProvider` is called before every attempt, so refreshed tokens are picked up
 - **Handshake errors** — non-101 upgrade responses surface as `.handshakeFailed(statusCode:)` (e.g. 401)
+- **Close codes** — a close frame after the upgrade surfaces as `.closedByServer(code:reason:)` (e.g. `4401`) and is retried;
+  `failureHandler` is awaited before the retry, so credentials the server rejected can be dropped first
 
 ## Usage
 
