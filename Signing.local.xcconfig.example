@@ -1,0 +1,12 @@
+//
+//  Signing.local.xcconfig
+//  AirRaid
+//
+//  Copy to Config/Signing.local.xcconfig (git-ignored) to sign with your own team without touching the project.
+//
+
+// Your team ID: Xcode → Settings → Accounts, or developer.apple.com → Membership.
+DEVELOPMENT_TEAM =
+
+// Uncomment for a free Personal Team, which cannot sign the App Attest capability.
+// CODE_SIGN_ENTITLEMENTS =

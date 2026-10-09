@@ -14,6 +14,7 @@
 
 /* Begin PBXFileReference section */
 		7F201B443074FAB600A5F804 /* AirRaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AirRaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F201D013074FAB600A5F804 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -42,8 +43,17 @@
 			isa = PBXGroup;
 			children = (
 				7F201B463074FAB600A5F804 /* AirRaid */,
+				7F201D023074FAB600A5F804 /* Config */,
 				7F201B453074FAB600A5F804 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		7F201D023074FAB600A5F804 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7F201D013074FAB600A5F804 /* Signing.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		7F201B453074FAB600A5F804 /* Products */ = {
@@ -177,7 +187,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = W75R6SF98Z;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -241,7 +250,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = W75R6SF98Z;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -265,13 +273,11 @@
 		};
 		7F201B503074FAB800A5F804 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7F201D013074FAB600A5F804 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = AirRaid/AirRaid.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = W75R6SF98Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "AirRaid Dev";
@@ -299,13 +305,11 @@
 		};
 		7F201B513074FAB800A5F804 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7F201D013074FAB600A5F804 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = AirRaid/AirRaid.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = W75R6SF98Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

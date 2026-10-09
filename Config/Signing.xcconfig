@@ -1,0 +1,19 @@
+//
+//  Signing.xcconfig
+//  AirRaid
+//
+//  Code signing for the AirRaid target. The base configuration of both Debug and Release.
+//
+//  Per-developer overrides go to `Signing.local.xcconfig` next to this file: git-ignored, optional
+//  (template: `Signing.local.xcconfig.example` in the repo root). Keep these keys out of the
+//  project file, or the target's own settings override this file.
+//
+
+DEVELOPMENT_TEAM = W75R6SF98Z
+CODE_SIGN_STYLE = Automatic
+
+// App Attest. A free Personal Team cannot sign it: clear it in Signing.local.xcconfig, and the app falls back
+// to an unattested token on the device, as on the simulator.
+CODE_SIGN_ENTITLEMENTS = AirRaid/AirRaid.entitlements
+
+#include? "Signing.local.xcconfig"
