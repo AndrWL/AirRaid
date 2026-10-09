@@ -7,10 +7,10 @@
 
 import Foundation
 
-/// Builds the WebSocket address of the «Небо» API: `wss://<server>/v1/ws?key=<key>[&since=<version>]`.
+/// Builds the WebSocket address of the «Небо» API: `wss://<server>/v1/ws[?since=<version>]`.
 ///
-/// The API takes the key only as a query item on WebSocket upgrades, and `since` changes between attempts,
-/// so the address is rebuilt before every connection attempt.
+/// The server address and `since` change between attempts, so the address is rebuilt before every connection
+/// attempt. Credentials go in the `Authorization` header, not the URL, which ends up in tunnel logs.
 nonisolated enum RealtimeEndpoint {
 
     /// The application-level heartbeat. The server answers `{"type":"pong","version":N}`; per the API guide the
@@ -21,17 +21,23 @@ nonisolated enum RealtimeEndpoint {
 
     static let pongTimeout: Duration = .seconds(10)
 
+    /// Close code for an expired or invalid token: refresh it and reconnect with `since`.
+    static let tokenRejectedCloseCode = 4401
+
+    /// Close code for a revoked installation: attest again; a refreshed token would be refused too.
+    static let installationRevokedCloseCode = 4403
+
+    /// Upgrade status for an app below the server's minimum version; reconnecting cannot help.
+    static let upgradeRequiredStatusCode = 426
+
     /// - Parameters:
     ///   - serverURLString: The server's base address, `https://` or `wss://`; any path is replaced.
-    ///   - apiKey: The app key.
     ///   - since: The last applied version, or `nil` to get a full snapshot.
-    /// - Throws: ``RealtimeEndpointError`` when the address or the key is missing.
+    /// - Throws: ``RealtimeEndpointError`` when the address is not usable.
     static func makeWebSocketURL(
         serverURLString: String,
-        apiKey: String,
         since: Int?
     ) throws -> URL {
-        guard !apiKey.isEmpty else { throw RealtimeEndpointError.missingAPIKey }
         guard var components = URLComponents(string: serverURLString), components.host != nil else {
             throw RealtimeEndpointError.invalidServerURL(serverURLString)
         }
@@ -44,12 +50,7 @@ nonisolated enum RealtimeEndpoint {
             components.scheme = Constants.webSocketScheme
         }
         components.path = Constants.path
-        // `URLQueryItem` leaves `+` as is, and servers read it as a space; keys are often base64.
-        guard let encodedKey = apiKey.addingPercentEncoding(withAllowedCharacters: Constants.queryValueAllowed) else {
-            throw RealtimeEndpointError.missingAPIKey
-        }
-        components.percentEncodedQueryItems = [URLQueryItem(name: Constants.keyQueryItem, value: encodedKey)]
-            + (since.map { [URLQueryItem(name: Constants.sinceQueryItem, value: String($0))] } ?? [])
+        components.queryItems = since.map { [URLQueryItem(name: Constants.sinceQueryItem, value: String($0))] }
 
         guard let url = components.url else { throw RealtimeEndpointError.invalidServerURL(serverURLString) }
         return url
@@ -63,7 +64,5 @@ nonisolated private enum Constants {
     static let webSocketScheme = "wss"
     static let insecureScheme = "http"
     static let insecureWebSocketScheme = "ws"
-    static let keyQueryItem = "key"
     static let sinceQueryItem = "since"
-    static let queryValueAllowed = CharacterSet.urlQueryAllowed.subtracting(CharacterSet(charactersIn: "+&=;"))
 }
