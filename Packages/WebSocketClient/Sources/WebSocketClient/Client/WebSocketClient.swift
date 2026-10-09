@@ -25,7 +25,9 @@ import Foundation
 /// message after which any incoming frame counts as the answer; the first frame then also confirms the handshake.
 ///
 /// A rejected upgrade whose status is in ``WebSocketClientConfiguration/nonRetryableStatusCodes``
-/// (a bad key) ends the loop in `disconnected`. A `Retry-After` on the upgrade response (rate limiting)
+/// (a bad key) ends the loop in `disconnected`. A close frame after a successful upgrade is reported as
+/// ``WebSocketClientError/closedByServer(code:reason:)`` and retried; ``WebSocketClientConfiguration/failureHandler``
+/// runs before the retry, so the next attempt can carry new credentials. A `Retry-After` on the upgrade response (rate limiting)
 /// lengthens the next backoff delay to at least that long. A ``WebSocketNonRetryableError`` from the URL or headers
 /// provider (bad configuration) ends the loop too.
 ///
@@ -194,6 +196,8 @@ private extension WebSocketClient {
                 guard isCurrent(loopGeneration) else { return }
                 let failure = mapError(error)
                 emit(.failure(failure))
+                await configuration.failureHandler(failure)
+                guard isCurrent(loopGeneration) else { return }
                 if error is WebSocketNonRetryableError || isNonRetryable(failure) {
                     finishConnectionLoop()
                     return
@@ -434,6 +438,9 @@ private extension WebSocketClient {
         }
         if let statusCode = activeTask?.httpStatusCode, statusCode != Constants.switchingProtocolsStatusCode {
             return .handshakeFailed(statusCode: statusCode)
+        }
+        if let closeCode = activeTask?.closeCode {
+            return .closedByServer(code: closeCode, reason: activeTask?.closeReason)
         }
         return .transportFailure(error as NSError)
     }

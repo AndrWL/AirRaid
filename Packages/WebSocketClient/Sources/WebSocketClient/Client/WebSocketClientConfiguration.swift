@@ -48,6 +48,12 @@ public struct WebSocketClientConfiguration: Sendable {
     /// call `connect()` again once the credentials change.
     public let nonRetryableStatusCodes: Set<Int>
 
+    /// Called with every failure before the client decides whether and when to reconnect.
+    ///
+    /// Awaited, so it can act on the failure before the next attempt calls ``headersProvider`` — e.g. drop a token
+    /// the server rejected with a close code. Events are delivered asynchronously and cannot guarantee that order.
+    public let failureHandler: @Sendable (WebSocketClientError) async -> Void
+
     /// - Parameter urlProvider: Called before every attempt; see ``urlProvider``.
     public init(
         urlProvider: @escaping @Sendable () async throws -> URL,
@@ -57,7 +63,8 @@ public struct WebSocketClientConfiguration: Sendable {
         pongTimeout: Duration = .seconds(10),
         requestTimeout: TimeInterval = 15,
         reconnectPolicy: ReconnectPolicy = .default,
-        nonRetryableStatusCodes: Set<Int> = [401, 403]
+        nonRetryableStatusCodes: Set<Int> = [401, 403],
+        failureHandler: @escaping @Sendable (WebSocketClientError) async -> Void = { _ in }
     ) {
         self.urlProvider = urlProvider
         self.headersProvider = headersProvider
@@ -67,6 +74,7 @@ public struct WebSocketClientConfiguration: Sendable {
         self.requestTimeout = requestTimeout
         self.reconnectPolicy = reconnectPolicy
         self.nonRetryableStatusCodes = nonRetryableStatusCodes
+        self.failureHandler = failureHandler
     }
 
     /// - Parameter url: A fixed endpoint, used for every attempt.
@@ -78,7 +86,8 @@ public struct WebSocketClientConfiguration: Sendable {
         pongTimeout: Duration = .seconds(10),
         requestTimeout: TimeInterval = 15,
         reconnectPolicy: ReconnectPolicy = .default,
-        nonRetryableStatusCodes: Set<Int> = [401, 403]
+        nonRetryableStatusCodes: Set<Int> = [401, 403],
+        failureHandler: @escaping @Sendable (WebSocketClientError) async -> Void = { _ in }
     ) {
         self.init(
             urlProvider: { url },
@@ -88,7 +97,8 @@ public struct WebSocketClientConfiguration: Sendable {
             pongTimeout: pongTimeout,
             requestTimeout: requestTimeout,
             reconnectPolicy: reconnectPolicy,
-            nonRetryableStatusCodes: nonRetryableStatusCodes
+            nonRetryableStatusCodes: nonRetryableStatusCodes,
+            failureHandler: failureHandler
         )
     }
 }

@@ -24,11 +24,17 @@ nonisolated enum AppEnvironment {
     /// Hosts the published address may point to. Add the permanent domain here once there is one.
     static let allowedServerHostSuffixes = [".trycloudflare.com"]
 
-    /// The app key for the «Небо» API (`APP_KEYS` on the server), from `AppSecrets.swift`.
+    /// The developer key for `POST /v1/dev/token` (`DEV_KEY` on the server), from `AppSecrets.swift`.
     ///
-    /// - Warning: A key compiled into the app can be extracted. Move it to Keychain behind a settings screen
-    ///   (or a short-lived token) before a public release.
-    static let apiKey = AppSecrets.apiKey
+    /// Simulator builds only — App Attest does not work there — so device builds, Release included, can never
+    /// contain it. `nil` when empty: the simulator then falls back to a limited unattested token.
+    static var devKey: String? {
+        #if targetEnvironment(simulator)
+        AppSecrets.devKey.isEmpty ? nil : AppSecrets.devKey
+        #else
+        nil
+        #endif
+    }
 
     /// The MapLibre style for the base map. OpenFreeMap: free, no API key.
     ///

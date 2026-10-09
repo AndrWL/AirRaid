@@ -218,6 +218,49 @@ struct WebSocketClientTests {
     }
 
     @Test
+    func connect_whenServerClosesWithCloseCode_reportsCodeAndReconnects() async {
+        let closedTask = StubWebSocketTask(closeCode: Constants.tokenExpiredCloseCode, closeReason: Constants.tokenExpired)
+        let factory = StubWebSocketTaskFactory(tasks: [closedTask])
+        let sut = makeSUT(factory: factory)
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        _ = await collect(&events, untilState: .connected)
+        closedTask.dropConnection()
+        let received = await collect(&events, untilState: .connected)
+
+        #expect(received == [
+            .failure(.closedByServer(code: Constants.tokenExpiredCloseCode, reason: Constants.tokenExpired)),
+            .stateChanged(.reconnecting(attempt: 1, delay: .seconds(1))),
+            .stateChanged(.connecting),
+            .stateChanged(.connected)
+        ])
+    }
+
+    @Test
+    func connect_whenFailureHandlerSet_runsItBeforeNextAttemptReadsHeaders() async {
+        let rejectedToken = LockIsolated(false)
+        let rejectedTask = StubWebSocketTask(pingResponses: [.failure(TestError.connectionReset)], httpStatusCode: 500)
+        let factory = StubWebSocketTaskFactory(tasks: [rejectedTask])
+        let sut = makeSUT(
+            factory: factory,
+            headersProvider: {
+                [Constants.authorizationHeader: rejectedToken.value ? Constants.refreshedToken : Constants.bearerToken]
+            },
+            failureHandler: { _ in rejectedToken.withValue { $0 = true } }
+        )
+        var events = sut.events.makeAsyncIterator()
+
+        await sut.connect()
+        _ = await collect(&events, untilState: .connected)
+
+        #expect(factory.requests.map { $0.value(forHTTPHeaderField: Constants.authorizationHeader) } == [
+            Constants.bearerToken,
+            Constants.refreshedToken
+        ])
+    }
+
+    @Test
     func connect_whenRateLimitedWithRetryAfter_waitsAtLeastThatLong() async {
         let limitedTask = StubWebSocketTask(
             pingResponses: [.failure(TestError.connectionReset)],
@@ -470,7 +513,8 @@ private extension WebSocketClientTests {
         headersProvider: @escaping @Sendable () async throws -> [String: String] = { [:] },
         heartbeat: WebSocketHeartbeat = .controlFrame,
         pingInterval: Duration? = nil,
-        reconnectPolicy: ReconnectPolicy = ReconnectPolicy(jitter: 0)
+        reconnectPolicy: ReconnectPolicy = ReconnectPolicy(jitter: 0),
+        failureHandler: @escaping @Sendable (WebSocketClientError) async -> Void = { _ in }
     ) -> WebSocketClient {
         WebSocketClient(
             configuration: WebSocketClientConfiguration(
@@ -479,7 +523,8 @@ private extension WebSocketClientTests {
                 heartbeat: heartbeat,
                 pingInterval: pingInterval,
                 pongTimeout: Constants.pongTimeout,
-                reconnectPolicy: reconnectPolicy
+                reconnectPolicy: reconnectPolicy,
+                failureHandler: failureHandler
             ),
             taskFactory: factory,
             pathMonitor: pathMonitor,
@@ -526,6 +571,9 @@ private enum Constants {
     static let pingInterval = Duration.seconds(25)
     static let authorizationHeader = "Authorization"
     static let bearerToken = "Bearer test-token"
+    static let refreshedToken = "Bearer refreshed-token"
+    static let tokenExpiredCloseCode = 4401
+    static let tokenExpired = "token_expired"
     static let payload = "payload"
     static let pingMessage = #"{"type":"ping"}"#
     static let snapshot = #"{"type":"snapshot"}"#

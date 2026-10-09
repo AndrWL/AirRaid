@@ -20,6 +20,13 @@ public protocol WebSocketTaskProtocol: Sendable {
     /// The upgrade response's `Retry-After` (e.g. with 429 or 503), or `nil` when absent.
     var retryAfter: Duration? { get }
 
+    /// The close code from the server's close frame (e.g. an application code like `4401`), or `nil` when
+    /// the connection has not been closed with one.
+    var closeCode: Int? { get }
+
+    /// The close frame's reason as UTF-8 text, or `nil` when absent.
+    var closeReason: String? { get }
+
     /// Starts the handshake.
     func resume()
 
