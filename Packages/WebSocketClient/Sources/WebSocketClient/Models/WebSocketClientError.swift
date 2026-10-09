@@ -16,6 +16,10 @@ public enum WebSocketClientError: Error, Equatable, Sendable {
     /// The server rejected the upgrade request with a non-101 HTTP status (e.g. 401 for a bad token).
     case handshakeFailed(statusCode: Int)
 
+    /// The server accepted the upgrade, then closed the connection with this close frame — for example an
+    /// application code like `4401` for an expired token.
+    case closedByServer(code: Int, reason: String?)
+
     /// No pong arrived within ``WebSocketClientConfiguration/pongTimeout`` — the connection is considered dead.
     case pongTimeout
 

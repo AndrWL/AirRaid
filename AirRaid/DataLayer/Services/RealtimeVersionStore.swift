@@ -5,7 +5,7 @@
 //  Created by ANDRII LEBEDIEV on 07.10.2026.
 //
 
-import Synchronization
+import os
 
 /// The last applied server `version` — the cursor for resuming the event stream after a drop.
 ///
@@ -16,7 +16,7 @@ nonisolated final class RealtimeVersionStore: Sendable {
 
     // MARK: - Variables
 
-    private let storage = Mutex<Int?>(nil)
+    private let storage = OSAllocatedUnfairLock<Int?>(initialState: nil)
 
     /// `nil` until the first snapshot, and after a server restart is detected.
     var version: Int? {

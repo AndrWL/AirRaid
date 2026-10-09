@@ -12,9 +12,6 @@ import WebSocketClient
 /// Non-retryable: reconnecting cannot fix it, so the client stops instead of retrying every 30 s.
 nonisolated enum RealtimeEndpointError: WebSocketNonRetryableError, Equatable {
 
-    /// `AppSecrets.serverURLString` is empty or not a URL.
+    /// The server address is not a URL.
     case invalidServerURL(String)
-
-    /// `AppSecrets.apiKey` is empty.
-    case missingAPIKey
 }
