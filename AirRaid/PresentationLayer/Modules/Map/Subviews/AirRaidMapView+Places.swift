@@ -26,7 +26,7 @@ extension AirRaidMapView.Coordinator {
         )
         radiusFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.placeRadiusFillOpacity)
 
-        // The user's own circle is solid, the home's dashed, so the two read apart where they overlap.
+        // One line per place, each in its own colour, so the two read apart where they overlap.
         let locationOutline = makeRadiusOutline(
             identifier: MapLayerStyle.placeRadiusOutlineLayerID,
             source: source,
@@ -39,7 +39,6 @@ extension AirRaidMapView.Coordinator {
             kind: MapLayerStyle.homeKind,
             color: MapLayerStyle.homeColor
         )
-        homeOutline.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.placeRadiusDashPattern)
 
         let homePin = MLNSymbolStyleLayer(identifier: MapLayerStyle.homePinLayerID, source: source)
         homePin.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.homePart)

@@ -106,8 +106,6 @@ enum MapLayerStyle {
     static let placeRadiusFillOpacity: Double = 0.1
     static let placeRadiusOutlineOpacity: Double = 1
     static let placeRadiusOutlineWidth: Double = 1.5
-    /// In line widths: long dashes, so the home's circle still reads as a circle and not as dots.
-    static let placeRadiusDashPattern: [Double] = [4, 2]
 
     /// A white house on an orange disc with a white rim, the way the blue dot marks the user.
     ///
