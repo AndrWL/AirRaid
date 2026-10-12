@@ -55,6 +55,14 @@ enum MapConnectionNotice: Equatable {
         }
     }
 
+    /// Whether the app is still trying, so the banner glyph pulses.
+    var isInProgress: Bool {
+        if case .connecting = self {
+            return true
+        }
+        return false
+    }
+
     var systemImage: String {
         switch self {
         case .connecting: return "arrow.triangle.2.circlepath"

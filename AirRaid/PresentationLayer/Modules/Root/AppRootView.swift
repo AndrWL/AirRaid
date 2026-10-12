@@ -62,6 +62,8 @@ struct AppRootView<Factory: RootFactory>: View {
             }
         }
         .animation(.easeInOut, value: viewModel.currentFlow)
+        // The app typeface for every Text that does not pick its own style.
+        .font(.app(.body))
     }
 }
 

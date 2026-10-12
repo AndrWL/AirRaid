@@ -19,6 +19,12 @@ must show the credits below.
 | Shahed silhouette | `AirRaid/Assets.xcassets/Threats/threat-shahed.imageset` | Traced from [Shahed-136-350-250draw.svg](https://commons.wikimedia.org/wiki/File:Shahed-136-350-250draw.svg) by Alexpl; reduced to a simplified silhouette | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | Other threat silhouettes | `AirRaid/Assets.xcassets/Threats/` | Original artwork for AirRaid | — |
 
+## Fonts
+
+| What | Where | Source | License |
+|---|---|---|---|
+| Manrope (variable, weights 200–800) | `AirRaid/Resources/Fonts/Manrope-Variable.ttf` | [google/fonts — ofl/manrope](https://github.com/google/fonts/tree/main/ofl/manrope), Copyright 2018 The Manrope Project Authors | [SIL OFL 1.1](https://openfontlicense.org) — license text shipped as `AirRaid/Resources/Fonts/Manrope-OFL.txt` |
+
 ## Libraries
 
 | Library | License |

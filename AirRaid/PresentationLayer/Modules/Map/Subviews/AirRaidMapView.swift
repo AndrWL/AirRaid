@@ -257,12 +257,12 @@ private extension AirRaidMapView.Coordinator {
 
         // Raion borders only inside alerted raions, so the alerted part reads as such without cluttering the map.
         let districtOutline = MLNLineStyleLayer(identifier: Constants.districtOutlineLayerID, source: districtSource)
-        districtOutline.lineColor = NSExpression(forConstantValue: UIColor.white)
+        districtOutline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
         districtOutline.lineOpacity = NSExpression(forConstantValue: Constants.districtOutlineOpacity)
         districtOutline.lineWidth = NSExpression(forConstantValue: Constants.districtOutlineWidth)
 
         let outline = MLNLineStyleLayer(identifier: Constants.outlineLayerID, source: regionSource)
-        outline.lineColor = NSExpression(forConstantValue: UIColor.white)
+        outline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
         outline.lineOpacity = NSExpression(forConstantValue: Constants.outlineOpacity)
         outline.lineWidth = NSExpression(forConstantValue: Constants.outlineWidth)
 
@@ -280,8 +280,8 @@ private extension AirRaidMapView.Coordinator {
         cityLabels.text = NSExpression(forKeyPath: Constants.nameKey)
         cityLabels.textFontNames = NSExpression(forConstantValue: Constants.cityFontNames)
         cityLabels.textFontSize = NSExpression(forConstantValue: Constants.cityFontSize)
-        cityLabels.textColor = NSExpression(forConstantValue: UIColor.white)
-        cityLabels.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(Constants.cityHaloAlpha))
+        cityLabels.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
+        cityLabels.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
         cityLabels.textHaloWidth = NSExpression(forConstantValue: Constants.cityHaloWidth)
         style.addLayer(cityLabels)
     }
@@ -325,8 +325,8 @@ private extension AirRaidMapView.Coordinator {
         })
         threatPins.textFontNames = NSExpression(forConstantValue: Constants.cityFontNames)
         threatPins.textFontSize = NSExpression(forConstantValue: Constants.threatCaptionFontSize)
-        threatPins.textColor = NSExpression(forConstantValue: UIColor.white)
-        threatPins.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(Constants.cityHaloAlpha))
+        threatPins.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
+        threatPins.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
         threatPins.textHaloWidth = NSExpression(forConstantValue: Constants.cityHaloWidth)
         threatPins.textAnchor = NSExpression(forConstantValue: Constants.topAnchor)
         threatPins.textOffset = NSExpression(
@@ -591,10 +591,10 @@ private enum Constants {
     static let mapAlignment = "map"
     static let topAnchor = "top"
 
-    static let territoryColor = UIColor(red: 0.29, green: 0.31, blue: 0.20, alpha: 1)
+    static let territoryColor = UIColor.mapTerritory
     static let territoryFillOpacity: Double = 0.55
-    static let redAlertColor = UIColor(red: 0.72, green: 0.34, blue: 0.28, alpha: 1)
-    static let yellowAlertColor = UIColor(red: 0.80, green: 0.66, blue: 0.24, alpha: 1)
+    static let redAlertColor = UIColor.mapAlertRed
+    static let yellowAlertColor = UIColor.mapAlertYellow
     static let wholeAlertFillOpacity: Double = 0.7
     static let partialAlertFillOpacity: Double = 0.35
     static let outlineOpacity: Double = 0.35
@@ -611,11 +611,11 @@ private enum Constants {
     static let outsideAlertOpacity: Double = 0.4
     static let captionLabelFontNames = ["Noto Sans Regular"]
     static let captionLabelScale: Double = 0.8
-    static let captionLabelColor = UIColor.white.withAlphaComponent(0.65)
+    static let captionLabelColor = UIColor.mapCaption
     /// Below the pin, in ems of the caption font; the selected pin is drawn larger, so its caption sits lower.
     static let threatCaptionOffset = CGVector(dx: 0, dy: 1.3)
     static let selectedThreatCaptionOffset = CGVector(dx: 0, dy: 1.8)
-    static let trackColor = UIColor.white
+    static let trackColor = UIColor.mapTrack
     static let trailOpacity: Double = 0.7
     static let forecastOpacity: Double = 0.55
     static let trackWidth: Double = 2
@@ -624,7 +624,6 @@ private enum Constants {
 
     /// Half the side of the square a tap searches for pins: about a fingertip.
     static let tapRadius: CGFloat = 22
-    static let cityHaloAlpha: CGFloat = 0.8
     static let cityHaloWidth: Double = 1.2
 }
 
