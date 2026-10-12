@@ -122,6 +122,16 @@ private extension ThreatDetailsView {
                     estimated(timeToTargetText)
                 }
             }
+            if let distanceText = content.distanceText {
+                LabeledContent("Від вас") {
+                    estimated(distanceText)
+                }
+            }
+            if let arrivalText = content.arrivalText {
+                LabeledContent("Може бути у вас") {
+                    estimated(arrivalText)
+                }
+            }
             LabeledContent("Область", value: content.regionName)
             if let locationNote = content.locationNote {
                 InlineNote(locationNote, systemImage: "exclamationmark.triangle", tone: .warning)
@@ -241,7 +251,8 @@ private enum Constants {
             ThreatDetailsView(
                 viewModel: ThreatDetailsViewModel(
                     threatID: "shahed-1",
-                    airSituationRepository: DemoAirSituationRepository()
+                    airSituationRepository: DemoAirSituationRepository(),
+                    userLocationService: UserLocationService()
                 ),
                 onClose: {}
             )

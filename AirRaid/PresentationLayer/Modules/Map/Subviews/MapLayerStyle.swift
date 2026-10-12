@@ -19,6 +19,8 @@ enum MapLayerStyle {
     static let focusEdgePadding = UIEdgeInsets(top: 150, left: 24, bottom: 120, right: 24)
     /// How far past the focused region's box the camera centre may be panned, as a share of the box.
     static let focusPanMargin: Double = 0.25
+    /// About a raion across on a phone: close enough to see what is around the user.
+    static let userZoomLevel: Double = 8.5
 
     static let regionSourceID = "regions"
     static let districtSourceID = "districts"

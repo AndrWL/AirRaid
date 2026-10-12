@@ -40,6 +40,15 @@ struct AirRaidMapView: UIViewRepresentable {
     /// Changes whenever the camera should fit the focused region (or the country) again.
     let recenterRequest: Int
 
+    /// Draws the user's blue dot; only once the user has allowed location, or the map would ask for it on its own.
+    let showsUserLocation: Bool
+
+    /// Where the camera flies on a ``locateRequest``.
+    let userLocation: GeoCoordinate?
+
+    /// Changes whenever the camera should fly to the user.
+    let locateRequest: Int
+
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
 
@@ -110,6 +119,7 @@ extension AirRaidMapView {
         private var favoriteRegionIDs: [String] = []
         private var focusedRegionID: String?
         private var recenterRequest = 0
+        private var locateRequest = 0
 
         weak var mapView: MLNMapView?
 
@@ -139,6 +149,7 @@ extension AirRaidMapView {
             let favoritesChanged = view.favoriteRegionIDs != favoriteRegionIDs
             let focusChanged = view.focusedRegionID != focusedRegionID
             let recenterRequested = view.recenterRequest != recenterRequest
+            let locateRequested = view.locateRequest != locateRequest
 
             boundaries = view.boundaries
             districts = view.districts
@@ -149,6 +160,8 @@ extension AirRaidMapView {
             favoriteRegionIDs = view.favoriteRegionIDs
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
+            locateRequest = view.locateRequest
+            updateUserLocation(from: view, locateRequested: locateRequested)
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
@@ -171,13 +184,7 @@ extension AirRaidMapView {
             if favoritesChanged {
                 applyFavoriteRegions()
             }
-            if focusChanged {
-                applyFocus()
-            }
-            // The region's outline may arrive after the focus did.
-            if focusChanged || recenterRequested || boundariesChanged && focusedRegionID != nil {
-                fitCamera(animated: true)
-            }
+            updateFocus(focusChanged: focusChanged, recenterRequested: recenterRequested, boundariesChanged: boundariesChanged)
             // An area-only threat is placed by the alerts, so its pin moves when they change.
             if threatsChanged || selectionChanged || alertsChanged || districtsChanged || focusChanged {
                 applyThreats()
@@ -185,29 +192,6 @@ extension AirRaidMapView {
             }
         }
 
-        /// Selects the pin nearest to the tap, else the region under it, or clears the selection when the tap hits
-        /// neither — outside Ukraine.
-        @objc
-        func handleTap(_ recognizer: UITapGestureRecognizer) {
-            guard recognizer.state == .ended, let mapView = recognizer.view as? MLNMapView else { return }
-            let point = recognizer.location(in: mapView)
-            let hitArea = CGRect(
-                x: point.x - MapLayerStyle.tapRadius,
-                y: point.y - MapLayerStyle.tapRadius,
-                width: MapLayerStyle.tapRadius * 2,
-                height: MapLayerStyle.tapRadius * 2
-            )
-            let nearest = mapView.visibleFeatures(in: hitArea, styleLayerIdentifiers: [MapLayerStyle.threatLayerID])
-                .min { lhs, rhs in
-                    Self.distance(from: point, to: lhs, in: mapView) < Self.distance(from: point, to: rhs, in: mapView)
-                }
-            if let threatID = nearest?.identifier as? String {
-                onSelect(.threat(id: threatID))
-                return
-            }
-            let region = mapView.visibleFeatures(at: point, styleLayerIdentifiers: [MapLayerStyle.territoryFillLayerID]).first
-            onSelect((region?.attributes[MapLayerStyle.regionIDKey] as? String).map { .region(id: $0) })
-        }
     }
 }
 
@@ -238,19 +222,6 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
     ) -> Bool {
         guard let box = focusedRegion?.boundingBox else { return true }
         return box.contains(GeoCoordinate(newCamera.centerCoordinate), margin: MapLayerStyle.focusPanMargin)
-    }
-}
-
-// MARK: - UIGestureRecognizerDelegate
-
-extension AirRaidMapView.Coordinator: UIGestureRecognizerDelegate {
-
-    /// The map has its own single tap (for annotations) that would otherwise swallow ours.
-    func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-    ) -> Bool {
-        true
     }
 }
 
@@ -583,6 +554,44 @@ private extension AirRaidMapView.Coordinator {
         }
     }
 
+    /// Dims for a new focus and fits the camera to it, or again when asked.
+    func updateFocus(
+        focusChanged: Bool,
+        recenterRequested: Bool,
+        boundariesChanged: Bool
+    ) {
+        if focusChanged {
+            applyFocus()
+        }
+        // The region's outline may arrive after the focus did.
+        if focusChanged || recenterRequested || boundariesChanged && focusedRegionID != nil {
+            fitCamera(animated: true)
+        }
+    }
+
+    /// Shows or hides the blue dot, and flies to the user when asked.
+    func updateUserLocation(
+        from view: AirRaidMapView,
+        locateRequested: Bool
+    ) {
+        if mapView?.showsUserLocation != view.showsUserLocation {
+            mapView?.showsUserLocation = view.showsUserLocation
+        }
+        if locateRequested, let location = view.userLocation {
+            flyToUser(at: location)
+        }
+    }
+
+    /// Centres on the user, zooming in to about a raion unless the map is already closer.
+    func flyToUser(at location: GeoCoordinate) {
+        guard let mapView else { return }
+        mapView.setCenter(
+            CLLocationCoordinate2D(location),
+            zoomLevel: max(mapView.zoomLevel, MapLayerStyle.userZoomLevel),
+            animated: true
+        )
+    }
+
     func applyFavoriteRegions() {
         favoriteRegionOutline?.predicate = favoriteRegionIDs.isEmpty
             ? Self.matchesNoRegion
@@ -593,16 +602,6 @@ private extension AirRaidMapView.Coordinator {
     /// no region has.
     static var matchesNoRegion: NSPredicate {
         NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, "")
-    }
-
-    /// Screen distance from the tap to a pin, to pick the nearest of overlapping pins.
-    static func distance(
-        from point: CGPoint,
-        to feature: MLNFeature,
-        in mapView: MLNMapView
-    ) -> CGFloat {
-        let featurePoint = mapView.convert(feature.coordinate, toPointTo: mapView)
-        return hypot(featurePoint.x - point.x, featurePoint.y - point.y)
     }
 
     /// Only alerted raions go into the source: drawing all 137 just to hide them would cost for nothing.
@@ -631,6 +630,9 @@ private extension AirRaidMapView.Coordinator {
             favoriteRegionIDs: [],
             focusedRegionID: nil,
             recenterRequest: 0,
+            showsUserLocation: false,
+            userLocation: nil,
+            locateRequest: 0,
             onSelect: { _ in }
         )
     }

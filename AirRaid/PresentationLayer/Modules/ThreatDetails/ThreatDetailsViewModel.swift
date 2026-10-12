@@ -21,6 +21,7 @@ final class ThreatDetailsViewModel: BaseViewModel {
     private(set) var threat: Threat?
     private(set) var regionAlerts: [RegionAlert] = []
     private(set) var isGone = false
+    private(set) var userLocation: GeoCoordinate?
 
     @ObservationIgnored
     private let threatID: String
@@ -28,12 +29,17 @@ final class ThreatDetailsViewModel: BaseViewModel {
     @ObservationIgnored
     private let airSituationRepository: AirSituationRepositoryProtocol
 
+    @ObservationIgnored
+    private let userLocationService: UserLocationServiceProtocol
+
     init(
         threatID: String,
-        airSituationRepository: AirSituationRepositoryProtocol
+        airSituationRepository: AirSituationRepositoryProtocol,
+        userLocationService: UserLocationServiceProtocol
     ) {
         self.threatID = threatID
         self.airSituationRepository = airSituationRepository
+        self.userLocationService = userLocationService
     }
 
     // MARK: - Override methods
@@ -48,6 +54,13 @@ final class ThreatDetailsViewModel: BaseViewModel {
                 self?.apply(situation)
             }
             .store(in: &cancellables)
+
+        userLocationService.locationPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] location in
+                self?.userLocation = location
+            }
+            .store(in: &cancellables)
     }
 }
 
@@ -57,7 +70,13 @@ extension ThreatDetailsViewModel: ThreatDetailsViewModelProtocol {
 
     func content(at date: Date) -> ThreatDetailsContent? {
         guard let threat else { return nil }
-        return ThreatDetailsContent(threat: threat, alerts: regionAlerts, isGone: isGone, now: date)
+        return ThreatDetailsContent(
+            threat: threat,
+            alerts: regionAlerts,
+            isGone: isGone,
+            proximity: userLocation.flatMap { threat.proximity(to: $0, at: date) },
+            now: date
+        )
     }
 }
 
