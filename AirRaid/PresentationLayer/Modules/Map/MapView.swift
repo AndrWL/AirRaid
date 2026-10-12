@@ -31,7 +31,8 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             selectedThreatID: viewModel.selectedThreatID,
             onSelectThreat: viewModel.didSelectThreat
         )
-        .ignoresSafeArea(edges: .top)
+        // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
+        .ignoresSafeArea()
         .task { await viewModel.onAppear() }
     }
 }
