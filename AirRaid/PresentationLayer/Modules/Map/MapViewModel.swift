@@ -22,6 +22,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var alertCoverage: AirRaidCoverage = .none
     private(set) var threats: [Threat] = []
     private(set) var connectionNotice: MapConnectionNotice?
+    private(set) var favoriteRegionIDs: [String] = []
 
     @ObservationIgnored
     private let router: Router
@@ -41,6 +42,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private let realtimeService: RealtimeServiceProtocol
 
+    @ObservationIgnored
+    private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
+
     /// When the connection last went down, so the banner can say how old the map is.
     @ObservationIgnored
     private var liveUntil: Date?
@@ -55,6 +59,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         cityRepository: CityRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
         realtimeService: RealtimeServiceProtocol,
+        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -63,6 +68,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.cityRepository = cityRepository
         self.airSituationRepository = airSituationRepository
         self.realtimeService = realtimeService
+        self.favoriteRegionsRepository = favoriteRegionsRepository
         self.styleURL = styleURL
     }
 
@@ -84,6 +90,14 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.trackLiveness(state)
+            }
+            .store(in: &cancellables)
+
+        favoriteRegionsRepository.favoriteRegionIDsPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] ids in
+                self?.favoriteRegionIDs = ids
             }
             .store(in: &cancellables)
 
@@ -117,6 +131,12 @@ extension MapViewModel: MapViewModelProtocol {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
         case nil: nil
+        }
+    }
+
+    var favoriteChips: [FavoriteRegionChip] {
+        favoriteRegionIDs.compactMap { id in
+            boundaries.first { $0.id == id }.map { FavoriteRegionChip(region: $0, coverage: alertCoverage) }
         }
     }
 

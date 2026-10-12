@@ -49,4 +49,7 @@ protocol DIRepositoryContaining {
 
     /// The live air situation: active alerts and spotted threats.
     var airSituationRepository: AirSituationRepositoryProtocol { get }
+
+    /// The regions the user follows.
+    var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol { get }
 }

@@ -79,6 +79,7 @@ private extension RegionDetailsView {
                 }
             }
             .accessibilityElement(children: .combine)
+            favoriteButton
         }
         .listRowBackground(Color.surface)
     }
@@ -128,12 +129,27 @@ private extension RegionDetailsView {
         .accessibilityElement(children: .combine)
     }
 
+    var favoriteButton: some View {
+        Button {
+            viewModel.didTapFavorite()
+        } label: {
+            Label(
+                viewModel.isFavorite ? "В обраних" : "Додати в обрані",
+                systemImage: viewModel.isFavorite ? "star.fill" : "star"
+            )
+            .font(.app(.body, weight: .semibold))
+            .contentTransition(.symbolEffect(.replace))
+        }
+        .sensoryFeedback(.selection, trigger: viewModel.isFavorite)
+        .accessibilityHint(viewModel.isFavorite ? "Прибрати область з обраних" : "Область буде виділено на карті")
+    }
+
     var closeButton: some View {
         CloseButton(action: onClose)
             .padding(Spacing.large)
     }
 
-    func badgeTone(of status: RegionDetailsContent.Status) -> Badge.Tone {
+    func badgeTone(of status: RegionAlertStatus) -> Badge.Tone {
         switch status.level {
         case .red: return .alertRed
         case .yellow: return .alertYellow
@@ -159,7 +175,8 @@ private enum Constants {
                 viewModel: RegionDetailsViewModel(
                     regionID: "UA-30",
                     airSituationRepository: DemoAirSituationRepository(),
-                    regionBoundaryRepository: RegionBoundaryRepository()
+                    regionBoundaryRepository: RegionBoundaryRepository(),
+                    favoriteRegionsRepository: FavoriteRegionsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard)
                 ),
                 onClose: {}
             )

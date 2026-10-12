@@ -16,7 +16,7 @@ struct RegionDetailsContent {
     /// «Полтавська область», «Київ».
     let title: String
 
-    let status: Status
+    let status: RegionAlertStatus
 
     /// «Триває 1 год 12 хв» since the earliest air raid alert in the region; `nil` when there is none.
     let durationText: String?
@@ -36,47 +36,13 @@ struct RegionDetailsContent {
         now: Date
     ) {
         self.title = title
-        status = Self.makeStatus(coverage: coverage, regionID: regionID)
+        status = RegionAlertStatus(coverage: coverage, regionID: regionID)
 
         let airRaidStart = alerts.filter { $0.kind == .airRaid }.map(\.startedAt).min()
         durationText = airRaidStart.map { "Триває \(DisplayTime.duration(max(now.timeIntervalSince($0), 0)))" }
 
         self.alerts = alerts.map { RegionAlertRow(alert: $0, now: now) }
         self.threats = threats.map(ThreatRow.init)
-    }
-}
-
-// MARK: - Status
-
-extension RegionDetailsContent {
-
-    /// The region's air raid state, as the map fills it.
-    enum Status: Hashable {
-
-        /// The whole region is under an air raid alert.
-        case whole(RegionAlertLevel)
-
-        /// Only some raions or hromadas are; the level is the highest among them.
-        case partial(RegionAlertLevel)
-
-        /// No air raid alert anywhere in the region.
-        case clear
-
-        /// «Повітряна тривога», «Тривога в частині області», «Тривоги немає».
-        var title: String {
-            switch self {
-            case .whole: return "Повітряна тривога"
-            case .partial: return "Тривога в частині області"
-            case .clear: return "Тривоги немає"
-            }
-        }
-
-        var level: RegionAlertLevel? {
-            switch self {
-            case .whole(let level), .partial(let level): return level
-            case .clear: return nil
-            }
-        }
     }
 }
 
@@ -108,21 +74,5 @@ extension RegionDetailsContent {
                 : nil
             iconName = ThreatIcon(threat).name
         }
-    }
-}
-
-// MARK: - Private methods
-
-private extension RegionDetailsContent {
-
-    static func makeStatus(
-        coverage: AirRaidCoverage,
-        regionID: String
-    ) -> Status {
-        if let level = coverage.regions[regionID] {
-            return .whole(level)
-        }
-        let level = coverage.districts.filter { $0.key.regionID == regionID }.map(\.value.level).max()
-        return level.map(Status.partial) ?? .clear
     }
 }

@@ -11,7 +11,7 @@ import SwiftUI
 /// A MapLibre map of Ukraine with air raid alerts filled by oblast or raion (color by alert level),
 /// regional centers labelled, and threats shown as pins. Tapping a pin selects it; the selected threat is drawn
 /// larger, with its track behind it and a dashed line to its target. A tap that hits no pin selects the region under
-/// it, which gets a bright outline.
+/// it, which gets a bright outline. Regions the user follows are outlined in the accent colour.
 ///
 /// Regions, cities, and threats are style layers over GeoJSON sources rather than annotations: the GPU draws
 /// them, and an update replaces one source instead of diffing views.
@@ -27,6 +27,9 @@ struct AirRaidMapView: UIViewRepresentable {
     let alertCoverage: AirRaidCoverage
     let threats: [Threat]
     let selection: MapSelection?
+
+    /// ISO codes of the regions the user follows.
+    let favoriteRegionIDs: [String]
 
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
@@ -63,7 +66,8 @@ struct AirRaidMapView: UIViewRepresentable {
             cities: cities,
             alertCoverage: alertCoverage,
             threats: threats,
-            selection: selection
+            selection: selection,
+            favoriteRegionIDs: favoriteRegionIDs
         )
     }
 }
@@ -101,6 +105,11 @@ extension AirRaidMapView {
         /// The selected-region outline, whose filter follows the selection.
         private var selectedRegionOutline: MLNLineStyleLayer?
 
+        private var favoriteRegionIDs: [String] = []
+
+        /// The followed-regions outline, whose filter follows the favourites.
+        private var favoriteRegionOutline: MLNLineStyleLayer?
+
         /// Region features by region ID, rebuilt only when the outlines change.
         private var regionFeatures: [String: MLNMultiPolygonFeature] = [:]
 
@@ -113,7 +122,8 @@ extension AirRaidMapView {
             cities: [City],
             alertCoverage: AirRaidCoverage,
             threats: [Threat],
-            selection: MapSelection?
+            selection: MapSelection?,
+            favoriteRegionIDs: [String]
         ) {
             let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
             let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
@@ -121,6 +131,7 @@ extension AirRaidMapView {
             let alertsChanged = alertCoverage != self.alertCoverage
             let threatsChanged = threats != self.threats
             let selectionChanged = selection != self.selection
+            let favoritesChanged = favoriteRegionIDs != self.favoriteRegionIDs
 
             self.boundaries = boundaries
             self.districts = districts
@@ -128,6 +139,7 @@ extension AirRaidMapView {
             self.alertCoverage = alertCoverage
             self.threats = threats
             self.selection = selection
+            self.favoriteRegionIDs = favoriteRegionIDs
 
             if boundariesChanged {
                 regionFeatures = Self.makeRegionFeatures(from: boundaries)
@@ -146,6 +158,9 @@ extension AirRaidMapView {
             }
             if selectionChanged {
                 applySelectedRegion()
+            }
+            if favoritesChanged {
+                applyFavoriteRegions()
             }
             // An area-only threat is placed by the alerts, so its pin moves when they change.
             if threatsChanged || selectionChanged || alertsChanged || districtsChanged {
@@ -197,6 +212,7 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyDistricts()
         applyCities()
         applySelectedRegion()
+        applyFavoriteRegions()
         applyThreats()
         applySelectedTrack()
     }
@@ -280,6 +296,13 @@ private extension AirRaidMapView.Coordinator {
         outline.lineOpacity = NSExpression(forConstantValue: Constants.outlineOpacity)
         outline.lineWidth = NSExpression(forConstantValue: Constants.outlineWidth)
 
+        let favoriteOutline = MLNLineStyleLayer(identifier: Constants.favoriteRegionOutlineLayerID, source: regionSource)
+        favoriteOutline.lineColor = NSExpression(forConstantValue: Constants.favoriteRegionColor)
+        favoriteOutline.lineOpacity = NSExpression(forConstantValue: Constants.favoriteRegionOutlineOpacity)
+        favoriteOutline.lineWidth = NSExpression(forConstantValue: Constants.favoriteRegionOutlineWidth)
+        favoriteOutline.lineJoin = NSExpression(forConstantValue: Constants.roundJoin)
+        favoriteRegionOutline = favoriteOutline
+
         let selectedOutline = MLNLineStyleLayer(identifier: Constants.selectedRegionOutlineLayerID, source: regionSource)
         selectedOutline.lineColor = NSExpression(forConstantValue: Constants.selectedRegionColor)
         selectedOutline.lineOpacity = NSExpression(forConstantValue: Constants.selectedRegionOutlineOpacity)
@@ -288,7 +311,7 @@ private extension AirRaidMapView.Coordinator {
         selectedRegionOutline = selectedOutline
 
         // Below the first label layer, so the base map's names stay readable over the fill.
-        let regionLayers = [territoryFill, regionAlertFill, districtAlertFill, districtOutline, outline, selectedOutline]
+        let regionLayers = [territoryFill, regionAlertFill, districtAlertFill, districtOutline, outline, favoriteOutline, selectedOutline]
         if let firstLabelLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
             regionLayers.forEach { style.insertLayer($0, below: firstLabelLayer) }
         } else {
@@ -486,6 +509,10 @@ private extension AirRaidMapView.Coordinator {
         selectedRegionOutline.predicate = NSPredicate(format: "%K == %@", Constants.regionIDKey, regionID)
     }
 
+    func applyFavoriteRegions() {
+        favoriteRegionOutline?.predicate = NSPredicate(format: "%K IN %@", Constants.regionIDKey, favoriteRegionIDs)
+    }
+
     /// Screen distance from the tap to a pin, to pick the nearest of overlapping pins.
     static func distance(
         from point: CGPoint,
@@ -600,6 +627,7 @@ private enum Constants {
     static let districtOutlineLayerID = "districts-outline"
     static let outlineLayerID = "regions-outline"
     static let selectedRegionOutlineLayerID = "regions-selected-outline"
+    static let favoriteRegionOutlineLayerID = "regions-favorite-outline"
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
     static let selectedTrailLayerID = "selected-track-trail"
@@ -642,6 +670,9 @@ private enum Constants {
     static let selectedRegionColor = UIColor.mapTrack
     static let selectedRegionOutlineOpacity: Double = 0.9
     static let selectedRegionOutlineWidth: Double = 2
+    static let favoriteRegionColor = UIColor.mapFavorite
+    static let favoriteRegionOutlineOpacity: Double = 0.9
+    static let favoriteRegionOutlineWidth: Double = 1.5
 
     /// A font the OpenFreeMap glyph server provides.
     static let cityFontNames = ["Noto Sans Bold"]
@@ -678,6 +709,7 @@ private enum Constants {
             alertCoverage: .none,
             threats: [],
             selection: nil,
+            favoriteRegionIDs: [],
             onSelect: { _ in }
         )
     }

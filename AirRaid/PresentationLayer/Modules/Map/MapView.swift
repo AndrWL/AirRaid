@@ -30,20 +30,42 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats,
             selection: viewModel.selection,
+            favoriteRegionIDs: viewModel.favoriteRegionIDs,
             onSelect: viewModel.didSelect
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
         .overlay(alignment: .top) {
-            if let notice = viewModel.connectionNotice {
-                MapConnectionBanner(notice: notice)
-                    .padding(.top, Spacing.small)
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            VStack(spacing: Spacing.small) {
+                if let notice = viewModel.connectionNotice {
+                    MapConnectionBanner(notice: notice)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+                if !viewModel.favoriteChips.isEmpty {
+                    FavoriteRegionsBar(
+                        chips: viewModel.favoriteChips,
+                        selectedRegionID: selectedRegionID,
+                        onSelect: { viewModel.didSelect(.region(id: $0)) }
+                    )
+                    .transition(.opacity)
+                }
             }
+            .padding(.top, Spacing.small)
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
         .sensoryFeedback(.selection, trigger: viewModel.selection) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
+    }
+}
+
+// MARK: - Private methods
+
+private extension MapView {
+
+    var selectedRegionID: String? {
+        guard case .region(let id) = viewModel.selection else { return nil }
+        return id
     }
 }
 
@@ -61,6 +83,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     cityRepository: CityRepository(),
                     airSituationRepository: DemoAirSituationRepository(),
                     realtimeService: container.services.realtimeService,
+                    favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
                     styleURL: styleURL
                 )
             )

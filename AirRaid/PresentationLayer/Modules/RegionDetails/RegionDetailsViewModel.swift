@@ -17,6 +17,7 @@ final class RegionDetailsViewModel: BaseViewModel {
 
     private(set) var regionName: String?
     private(set) var situation: AirSituation = .empty
+    private(set) var isFavorite = false
 
     @ObservationIgnored
     private let regionID: String
@@ -28,16 +29,21 @@ final class RegionDetailsViewModel: BaseViewModel {
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
 
     @ObservationIgnored
+    private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
+
+    @ObservationIgnored
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     init(
         regionID: String,
         airSituationRepository: AirSituationRepositoryProtocol,
-        regionBoundaryRepository: RegionBoundaryRepositoryProtocol
+        regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
+        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
     ) {
         self.regionID = regionID
         self.airSituationRepository = airSituationRepository
         self.regionBoundaryRepository = regionBoundaryRepository
+        self.favoriteRegionsRepository = favoriteRegionsRepository
     }
 
     // MARK: - Override methods
@@ -50,6 +56,14 @@ final class RegionDetailsViewModel: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] situation in
                 self?.situation = situation
+            }
+            .store(in: &cancellables)
+
+        favoriteRegionsRepository.favoriteRegionIDsPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] ids in
+                guard let self else { return }
+                isFavorite = ids.contains(regionID)
             }
             .store(in: &cancellables)
     }
@@ -81,6 +95,10 @@ extension RegionDetailsViewModel: RegionDetailsViewModelProtocol {
             logger.error("Failed to load region boundaries: \(String(describing: error), privacy: .public)")
             regionName = regionID
         }
+    }
+
+    func didTapFavorite() {
+        favoriteRegionsRepository.setFavorite(!isFavorite, regionID: regionID)
     }
 }
 
