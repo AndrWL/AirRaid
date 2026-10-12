@@ -70,9 +70,19 @@ nonisolated extension Array where Element == GeoCoordinate {
     /// The middle of the longest segment where the parallel runs inside the ring.
     func widestCrossing(atLatitude latitude: Double) -> GeoCoordinate? {
         let longitudes = crossings(atLatitude: latitude).sorted()
-        let widest = Swift.stride(from: 0, to: longitudes.count - 1, by: 2)
-            .max { longitudes[$0 + 1] - longitudes[$0] < longitudes[$1 + 1] - longitudes[$1] }
-        return widest.map { GeoCoordinate(latitude: latitude, longitude: (longitudes[$0] + longitudes[$0 + 1]) / 2) }
+        // Sorted crossings pair up into the stretches that run inside the ring: [0, 1], [2, 3], …
+        var best: (start: Double, end: Double)?
+        var index = 0
+        while index + 1 < longitudes.count {
+            let start = longitudes[index]
+            let end = longitudes[index + 1]
+            if best.map({ end - start > $0.end - $0.start }) ?? true {
+                best = (start, end)
+            }
+            index += 2
+        }
+        guard let best else { return nil }
+        return GeoCoordinate(latitude: latitude, longitude: (best.start + best.end) / 2)
     }
 }
 
