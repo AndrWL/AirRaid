@@ -31,7 +31,6 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats,
             selection: viewModel.selection,
-            favoriteRegionIDs: viewModel.favoriteRegionIDs,
             focusedRegionID: viewModel.focusedRegionID,
             recenterRequest: viewModel.recenterRequest,
             showsUserLocation: viewModel.locationAuthorization == .authorized,
@@ -57,19 +56,10 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     )
                     .transition(.opacity)
                 }
-                if !viewModel.favoriteChips.isEmpty, !viewModel.isPickingHome {
-                    FavoriteRegionsBar(
-                        chips: viewModel.favoriteChips,
-                        selectedRegionID: selectedRegionID,
-                        onSelect: { viewModel.didSelect(.region(id: $0)) }
-                    )
-                    .transition(.opacity)
-                }
             }
             .padding(.top, Spacing.small)
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
-        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
         .overlay {
             if viewModel.isPickingHome {
@@ -197,7 +187,6 @@ private enum Constants {
                     cityRepository: CityRepository(),
                     airSituationRepository: DemoAirSituationRepository(),
                     realtimeService: container.services.realtimeService,
-                    favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
                     focusedRegionRepository: container.repositories.focusedRegionRepository,
                     userLocationService: container.services.userLocationService,
                     placeSettingsRepository: container.repositories.placeSettingsRepository,

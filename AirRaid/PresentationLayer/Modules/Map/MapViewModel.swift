@@ -22,7 +22,6 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var alertCoverage: AirRaidCoverage = .none
     private(set) var threats: [Threat] = []
     private(set) var connectionNotice: MapConnectionNotice?
-    private(set) var favoriteRegionIDs: [String] = []
     private(set) var focusedRegionID: String?
     private(set) var recenterRequest = 0
     private(set) var userLocation: GeoCoordinate?
@@ -49,9 +48,6 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
 
     @ObservationIgnored
     private let realtimeService: RealtimeServiceProtocol
-
-    @ObservationIgnored
-    private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
 
     @ObservationIgnored
     private let focusedRegionRepository: FocusedRegionRepositoryProtocol
@@ -85,7 +81,6 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         cityRepository: CityRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
         realtimeService: RealtimeServiceProtocol,
-        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
         focusedRegionRepository: FocusedRegionRepositoryProtocol,
         userLocationService: UserLocationServiceProtocol,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
@@ -97,7 +92,6 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.cityRepository = cityRepository
         self.airSituationRepository = airSituationRepository
         self.realtimeService = realtimeService
-        self.favoriteRegionsRepository = favoriteRegionsRepository
         self.focusedRegionRepository = focusedRegionRepository
         self.userLocationService = userLocationService
         self.placeSettingsRepository = placeSettingsRepository
@@ -158,12 +152,6 @@ extension MapViewModel: MapViewModelProtocol {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
         case .places, nil: nil
-        }
-    }
-
-    var favoriteChips: [FavoriteRegionChip] {
-        favoriteRegionIDs.compactMap { id in
-            boundaries.first { $0.id == id }.map { FavoriteRegionChip(region: $0, coverage: alertCoverage) }
         }
     }
 
@@ -282,14 +270,6 @@ private extension MapViewModel {
 
     /// The followed and the focused regions, which the region sheet changes.
     func bindPreferences() {
-        favoriteRegionsRepository.favoriteRegionIDsPublisher
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] ids in
-                self?.favoriteRegionIDs = ids
-            }
-            .store(in: &cancellables)
-
         focusedRegionRepository.focusedRegionIDPublisher
             .removeDuplicates()
             .receive(on: DispatchQueue.main)

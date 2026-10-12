@@ -62,7 +62,6 @@ extension DIRepositoryContainer: DIAssembling {
         registerDistrictBoundaryRepository()
         registerCityRepository()
         registerAirSituationRepository(with: appContainer)
-        registerFavoriteRegionsRepository()
         registerFocusedRegionRepository()
         registerPlaceSettingsRepository()
     }
@@ -86,10 +85,6 @@ extension DIRepositoryContainer: DIRepositoryContaining {
 
     var airSituationRepository: AirSituationRepositoryProtocol {
         return container.resolve(AirSituationRepositoryProtocol.self)
-    }
-
-    var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol {
-        return container.resolve(FavoriteRegionsRepositoryProtocol.self)
     }
 
     var focusedRegionRepository: FocusedRegionRepositoryProtocol {
@@ -131,13 +126,6 @@ private extension DIRepositoryContainer {
                 realtimeService: appContainer.services.realtimeService,
                 versionStore: appContainer.services.realtimeVersionStore
             )
-        }
-    }
-
-    /// A singleton so the map and the region sheet see the same list as it changes.
-    func registerFavoriteRegionsRepository() {
-        container.register(FavoriteRegionsRepositoryProtocol.self, lifetime: .singleton) { _ in
-            FavoriteRegionsRepository()
         }
     }
 

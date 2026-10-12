@@ -31,12 +31,6 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Why the map is not live right now; `nil` while it is.
     var connectionNotice: MapConnectionNotice? { get }
 
-    /// ISO codes of the regions the user follows, outlined on the map.
-    var favoriteRegionIDs: [String] { get }
-
-    /// The followed regions with their alert state, in the order they were added; empty until the outlines load.
-    var favoriteChips: [FavoriteRegionChip] { get }
-
     /// The region the map is narrowed to, or `nil` for the whole country.
     var focusedRegionID: String? { get }
 

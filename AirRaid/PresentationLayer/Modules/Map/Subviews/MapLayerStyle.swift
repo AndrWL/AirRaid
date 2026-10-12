@@ -33,7 +33,6 @@ enum MapLayerStyle {
     static let districtOutlineLayerID = "districts-outline"
     static let outlineLayerID = "regions-outline"
     static let selectedRegionOutlineLayerID = "regions-selected-outline"
-    static let favoriteRegionOutlineLayerID = "regions-favorite-outline"
     static let focusDimLayerID = "regions-focus-dim"
     static let placesSourceID = "places"
     static let placeRadiusFillLayerID = "places-radius-fill"
@@ -86,9 +85,6 @@ enum MapLayerStyle {
     static let selectedRegionColor = UIColor.mapTrack
     static let selectedRegionOutlineOpacity: Double = 0.9
     static let selectedRegionOutlineWidth: Double = 2
-    static let favoriteRegionColor = UIColor.mapFavorite
-    static let favoriteRegionOutlineOpacity: Double = 0.9
-    static let favoriteRegionOutlineWidth: Double = 1.5
 
     /// A font the OpenFreeMap glyph server provides.
     static let cityFontNames = ["Noto Sans Bold"]
