@@ -140,7 +140,8 @@ extension AirRaidMapView {
             if citiesChanged {
                 applyCities()
             }
-            if threatsChanged || selectionChanged {
+            // An area-only threat is placed by the alerts, so its pin moves when they change.
+            if threatsChanged || selectionChanged || alertsChanged || districtsChanged {
                 applyThreats()
                 applySelectedTrack()
             }
@@ -300,6 +301,41 @@ private extension AirRaidMapView.Coordinator {
         )
         threatPins.iconAllowsOverlap = NSExpression(forConstantValue: true)
         threatPins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
+        // A pin where there is no alert is probably misplaced (a namesake in another oblast): faded, not hidden.
+        let outsideAlertOpacity = NSExpression(
+            forMLNConditional: NSPredicate(format: "%K == YES", Constants.outsideAlertKey),
+            trueExpression: NSExpression(forConstantValue: Constants.outsideAlertOpacity),
+            falseExpression: NSExpression(forConstantValue: 1)
+        )
+        threatPins.iconOpacity = outsideAlertOpacity
+        threatPins.textOpacity = outsideAlertOpacity
+
+        // The caption under the pin; captions that would collide are hidden, the pins always stay.
+        let captionLabel = MLNAttributedExpression(
+            NSExpression(forKeyPath: Constants.captionLabelKey),
+            attributes: [
+                .fontNamesAttribute: NSExpression(forConstantValue: Constants.captionLabelFontNames),
+                .fontScaleAttribute: NSExpression(forConstantValue: Constants.captionLabelScale),
+                .fontColorAttribute: NSExpression(forConstantValue: Constants.captionLabelColor)
+            ]
+        )
+        let captionName = MLNAttributedExpression(NSExpression(forKeyPath: Constants.captionNameKey))
+        threatPins.text = NSExpression(forAttributedExpressions: [captionLabel, captionName].map {
+            NSExpression(forConstantValue: $0)
+        })
+        threatPins.textFontNames = NSExpression(forConstantValue: Constants.cityFontNames)
+        threatPins.textFontSize = NSExpression(forConstantValue: Constants.threatCaptionFontSize)
+        threatPins.textColor = NSExpression(forConstantValue: UIColor.white)
+        threatPins.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(Constants.cityHaloAlpha))
+        threatPins.textHaloWidth = NSExpression(forConstantValue: Constants.cityHaloWidth)
+        threatPins.textAnchor = NSExpression(forConstantValue: Constants.topAnchor)
+        threatPins.textOffset = NSExpression(
+            forMLNConditional: NSPredicate(format: "%K == YES", Constants.selectedKey),
+            trueExpression: NSExpression(forConstantValue: NSValue(cgVector: Constants.selectedThreatCaptionOffset)),
+            falseExpression: NSExpression(forConstantValue: NSValue(cgVector: Constants.threatCaptionOffset))
+        )
+        threatPins.textOptional = NSExpression(forConstantValue: true)
+        threatPins.textAllowsOverlap = NSExpression(forConstantValue: false)
         style.addLayer(threatPins)
     }
 
@@ -361,16 +397,23 @@ private extension AirRaidMapView.Coordinator {
         guard let threatSource else { return }
         // Country-wide reports have no place on the map.
         threatSource.shape = MLNShapeCollectionFeature(shapes: threats.compactMap { threat -> MLNPointFeature? in
-            guard let coordinate = threat.markerCoordinate else { return nil }
+            guard let coordinate = threat.markerCoordinate(coverage: alertCoverage, districts: districts) else { return nil }
+            // Until the outlines load nothing can be checked, so nothing is faded.
+            let isOutsideAlert = !boundaries.isEmpty
+                && !alertCoverage.isAlerted(at: coordinate, regions: boundaries, districts: districts)
             let feature = MLNPointFeature()
             feature.coordinate = CLLocationCoordinate2D(coordinate)
             feature.identifier = threat.id
             let icon = ThreatIcon(threat)
             feature.attributes = [
                 Constants.iconNameKey: icon.name,
-                // Unknown heading draws the icon pointing north.
-                Constants.headingKey: icon.rotatesWithHeading ? threat.heading ?? 0 : 0,
-                Constants.selectedKey: threat.id == selectedThreatID
+                // Unknown course draws the icon pointing north.
+                Constants.headingKey: icon.rotatesWithHeading ? threat.course ?? 0 : 0,
+                Constants.selectedKey: threat.id == selectedThreatID,
+                Constants.outsideAlertKey: isOutsideAlert,
+                // The line break ends the label's section, so the name always starts a line of its own.
+                Constants.captionLabelKey: threat.mapCaption.map { "\($0.label)\n" } ?? "",
+                Constants.captionNameKey: threat.mapCaption?.name ?? ""
             ]
             return feature
         })
@@ -380,7 +423,7 @@ private extension AirRaidMapView.Coordinator {
         guard let selectedTrackSource else { return }
         guard
             let threat = threats.first(where: { $0.id == selectedThreatID }),
-            let marker = threat.markerCoordinate
+            let marker = threat.markerCoordinate(coverage: alertCoverage, districts: districts)
         else {
             selectedTrackSource.shape = nil
             return
@@ -537,12 +580,16 @@ private enum Constants {
     static let iconNameKey = "iconName"
     static let headingKey = "heading"
     static let selectedKey = "selected"
+    static let outsideAlertKey = "outsideAlert"
+    static let captionLabelKey = "captionLabel"
+    static let captionNameKey = "captionName"
     static let trackPartKey = "part"
     static let trailPart = "trail"
     static let forecastPart = "forecast"
     static let targetPart = "target"
     static let roundJoin = "round"
     static let mapAlignment = "map"
+    static let topAnchor = "top"
 
     static let territoryColor = UIColor(red: 0.29, green: 0.31, blue: 0.20, alpha: 1)
     static let territoryFillOpacity: Double = 0.55
@@ -560,6 +607,14 @@ private enum Constants {
     static let cityFontSize: Double = 11
     static let threatIconScale: Double = 0.75
     static let selectedThreatIconScale: Double = 1
+    static let threatCaptionFontSize: Double = 11
+    static let outsideAlertOpacity: Double = 0.4
+    static let captionLabelFontNames = ["Noto Sans Regular"]
+    static let captionLabelScale: Double = 0.8
+    static let captionLabelColor = UIColor.white.withAlphaComponent(0.65)
+    /// Below the pin, in ems of the caption font; the selected pin is drawn larger, so its caption sits lower.
+    static let threatCaptionOffset = CGVector(dx: 0, dy: 1.3)
+    static let selectedThreatCaptionOffset = CGVector(dx: 0, dy: 1.8)
     static let trackColor = UIColor.white
     static let trailOpacity: Double = 0.7
     static let forecastOpacity: Double = 0.55

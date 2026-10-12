@@ -12,6 +12,29 @@ extension Threat {
     var displayName: String {
         type?.displayName ?? kind.displayName
     }
+
+    /// The caption under the map pin, from the most useful thing known: where it flies, else where it was spotted,
+    /// else its region. Labelled the way the details sheet labels the same rows. `nil` for a country-wide report.
+    var mapCaption: ThreatMapCaption? {
+        if let target {
+            return ThreatMapCaption(label: "курсом на", name: target.name)
+        }
+        if let position {
+            return ThreatMapCaption(label: "зараз", name: position.name)
+        }
+        return isCountryWide ? nil : ThreatMapCaption(label: "область", name: area.name)
+    }
+}
+
+// MARK: - ThreatMapCaption
+
+/// Two lines under a pin: a small label («курсом на») over the place name («Кобеляки»).
+///
+/// The name stays in the nominative, as the backend sends it, so it reads as a value under a label rather than
+/// as a phrase («курсом на Кобеляки» would need the accusative for «Звенигородка»).
+struct ThreatMapCaption: Hashable {
+    let label: String
+    let name: String
 }
 
 // MARK: - ThreatType

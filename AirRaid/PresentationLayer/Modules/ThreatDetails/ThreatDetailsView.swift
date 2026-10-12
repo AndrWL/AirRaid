@@ -122,6 +122,11 @@ private extension ThreatDetailsView {
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
+            if let noAlertNote = content.noAlertNote {
+                Label(noAlertNote, systemImage: "questionmark.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 

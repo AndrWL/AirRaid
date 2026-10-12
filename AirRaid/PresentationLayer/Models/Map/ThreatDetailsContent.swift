@@ -46,7 +46,11 @@ struct ThreatDetailsContent {
     /// Why the pin may not be where the threat is; `nil` for a confirmed position.
     let locationNote: String?
 
-    /// «Пд-Зх (215°)»; `nil` when the heading is unknown.
+    /// Set when the threat's oblast has no air raid alert at all: the place was probably matched to a namesake
+    /// in the wrong oblast, which is also why the map fades such a pin.
+    let noAlertNote: String?
+
+    /// «Пд-Зх (215°)» from ``Threat/course``; `nil` when the course is unknown.
     let courseText: String?
 
     /// «Пн-Сх»; `nil` when unknown.
@@ -86,7 +90,7 @@ struct ThreatDetailsContent {
         title = threat.displayName
         countText = threat.count.flatMap { $0 > 1 ? "×\($0)" : nil }
         iconName = icon.name
-        iconRotation = icon.rotatesWithHeading ? threat.heading ?? 0 : 0
+        iconRotation = icon.rotatesWithHeading ? threat.course ?? 0 : 0
         summary = threat.summary
         confidence = Confidence(level: threat.level, value: threat.confidence)
         sourcesText = Self.makeSourcesText(count: threat.sourceCount)
@@ -95,8 +99,11 @@ struct ThreatDetailsContent {
         targetName = threat.target?.name
         regionName = threat.area.name
         locationNote = Self.makeLocationNote(for: threat)
+        noAlertNote = threat.isCountryWide || alerts.contains(where: { $0.kind == .airRaid })
+            ? nil
+            : "В області зараз немає повітряної тривоги — місце могли визначити помилково"
 
-        courseText = threat.heading.map { "\(Self.compassPoint(for: $0)) (\(Int($0.rounded()))°)" }
+        courseText = threat.course.map { "\(Self.compassPoint(for: $0)) (\(Int($0.rounded()))°)" }
         approachText = threat.approachBearing.map(Self.compassPoint)
         speedText = threat.speedKmh > 0 ? "~\(Int(threat.speedKmh.rounded())) км/год" : nil
         isSpeedEstimated = threat.speedSource == .typical
@@ -193,7 +200,7 @@ private extension ThreatDetailsContent {
         case .targetOnly:
             return "Відомий лише напрямок — позначка стоїть на цілі атаки, а не там, де загроза зараз"
         case .area:
-            return "Відома лише область — позначка стоїть у її центрі, це не місце загрози"
+            return "Відома лише область — позначка стоїть умовно (у зоні тривоги, якщо вона є), це не місце загрози"
         }
     }
 
