@@ -5,6 +5,8 @@
 //  Created by ANDRII LEBEDIEV on 12.10.2026.
 //
 
+import SwiftUI
+
 extension WatchedPlaceKind {
 
     /// «Моя геолокація», «Дім».
@@ -35,6 +37,14 @@ extension WatchedPlaceKind {
         switch self {
         case .currentLocation: return "location.fill"
         case .home: return "house.fill"
+        }
+    }
+
+    /// The place's colour on the map: its circle, and for the home its pin.
+    var tint: Color {
+        switch self {
+        case .currentLocation: return .mapPlace
+        case .home: return .mapHome
         }
     }
 }

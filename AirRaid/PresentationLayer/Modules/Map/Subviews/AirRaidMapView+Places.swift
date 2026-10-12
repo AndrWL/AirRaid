@@ -19,7 +19,11 @@ extension AirRaidMapView.Coordinator {
 
         let radiusFill = MLNFillStyleLayer(identifier: MapLayerStyle.placeRadiusFillLayerID, source: source)
         radiusFill.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.radiusPart)
-        radiusFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.placeColor)
+        radiusFill.fillColor = NSExpression(
+            forMLNMatchingKey: NSExpression(forKeyPath: MapLayerStyle.placeKindKey),
+            in: [NSExpression(forConstantValue: MapLayerStyle.homeKind): NSExpression(forConstantValue: MapLayerStyle.homeColor)],
+            default: NSExpression(forConstantValue: MapLayerStyle.currentLocationColor)
+        )
         radiusFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.placeRadiusFillOpacity)
 
         // A dark casing under the coloured line, the way labels get a halo: the circle crosses dark, yellow and red
@@ -37,12 +41,14 @@ extension AirRaidMapView.Coordinator {
         let locationOutline = makeRadiusOutline(
             identifier: MapLayerStyle.placeRadiusOutlineLayerID,
             source: source,
-            kind: MapLayerStyle.currentLocationKind
+            kind: MapLayerStyle.currentLocationKind,
+            color: MapLayerStyle.currentLocationColor
         )
         let homeOutline = makeRadiusOutline(
             identifier: MapLayerStyle.homeRadiusOutlineLayerID,
             source: source,
-            kind: MapLayerStyle.homeKind
+            kind: MapLayerStyle.homeKind,
+            color: MapLayerStyle.homeColor
         )
         homeOutline.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.placeRadiusDashPattern)
 
@@ -58,12 +64,13 @@ extension AirRaidMapView.Coordinator {
     func makeRadiusOutline(
         identifier: String,
         source: MLNShapeSource,
-        kind: String
+        kind: String,
+        color: UIColor
     ) -> MLNLineStyleLayer {
         let outline = MapFeatureFactory.makeOutline(
             identifier: identifier,
             source: source,
-            color: MapLayerStyle.placeColor,
+            color: color,
             opacity: MapLayerStyle.placeRadiusOutlineOpacity,
             width: MapLayerStyle.placeRadiusOutlineWidth
         )

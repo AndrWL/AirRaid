@@ -40,13 +40,13 @@ private extension HomePickerOverlay {
             Image(systemName: "house.circle.fill")
                 .font(.system(size: Constants.pinSize))
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.accentColor)
+                .foregroundStyle(.white, Color.mapHome)
                 .shadow(radius: Constants.pinShadow)
             Rectangle()
-                .fill(Color.accentColor)
+                .fill(Color.mapHome)
                 .frame(width: Constants.stemWidth, height: Constants.stemHeight)
             Circle()
-                .fill(Color.accentColor)
+                .fill(Color.mapHome)
                 .frame(width: Constants.tipSize, height: Constants.tipSize)
         }
         // Lift the pin by its own height minus half the tip, so the tip's centre is the screen's centre.

@@ -117,9 +117,14 @@ private extension PlacesView {
         detail: String? = nil
     ) -> some View {
         HStack {
-            Label(kind.title, systemImage: kind.systemImage)
-                .font(.app(.body, weight: .semibold))
-                .foregroundStyle(.ink)
+            Label {
+                Text(kind.title)
+                    .foregroundStyle(.ink)
+            } icon: {
+                Image(systemName: kind.systemImage)
+                    .foregroundStyle(kind.tint)
+            }
+            .font(.app(.body, weight: .semibold))
             Spacer()
             if let detail {
                 Text(detail)

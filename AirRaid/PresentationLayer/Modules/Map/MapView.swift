@@ -125,7 +125,7 @@ private extension MapView {
         Button(action: viewModel.didTapPlaces) {
             Image(systemName: viewModel.placeSettings.home == nil ? "house" : "house.fill")
                 .font(.app(.body, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(WatchedPlaceKind.home.tint)
                 .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
                 .glassBackground(in: .circle)
                 // The whole disc, not only the glyph: a tap on the glass edge would fall through to the map.
