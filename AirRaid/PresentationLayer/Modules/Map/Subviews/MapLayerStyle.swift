@@ -101,7 +101,7 @@ enum MapLayerStyle {
     static let outsideFocusOpacity: Double = 0.25
     static let focusDimColor = UIColor.mapDim
     static let focusDimOpacity: Double = 0.7
-    /// The user's location is blue like the system's blue dot; the home is violet, so the two never read as one.
+    /// The user's location is blue like the system's blue dot; the home is orange (#FF8000), so the two never read as one.
     static let currentLocationColor = UIColor.mapPlace
     static let homeColor = UIColor.mapHome
     static let placeCasingColor = UIColor.mapHalo
@@ -113,7 +113,7 @@ enum MapLayerStyle {
     /// In line widths: long dashes, so the home's circle still reads as a circle and not as dots.
     static let placeRadiusDashPattern: [Double] = [2.5, 1.5]
 
-    /// A white house on a violet disc with a white rim, the way the blue dot marks the user.
+    /// A white house on an orange disc with a white rim, the way the blue dot marks the user.
     ///
     /// Drawn into a bitmap rather than handed over as a palette symbol: MapLibre keeps only the symbol's shape and
     /// draws it black.
