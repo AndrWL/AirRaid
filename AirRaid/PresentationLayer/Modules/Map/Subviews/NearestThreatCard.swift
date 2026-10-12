@@ -39,6 +39,8 @@ struct NearestThreatCard: View {
             .padding(.horizontal, Spacing.medium)
             .padding(.vertical, Spacing.small)
             .glassBackground(in: .rect(cornerRadius: Radius.large))
+            // The whole card: a tap between the icon and the text would otherwise reach the map below.
+            .contentShape(.rect(cornerRadius: Radius.large))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Найближча загроза: \(summary.title), \(detailText), оцінка")

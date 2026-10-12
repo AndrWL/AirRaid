@@ -24,6 +24,7 @@ struct RegionFocusPill: View {
                     .foregroundStyle(.ink)
                     .padding(.leading, Spacing.medium)
                     .padding(.vertical, Spacing.small)
+                    .contentShape(.rect)
             }
             .accessibilityLabel("Фокус: \(regionName)")
             .accessibilityHint("Повернути карту на область")
@@ -40,6 +41,8 @@ struct RegionFocusPill: View {
         }
         .buttonStyle(.plain)
         .glassBackground(in: .capsule)
+        // The gaps between the two buttons belong to the pill, not to the map below it.
+        .contentShape(.capsule)
     }
 }
 

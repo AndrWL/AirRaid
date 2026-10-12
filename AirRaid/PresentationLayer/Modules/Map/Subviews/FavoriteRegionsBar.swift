@@ -50,6 +50,7 @@ private extension FavoriteRegionsBar {
             .padding(.horizontal, Spacing.medium)
             .padding(.vertical, Spacing.small)
             .glassBackground(in: .capsule)
+            .contentShape(.capsule)
             .overlay {
                 if chip.id == selectedRegionID {
                     Capsule().strokeBorder(Color.accentColor, lineWidth: Constants.selectedBorderWidth)
