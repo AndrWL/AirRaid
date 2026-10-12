@@ -130,31 +130,23 @@ extension AirRaidMapView {
 
         /// Applies the view's latest data, rebuilding only the sources whose input changed.
         func update(from view: AirRaidMapView) {
-            let boundaries = view.boundaries
-            let districts = view.districts
-            let cities = view.cities
-            let alertCoverage = view.alertCoverage
-            let threats = view.threats
-            let selection = view.selection
-            let favoriteRegionIDs = view.favoriteRegionIDs
+            let boundariesChanged = view.boundaries.map(\.id) != boundaries.map(\.id)
+            let districtsChanged = view.districts.map(\.id) != districts.map(\.id)
+            let citiesChanged = view.cities != cities
+            let alertsChanged = view.alertCoverage != alertCoverage
+            let threatsChanged = view.threats != threats
+            let selectionChanged = view.selection != selection
+            let favoritesChanged = view.favoriteRegionIDs != favoriteRegionIDs
             let focusChanged = view.focusedRegionID != focusedRegionID
             let recenterRequested = view.recenterRequest != recenterRequest
 
-            let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
-            let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
-            let citiesChanged = cities != self.cities
-            let alertsChanged = alertCoverage != self.alertCoverage
-            let threatsChanged = threats != self.threats
-            let selectionChanged = selection != self.selection
-            let favoritesChanged = favoriteRegionIDs != self.favoriteRegionIDs
-
-            self.boundaries = boundaries
-            self.districts = districts
-            self.cities = cities
-            self.alertCoverage = alertCoverage
-            self.threats = threats
-            self.selection = selection
-            self.favoriteRegionIDs = favoriteRegionIDs
+            boundaries = view.boundaries
+            districts = view.districts
+            cities = view.cities
+            alertCoverage = view.alertCoverage
+            threats = view.threats
+            selection = view.selection
+            favoriteRegionIDs = view.favoriteRegionIDs
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
 
@@ -318,47 +310,62 @@ private extension AirRaidMapView.Coordinator {
         )
 
         // Raion borders only inside alerted raions, so the alerted part reads as such without cluttering the map.
-        let districtOutline = MLNLineStyleLayer(identifier: MapLayerStyle.districtOutlineLayerID, source: districtSource)
-        districtOutline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
-        districtOutline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.districtOutlineOpacity)
-        districtOutline.lineWidth = NSExpression(forConstantValue: MapLayerStyle.districtOutlineWidth)
-
-        let outline = MLNLineStyleLayer(identifier: MapLayerStyle.outlineLayerID, source: regionSource)
-        outline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
-        outline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.outlineOpacity)
-        outline.lineWidth = NSExpression(forConstantValue: MapLayerStyle.outlineWidth)
-
-        // Over the alert fills, so the rest of the country reads as background, but under the outlines.
-        let dimFill = MLNFillStyleLayer(identifier: MapLayerStyle.focusDimLayerID, source: regionSource)
-        dimFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.focusDimColor)
-        dimFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.focusDimOpacity)
-        dimFill.predicate = Self.matchesNoRegion
-        focusDimFill = dimFill
-
-        let favoriteOutline = MLNLineStyleLayer(identifier: MapLayerStyle.favoriteRegionOutlineLayerID, source: regionSource)
-        favoriteOutline.lineColor = NSExpression(forConstantValue: MapLayerStyle.favoriteRegionColor)
-        favoriteOutline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.favoriteRegionOutlineOpacity)
-        favoriteOutline.lineWidth = NSExpression(forConstantValue: MapLayerStyle.favoriteRegionOutlineWidth)
-        favoriteOutline.lineJoin = NSExpression(forConstantValue: MapLayerStyle.roundJoin)
-        favoriteRegionOutline = favoriteOutline
-
-        let selectedOutline = MLNLineStyleLayer(identifier: MapLayerStyle.selectedRegionOutlineLayerID, source: regionSource)
-        selectedOutline.lineColor = NSExpression(forConstantValue: MapLayerStyle.selectedRegionColor)
-        selectedOutline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.selectedRegionOutlineOpacity)
-        selectedOutline.lineWidth = NSExpression(forConstantValue: MapLayerStyle.selectedRegionOutlineWidth)
-        selectedOutline.lineJoin = NSExpression(forConstantValue: MapLayerStyle.roundJoin)
-        selectedRegionOutline = selectedOutline
+        let districtOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.districtOutlineLayerID,
+            source: districtSource,
+            color: .mapOutline,
+            opacity: MapLayerStyle.districtOutlineOpacity,
+            width: MapLayerStyle.districtOutlineWidth
+        )
+        let outline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.outlineLayerID,
+            source: regionSource,
+            color: .mapOutline,
+            opacity: MapLayerStyle.outlineOpacity,
+            width: MapLayerStyle.outlineWidth
+        )
 
         // Below the first label layer, so the base map's names stay readable over the fill.
         let regionLayers = [
-            territoryFill, regionAlertFill, districtAlertFill, dimFill, districtOutline, outline, favoriteOutline,
-            selectedOutline
-        ]
+            territoryFill, regionAlertFill, districtAlertFill, makeFocusDim(source: regionSource), districtOutline, outline
+        ] + makeHighlightOutlines(source: regionSource)
         if let firstLabelLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
             regionLayers.forEach { style.insertLayer($0, below: firstLabelLayer) }
         } else {
             regionLayers.forEach(style.addLayer)
         }
+    }
+
+    /// Over the alert fills, so the rest of the country reads as background, but under the outlines.
+    func makeFocusDim(source: MLNShapeSource) -> MLNFillStyleLayer {
+        let dimFill = MLNFillStyleLayer(identifier: MapLayerStyle.focusDimLayerID, source: source)
+        dimFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.focusDimColor)
+        dimFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.focusDimOpacity)
+        dimFill.predicate = Self.matchesNoRegion
+        focusDimFill = dimFill
+        return dimFill
+    }
+
+    /// The followed regions' outlines and, over them, the selected region's.
+    func makeHighlightOutlines(source: MLNShapeSource) -> [MLNLineStyleLayer] {
+        let favoriteOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.favoriteRegionOutlineLayerID,
+            source: source,
+            color: MapLayerStyle.favoriteRegionColor,
+            opacity: MapLayerStyle.favoriteRegionOutlineOpacity,
+            width: MapLayerStyle.favoriteRegionOutlineWidth
+        )
+        favoriteRegionOutline = favoriteOutline
+
+        let selectedOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.selectedRegionOutlineLayerID,
+            source: source,
+            color: MapLayerStyle.selectedRegionColor,
+            opacity: MapLayerStyle.selectedRegionOutlineOpacity,
+            width: MapLayerStyle.selectedRegionOutlineWidth
+        )
+        selectedRegionOutline = selectedOutline
+        return [favoriteOutline, selectedOutline]
     }
 
     func installCityLayer(in style: MLNStyle, source: MLNShapeSource) {
@@ -387,17 +394,7 @@ private extension AirRaidMapView.Coordinator {
         )
         threatPins.iconAllowsOverlap = NSExpression(forConstantValue: true)
         threatPins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        // A pin where there is no alert is probably misplaced (a namesake in another oblast): faded, not hidden.
-        // A pin outside the focused region fades further: it is context, not what the user is watching.
-        let pinOpacity = NSExpression(
-            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideFocusKey),
-            trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideFocusOpacity),
-            falseExpression: NSExpression(
-                forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideAlertKey),
-                trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideAlertOpacity),
-                falseExpression: NSExpression(forConstantValue: 1)
-            )
-        )
+        let pinOpacity = MapFeatureFactory.makePinOpacity()
         threatPins.iconOpacity = pinOpacity
         threatPins.textOpacity = pinOpacity
 

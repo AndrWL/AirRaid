@@ -27,6 +27,36 @@ enum MapFeatureFactory {
         return fill
     }
 
+    /// A plain line along a source's polygons; round joins keep the bright outlines from spiking at sharp corners.
+    static func makeOutline(
+        identifier: String,
+        source: MLNShapeSource,
+        color: UIColor,
+        opacity: Double,
+        width: Double
+    ) -> MLNLineStyleLayer {
+        let outline = MLNLineStyleLayer(identifier: identifier, source: source)
+        outline.lineColor = NSExpression(forConstantValue: color)
+        outline.lineOpacity = NSExpression(forConstantValue: opacity)
+        outline.lineWidth = NSExpression(forConstantValue: width)
+        outline.lineJoin = NSExpression(forConstantValue: MapLayerStyle.roundJoin)
+        return outline
+    }
+
+    /// A pin where there is no alert is probably misplaced (a namesake in another oblast): faded, not hidden.
+    /// A pin outside the focused region fades further: it is context, not what the user is watching.
+    static func makePinOpacity() -> NSExpression {
+        NSExpression(
+            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideFocusKey),
+            trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideFocusOpacity),
+            falseExpression: NSExpression(
+                forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideAlertKey),
+                trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideAlertOpacity),
+                falseExpression: NSExpression(forConstantValue: 1)
+            )
+        )
+    }
+
     static func makeDistrictFeatures(from districts: [DistrictBoundary]) -> [DistrictKey: MLNMultiPolygonFeature] {
         Dictionary(
             districts.map { district in
