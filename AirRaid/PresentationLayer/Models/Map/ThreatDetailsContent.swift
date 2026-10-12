@@ -92,7 +92,7 @@ struct ThreatDetailsContent {
         iconName = icon.name
         iconRotation = icon.rotatesWithHeading ? threat.course ?? 0 : 0
         summary = threat.summary
-        confidence = Confidence(level: threat.level, value: threat.confidence)
+        confidence = Confidence(level: threat.level)
         sourcesText = Self.makeSourcesText(count: threat.sourceCount)
 
         positionName = threat.position?.name
@@ -130,20 +130,15 @@ extension ThreatDetailsContent {
         /// «Висока».
         let label: String
 
-        /// «82 %».
-        let percentText: String
-
-        init(
-            level: ThreatLevel,
-            value: Double
-        ) {
+        /// The level only, no percentage: a number like «71 %» reads as more precise than an aggregate of
+        /// channel posts can be.
+        init(level: ThreatLevel) {
             self.level = level
             switch level {
             case .low: label = "Низька"
             case .medium: label = "Середня"
             case .high: label = "Висока"
             }
-            percentText = "\(Int((min(max(value, 0), 1) * 100).rounded())) %"
         }
     }
 }

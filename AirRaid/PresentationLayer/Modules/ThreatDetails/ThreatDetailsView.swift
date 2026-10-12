@@ -188,7 +188,7 @@ private extension ThreatDetailsView {
 private extension ThreatDetailsView {
 
     func confidenceBadge(_ confidence: ThreatDetailsContent.Confidence) -> some View {
-        Text("Достовірність: \(confidence.label) · \(confidence.percentText)")
+        Text("Достовірність: \(confidence.label)")
             .font(.caption.weight(.semibold))
             .foregroundStyle(color(of: confidence.level))
             .padding(.horizontal, 8)
