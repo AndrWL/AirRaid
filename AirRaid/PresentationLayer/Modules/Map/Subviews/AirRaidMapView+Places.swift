@@ -67,11 +67,10 @@ extension AirRaidMapView.Coordinator {
             opacity: MapLayerStyle.placeRadiusOutlineOpacity,
             width: MapLayerStyle.placeRadiusOutlineWidth
         )
-        outline.predicate = NSPredicate(
-            format: "%K == %@ AND %K == %@",
-            MapLayerStyle.placePartKey, MapLayerStyle.radiusPart,
-            MapLayerStyle.placeKindKey, kind
-        )
+        outline.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.radiusPart),
+            NSPredicate(format: "%K == %@", MapLayerStyle.placeKindKey, kind)
+        ])
         return outline
     }
 
