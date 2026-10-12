@@ -11,6 +11,7 @@ import Foundation
 @Observable
 final class MapRouter: BaseRouter {
 
+    var activeSheet: MapSheetRoute?
 }
 
 // MARK: - MapRouterProtocol

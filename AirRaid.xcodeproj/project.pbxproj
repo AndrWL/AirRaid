@@ -48,20 +48,20 @@
 			);
 			sourceTree = "<group>";
 		};
-		7F201D023074FAB600A5F804 /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				7F201D013074FAB600A5F804 /* Signing.xcconfig */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
 		7F201B453074FAB600A5F804 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				7F201B443074FAB600A5F804 /* AirRaid.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7F201D023074FAB600A5F804 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7F201D013074FAB600A5F804 /* Signing.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

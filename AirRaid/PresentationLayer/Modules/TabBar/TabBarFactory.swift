@@ -38,7 +38,10 @@ extension TabBarFactory: TabBarFactoryProtocol {
 
     @ViewBuilder
     func makeMap() -> some View {
-        MapCoordinatorView(appContainer: appContainer)
+        MapCoordinatorView(
+            appContainer: appContainer,
+            factory: MapFactory(appContainer: appContainer)
+        )
     }
 
     @ViewBuilder
