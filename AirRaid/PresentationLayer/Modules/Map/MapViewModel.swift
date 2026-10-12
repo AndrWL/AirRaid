@@ -27,9 +27,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var recenterRequest = 0
     private(set) var userLocation: GeoCoordinate?
     private(set) var placeSettings: PlaceSettings = .initial
-    private(set) var pendingHomeCoordinate: GeoCoordinate?
+    private(set) var isPickingHome = false
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
-    private(set) var locateRequest = 0
+    private(set) var flyRequest: MapFlyRequest?
     private(set) var isLocationDeniedAlertPresented = false
 
     @ObservationIgnored
@@ -65,6 +65,11 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     /// "To me" was tapped before there was a fix; the camera flies once the first one arrives.
     @ObservationIgnored
     private var isLocatePending = false
+
+    /// The point under the centre of the map, followed while picking the home; ignored for observation because it
+    /// changes on every pan and nothing renders from it.
+    @ObservationIgnored
+    private var mapCenter: GeoCoordinate?
 
     /// When the connection last went down, so the banner can say how old the map is.
     @ObservationIgnored
@@ -182,18 +187,28 @@ extension MapViewModel: MapViewModelProtocol {
         router.presentSheet(.places)
     }
 
-    func didLongPress(at coordinate: GeoCoordinate) {
-        pendingHomeCoordinate = coordinate
+    func didStartPickingHome() {
+        router.dismissSheet()
+        isPickingHome = true
+        // Start where the user is most likely to put it: the current home, else where they are now.
+        if let start = placeSettings.home?.coordinate ?? userLocation {
+            fly(to: start)
+        }
     }
 
-    func didConfirmHome() {
-        guard let pendingHomeCoordinate else { return }
-        placeSettingsRepository.setHome(at: pendingHomeCoordinate)
-        self.pendingHomeCoordinate = nil
+    func didChangeMapCenter(_ center: GeoCoordinate) {
+        mapCenter = center
     }
 
-    func didCancelHome() {
-        pendingHomeCoordinate = nil
+    func didConfirmHomePick() {
+        if let mapCenter {
+            placeSettingsRepository.setHome(at: mapCenter)
+        }
+        isPickingHome = false
+    }
+
+    func didCancelHomePick() {
+        isPickingHome = false
     }
 
     func didTapLocate() {
@@ -204,8 +219,8 @@ extension MapViewModel: MapViewModelProtocol {
         case .denied:
             isLocationDeniedAlertPresented = true
         case .authorized:
-            if userLocation != nil {
-                locateRequest += 1
+            if let userLocation {
+                fly(to: userLocation)
             } else {
                 isLocatePending = true
             }
@@ -245,6 +260,8 @@ extension MapViewModel: MapViewModelProtocol {
     }
 
     func didSelect(_ selection: MapSelection?) {
+        // While picking the home, taps belong to placing it.
+        guard !isPickingHome else { return }
         guard let selection else {
             if self.selection != nil {
                 router.dismissSheet()
@@ -318,10 +335,14 @@ private extension MapViewModel {
 
     func apply(_ location: GeoCoordinate?) {
         userLocation = location
-        if location != nil, isLocatePending {
+        if let location, isLocatePending {
             isLocatePending = false
-            locateRequest += 1
+            fly(to: location)
         }
+    }
+
+    func fly(to coordinate: GeoCoordinate) {
+        flyRequest = MapFlyRequest(id: (flyRequest?.id ?? 0) + 1, coordinate: coordinate)
     }
 
     func apply(_ situation: AirSituation) {

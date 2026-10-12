@@ -18,6 +18,7 @@ final class PlacesViewModel: BaseViewModel {
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
     private(set) var settings: PlaceSettings = .initial
     private(set) var boundaries: [RegionBoundary] = []
+    private(set) var userLocation: GeoCoordinate?
 
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
@@ -56,6 +57,13 @@ final class PlacesViewModel: BaseViewModel {
                 self?.locationAuthorization = authorization
             }
             .store(in: &cancellables)
+
+        userLocationService.locationPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] location in
+                self?.userLocation = location
+            }
+            .store(in: &cancellables)
     }
 }
 
@@ -65,6 +73,10 @@ extension PlacesViewModel: PlacesViewModelProtocol {
 
     var currentLocationRadiusKm: Double {
         settings.currentLocationRadiusKm
+    }
+
+    var canUseCurrentLocation: Bool {
+        userLocation != nil
     }
 
     var homeRadiusKm: Double? {
@@ -88,6 +100,11 @@ extension PlacesViewModel: PlacesViewModelProtocol {
 
     func didTapRemoveHome() {
         placeSettingsRepository.removeHome()
+    }
+
+    func didTapUseCurrentLocation() {
+        guard let userLocation else { return }
+        placeSettingsRepository.setHome(at: userLocation)
     }
 }
 

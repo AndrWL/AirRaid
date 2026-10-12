@@ -43,11 +43,12 @@ struct AirRaidMapView: UIViewRepresentable {
     /// Draws the user's blue dot; only once the user has allowed location, or the map would ask for it on its own.
     let showsUserLocation: Bool
 
-    /// Where the camera flies on a ``locateRequest``.
-    let userLocation: GeoCoordinate?
+    /// A new request flies the camera to its point.
+    let flyRequest: MapFlyRequest?
 
-    /// Changes whenever the camera should fly to the user.
-    let locateRequest: Int
+    /// While the user picks a point under a fixed centre pin: taps select nothing and the focus does not hold the
+    /// camera.
+    let isPickingLocation: Bool
 
     /// The user's location and home: a radius circle around each, and a pin on the home.
     let places: [WatchedPlace]
@@ -55,8 +56,8 @@ struct AirRaidMapView: UIViewRepresentable {
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
 
-    /// Called with the long-pressed point, to put the home there.
-    let onLongPress: (GeoCoordinate) -> Void
+    /// Called with the point under the centre of the map whenever the camera stops, and as it moves while picking.
+    let onCenterChange: (GeoCoordinate) -> Void
 
     // MARK: - UIViewRepresentable
 
@@ -80,19 +81,12 @@ struct AirRaidMapView: UIViewRepresentable {
             }
         }
         mapView.addGestureRecognizer(tap)
-
-        let longPress = UILongPressGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handleLongPress)
-        )
-        longPress.delegate = context.coordinator
-        mapView.addGestureRecognizer(longPress)
         return mapView
     }
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.onSelect = onSelect
-        context.coordinator.onLongPress = onLongPress
+        context.coordinator.onCenterChange = onCenterChange
         context.coordinator.update(from: self)
     }
 }
@@ -133,12 +127,13 @@ extension AirRaidMapView {
         private var favoriteRegionIDs: [String] = []
         private var focusedRegionID: String?
         private var recenterRequest = 0
-        private var locateRequest = 0
+        private var flyRequest: MapFlyRequest?
+        var isPickingLocation = false
 
         /// Read by the places extension in its own file, hence not private.
         var places: [WatchedPlace] = []
         var placesSource: MLNShapeSource?
-        var onLongPress: (GeoCoordinate) -> Void = { _ in }
+        var onCenterChange: (GeoCoordinate) -> Void = { _ in }
 
         weak var mapView: MLNMapView?
 
@@ -168,7 +163,7 @@ extension AirRaidMapView {
             let favoritesChanged = view.favoriteRegionIDs != favoriteRegionIDs
             let focusChanged = view.focusedRegionID != focusedRegionID
             let recenterRequested = view.recenterRequest != recenterRequest
-            let locateRequested = view.locateRequest != locateRequest
+            let flyRequested = view.flyRequest != flyRequest
 
             boundaries = view.boundaries
             districts = view.districts
@@ -179,8 +174,9 @@ extension AirRaidMapView {
             favoriteRegionIDs = view.favoriteRegionIDs
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
-            locateRequest = view.locateRequest
-            updatePlaces(from: view, locateRequested: locateRequested)
+            flyRequest = view.flyRequest
+            isPickingLocation = view.isPickingLocation
+            updatePlaces(from: view, flyRequested: flyRequested)
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
@@ -234,13 +230,23 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applySelectedTrack()
     }
 
+    /// Also while the camera is still moving: "here" may be tapped before a fling has settled.
+    func mapViewRegionIsChanging(_ mapView: MLNMapView) {
+        guard isPickingLocation else { return }
+        onCenterChange(GeoCoordinate(mapView.centerCoordinate))
+    }
+
+    func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
+        onCenterChange(GeoCoordinate(mapView.centerCoordinate))
+    }
+
     /// Keeps a pan from leaving the focused region: the centre may stray a quarter of the region's size past its box.
     func mapView(
         _ mapView: MLNMapView,
         shouldChangeFrom oldCamera: MLNMapCamera,
         to newCamera: MLNMapCamera
     ) -> Bool {
-        guard let box = focusedRegion?.boundingBox else { return true }
+        guard !isPickingLocation, let box = focusedRegion?.boundingBox else { return true }
         return box.contains(GeoCoordinate(newCamera.centerCoordinate), margin: MapLayerStyle.focusPanMargin)
     }
 }
@@ -629,11 +635,11 @@ private extension AirRaidMapView.Coordinator {
             focusedRegionID: nil,
             recenterRequest: 0,
             showsUserLocation: false,
-            userLocation: nil,
-            locateRequest: 0,
+            flyRequest: nil,
+            isPickingLocation: false,
             places: [],
             onSelect: { _ in },
-            onLongPress: { _ in }
+            onCenterChange: { _ in }
         )
     }
 }

@@ -61,30 +61,30 @@ extension AirRaidMapView.Coordinator {
     /// The blue dot, the flight to the user and the places' circles, from the view's latest values.
     func updatePlaces(
         from view: AirRaidMapView,
-        locateRequested: Bool
+        flyRequested: Bool
     ) {
-        updateUserLocation(from: view, locateRequested: locateRequested)
+        updateUserLocation(from: view, flyRequested: flyRequested)
         if view.places != places {
             places = view.places
             applyPlaces()
         }
     }
 
-    /// Shows or hides the blue dot, and flies to the user when asked.
+    /// Shows or hides the blue dot, and flies the camera when asked.
     func updateUserLocation(
         from view: AirRaidMapView,
-        locateRequested: Bool
+        flyRequested: Bool
     ) {
         if mapView?.showsUserLocation != view.showsUserLocation {
             mapView?.showsUserLocation = view.showsUserLocation
         }
-        if locateRequested, let location = view.userLocation {
-            flyToUser(at: location)
+        if flyRequested, let request = view.flyRequest {
+            fly(to: request.coordinate)
         }
     }
 
-    /// Centres on the user, zooming in to about a raion unless the map is already closer.
-    func flyToUser(at location: GeoCoordinate) {
+    /// Centres on the point, zooming in to about a raion unless the map is already closer.
+    func fly(to location: GeoCoordinate) {
         guard let mapView else { return }
         mapView.setCenter(
             CLLocationCoordinate2D(location),

@@ -94,7 +94,7 @@ private extension MapCoordinatorView {
     }
 
     func sheetContent(for route: MapSheetRoute) -> some View {
-        factory.sheet(for: route)
+        factory.sheet(for: route, actions: MapSheetActions(pickHomeOnMap: viewModel.didStartPickingHome))
             // Tapping another pin swaps the route of the sheet already on screen (see `MapSheetRoute.id`);
             // a new identity rebuilds the module, whose view model would otherwise keep the old threat.
             .id(route)

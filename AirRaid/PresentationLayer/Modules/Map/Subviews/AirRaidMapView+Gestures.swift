@@ -15,7 +15,7 @@ extension AirRaidMapView.Coordinator {
     /// neither — outside Ukraine.
     @objc
     func handleTap(_ recognizer: UITapGestureRecognizer) {
-        guard recognizer.state == .ended, let mapView = recognizer.view as? MLNMapView else { return }
+        guard recognizer.state == .ended, !isPickingLocation, let mapView = recognizer.view as? MLNMapView else { return }
         let point = recognizer.location(in: mapView)
         let hitArea = CGRect(
             x: point.x - MapLayerStyle.tapRadius,
@@ -33,19 +33,6 @@ extension AirRaidMapView.Coordinator {
         }
         let region = mapView.visibleFeatures(at: point, styleLayerIdentifiers: [MapLayerStyle.territoryFillLayerID]).first
         onSelect((region?.attributes[MapLayerStyle.regionIDKey] as? String).map { .region(id: $0) })
-    }
-}
-
-// MARK: - Long press
-
-extension AirRaidMapView.Coordinator {
-
-    /// Reports the pressed point once, when the press is recognized, not again while the finger moves.
-    @objc
-    func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
-        guard recognizer.state == .began, let mapView = recognizer.view as? MLNMapView else { return }
-        let coordinate = mapView.convert(recognizer.location(in: mapView), toCoordinateFrom: mapView)
-        onLongPress(GeoCoordinate(coordinate))
     }
 }
 

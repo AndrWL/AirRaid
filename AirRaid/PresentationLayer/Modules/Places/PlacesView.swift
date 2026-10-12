@@ -14,13 +14,16 @@ struct PlacesView<ViewModel: PlacesViewModelProtocol>: View {
     // MARK: - Variables
 
     private let viewModel: ViewModel
+    private let onPickHomeOnMap: () -> Void
     private let onClose: () -> Void
 
     init(
         viewModel: ViewModel,
+        onPickHomeOnMap: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.viewModel = viewModel
+        self.onPickHomeOnMap = onPickHomeOnMap
         self.onClose = onClose
     }
 
@@ -70,10 +73,11 @@ private extension PlacesView {
             placeTitle(.home, detail: viewModel.homeRegionName)
             if let homeRadiusKm = viewModel.homeRadiusKm {
                 radiusPicker(selection: homeRadiusKm, for: .home)
+            }
+            homeActions
+            if viewModel.homeRadiusKm != nil {
                 Button("Прибрати дім", role: .destructive, action: viewModel.didTapRemoveHome)
                     .font(.app(.body, weight: .semibold))
-            } else {
-                hint("Затисніть точку на карті, щоб позначити дім.")
             }
         }
         .listRowBackground(Color.surface)
@@ -92,6 +96,21 @@ private extension PlacesView {
 // MARK: - Components
 
 private extension PlacesView {
+
+    /// Where to put the home: on the map, or right where the user is.
+    var homeActions: some View {
+        Group {
+            Button(action: onPickHomeOnMap) {
+                Label(viewModel.homeRadiusKm == nil ? "Обрати на карті" : "Змінити на карті", systemImage: "mappin.and.ellipse")
+            }
+            if viewModel.canUseCurrentLocation {
+                Button(action: viewModel.didTapUseCurrentLocation) {
+                    Label("Дім там, де я зараз", systemImage: "location")
+                }
+            }
+        }
+        .font(.app(.body, weight: .semibold))
+    }
 
     func placeTitle(
         _ kind: WatchedPlaceKind,
@@ -157,6 +176,7 @@ private enum Constants {
                     userLocationService: UserLocationService(),
                     regionBoundaryRepository: RegionBoundaryRepository()
                 ),
+                onPickHomeOnMap: {},
                 onClose: {}
             )
             .presentationDetents([.medium, .large])

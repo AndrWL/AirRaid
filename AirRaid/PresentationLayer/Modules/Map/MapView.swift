@@ -35,11 +35,11 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             focusedRegionID: viewModel.focusedRegionID,
             recenterRequest: viewModel.recenterRequest,
             showsUserLocation: viewModel.locationAuthorization == .authorized,
-            userLocation: viewModel.userLocation,
-            locateRequest: viewModel.locateRequest,
+            flyRequest: viewModel.flyRequest,
+            isPickingLocation: viewModel.isPickingHome,
             places: viewModel.places,
             onSelect: viewModel.didSelect,
-            onLongPress: viewModel.didLongPress
+            onCenterChange: viewModel.didChangeMapCenter
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
@@ -57,7 +57,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     )
                     .transition(.opacity)
                 }
-                if !viewModel.favoriteChips.isEmpty {
+                if !viewModel.favoriteChips.isEmpty, !viewModel.isPickingHome {
                     FavoriteRegionsBar(
                         chips: viewModel.favoriteChips,
                         selectedRegionID: selectedRegionID,
@@ -71,18 +71,19 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
-        .overlay(alignment: .bottom) { bottomControls }
-        // An alert rather than a confirmation dialog: on iPad and iOS 26 the dialog is a popover, and there is no view
-        // at the pressed point to anchor it to.
-        .alert(
-            viewModel.placeSettings.home == nil ? "Позначити тут дім?" : "Перенести дім сюди?",
-            isPresented: homeConfirmation
-        ) {
-            Button(viewModel.placeSettings.home == nil ? "Позначити дім" : "Перенести дім", action: viewModel.didConfirmHome)
-            Button("Скасувати", role: .cancel, action: viewModel.didCancelHome)
-        } message: {
-            Text("Загрози в радіусі навколо дому з'являтимуться в картці на карті.")
+        .overlay {
+            if viewModel.isPickingHome {
+                HomePickerOverlay(
+                    isMovingHome: viewModel.placeSettings.home != nil,
+                    onConfirm: viewModel.didConfirmHomePick,
+                    onCancel: viewModel.didCancelHomePick
+                )
+            } else {
+                bottomControls
+            }
         }
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.isPickingHome)
+        .sensoryFeedback(.success, trigger: viewModel.placeSettings.home)
         .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
             Button("Відкрити Налаштування") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -104,6 +105,13 @@ private extension MapView {
 
     /// The nearest threat on the left, "to me" on the right; above the map's attribution and the tab bar.
     var bottomControls: some View {
+        VStack {
+            Spacer()
+            bottomControlsRow
+        }
+    }
+
+    var bottomControlsRow: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
             TimelineView(.periodic(from: .now, by: Constants.nearestThreatRefreshInterval)) { timeline in
                 if let summary = viewModel.nearestThreat(at: timeline.date) {
@@ -130,6 +138,8 @@ private extension MapView {
                 .foregroundStyle(Color.accentColor)
                 .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
                 .glassBackground(in: .circle)
+                // The whole disc, not only the glyph: a tap on the glass edge would fall through to the map.
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Мої місця")
@@ -142,19 +152,10 @@ private extension MapView {
                 .foregroundStyle(Color.accentColor)
                 .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
                 .glassBackground(in: .circle)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Показати мене на карті")
-    }
-
-    /// Shown while a long-pressed point waits to become the home.
-    var homeConfirmation: Binding<Bool> {
-        Binding(
-            get: { viewModel.pendingHomeCoordinate != nil },
-            set: { isPresented in
-                if !isPresented { viewModel.didCancelHome() }
-            }
-        )
     }
 
     /// The view model owns the flag; the alert only reports its dismissal.

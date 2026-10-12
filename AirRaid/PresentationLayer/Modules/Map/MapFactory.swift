@@ -25,14 +25,14 @@ struct MapFactory {
 extension MapFactory: MapFactoryProtocol {
 
     @ViewBuilder
-    func sheet(for route: MapSheetRoute) -> some View {
+    func sheet(for route: MapSheetRoute, actions: MapSheetActions) -> some View {
         switch route {
         case .threatDetails(let id):
             ThreatDetailsCoordinatorView(appContainer: appContainer, threatID: id)
         case .regionDetails(let id):
             RegionDetailsCoordinatorView(appContainer: appContainer, regionID: id)
         case .places:
-            PlacesCoordinatorView(appContainer: appContainer)
+            PlacesCoordinatorView(appContainer: appContainer, onPickHomeOnMap: actions.pickHomeOnMap)
         }
     }
 }

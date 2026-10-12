@@ -18,9 +18,13 @@ struct PlacesCoordinatorView: View {
     @State private var viewModel: PlacesViewModel
     @Environment(\.dismiss) private var dismiss
 
+    private let onPickHomeOnMap: () -> Void
+
     init(
-        appContainer: DIAppContaining
+        appContainer: DIAppContaining,
+        onPickHomeOnMap: @escaping () -> Void
     ) {
+        self.onPickHomeOnMap = onPickHomeOnMap
         let viewModel = PlacesViewModel(
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             userLocationService: appContainer.services.userLocationService,
@@ -30,7 +34,7 @@ struct PlacesCoordinatorView: View {
     }
 
     var body: some View {
-        PlacesView(viewModel: viewModel) {
+        PlacesView(viewModel: viewModel, onPickHomeOnMap: onPickHomeOnMap) {
             dismiss()
         }
     }
@@ -40,5 +44,5 @@ struct PlacesCoordinatorView: View {
     let container = DIAppContainer()
     container.setup()
 
-    return PlacesCoordinatorView(appContainer: container)
+    return PlacesCoordinatorView(appContainer: container, onPickHomeOnMap: {})
 }

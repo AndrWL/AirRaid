@@ -22,10 +22,16 @@ protocol PlacesViewModelProtocol: BaseViewModelProtocol {
     /// «Полтавська область» — where the home pin is; `nil` without a home or outside Ukraine.
     var homeRegionName: String? { get }
 
+    /// Whether the user's location is known, so the home can be put there.
+    var canUseCurrentLocation: Bool { get }
+
     /// Loads the region outlines to name the home's region. Safe to call on every appearance.
     func onAppear() async
 
     func didSelectRadius(_ radiusKm: Double, for kind: WatchedPlaceKind)
 
     func didTapRemoveHome()
+
+    /// Puts the home where the user is now.
+    func didTapUseCurrentLocation()
 }
