@@ -13,18 +13,19 @@ nonisolated enum MapSheetRoute: Identifiable, Hashable {
     /// The details of the threat with this id.
     case threatDetails(id: String)
 
-    /// One identity for every threat, so tapping another pin while the sheet is open updates the sheet in place
-    /// instead of presenting a new one — which would drop the height the user chose.
+    /// The alerts and threats of the region with this ISO 3166-2 code.
+    case regionDetails(id: String)
+
+    /// One identity for every threat and region, so tapping another pin or region while the sheet is open updates
+    /// the sheet in place instead of presenting a new one — which would drop the height the user chose.
     var id: String {
-        switch self {
-        case .threatDetails: "threatDetails"
-        }
+        "details"
     }
 
-    /// Starts at half height so the threat and its track stay visible on the map above.
+    /// Starts at half height so the threat or region stays visible on the map above.
     var detents: Set<PresentationDetent> {
         switch self {
-        case .threatDetails: [.medium, .large]
+        case .threatDetails, .regionDetails: [.medium, .large]
         }
     }
 }

@@ -54,6 +54,22 @@ nonisolated extension AirSituation {
         return AirRaidCoverage(regions: regions, districts: districts)
     }
 
+    /// Every alert that concerns the region: its own (oblast, raion, hromada, city), earliest first, plus the
+    /// oblast-wide alerts of a region that includes it — a Crimea-wide alert for Sevastopol.
+    func alerts(inRegion regionID: String) -> [RegionAlert] {
+        alerts
+            .filter { alert in
+                alert.regionID == regionID
+                    || alert.scope == .oblast && Self.includedRegionIDs[alert.regionID]?.contains(regionID) == true
+            }
+            .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    /// Threats reported in the region, not counting country-wide reports.
+    func threats(inRegion regionID: String) -> [Threat] {
+        threats.filter { $0.area.regionID == regionID }
+    }
+
     /// Cities that are regions of their own, so a city alert covers the whole region: Kyiv, Sevastopol.
     private static let cityRegionIDs: Set<String> = ["UA-30", "UA-40"]
 

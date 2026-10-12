@@ -172,7 +172,7 @@ private extension ThreatDetailsView {
                 InlineNote("Тривоги немає", systemImage: "checkmark.shield", tone: .allClear)
             } else {
                 ForEach(content.alerts) { alert in
-                    alertRow(alert)
+                    RegionAlertRowView(alert)
                 }
             }
         }
@@ -204,33 +204,6 @@ private extension ThreatDetailsView {
         return Badge("Достовірність: \(confidence.label)", tone: tone)
     }
 
-    func alertRow(_ alert: ThreatDetailsContent.AlertRow) -> some View {
-        HStack(spacing: Constants.alertRowSpacing) {
-            StatusDot(dotTone(of: alert.level))
-            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
-                Text(alert.name)
-                    .foregroundStyle(.ink)
-                if let kindText = alert.kindText {
-                    Text(kindText)
-                        .font(.app(.footnote))
-                        .foregroundStyle(.inkMuted)
-                }
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: Spacing.xxSmall) {
-                Text(alert.startedText)
-                    .foregroundStyle(.ink)
-                Text(alert.durationText)
-                    .font(.app(.footnote))
-                    .foregroundStyle(.inkMuted)
-                    .contentTransition(.numericText())
-                    .animation(Motion.quick, value: alert.durationText)
-            }
-            .monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-
     /// A value computed by the app rather than reported, tagged so it is not read as a fact.
     func estimated(_ text: String) -> some View {
         HStack(spacing: Spacing.small) {
@@ -248,13 +221,6 @@ private extension ThreatDetailsView {
             .padding(Spacing.large)
     }
 
-    func dotTone(of level: RegionAlertLevel?) -> StatusDot.Tone {
-        switch level {
-        case .red: return .alertRed
-        case .yellow: return .alertYellow
-        case nil: return .unknown
-        }
-    }
 }
 
 // MARK: - Constants
@@ -267,7 +233,6 @@ private enum Constants {
     static let countSpacing: CGFloat = 6
     /// Room on the right of the header for the close button overlay.
     static let closeButtonClearance: CGFloat = 36
-    static let alertRowSpacing: CGFloat = 10
 }
 
 #Preview {

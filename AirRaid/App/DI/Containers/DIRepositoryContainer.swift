@@ -90,8 +90,9 @@ extension DIRepositoryContainer: DIRepositoryContaining {
 
 private extension DIRepositoryContainer {
 
+    /// A singleton: it keeps the decoded outlines for the map and the region sheets.
     func registerRegionBoundaryRepository() {
-        container.register(RegionBoundaryRepositoryProtocol.self, lifetime: .transient) { _ in
+        container.register(RegionBoundaryRepositoryProtocol.self, lifetime: .singleton) { _ in
             RegionBoundaryRepository()
         }
     }

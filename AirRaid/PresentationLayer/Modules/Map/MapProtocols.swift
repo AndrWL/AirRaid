@@ -31,14 +31,14 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Why the map is not live right now; `nil` while it is.
     var connectionNotice: MapConnectionNotice? { get }
 
-    /// The threat whose details are open, highlighted on the map with its track; `nil` when none is.
-    var selectedThreatID: String? { get }
+    /// The threat or region whose sheet is open, highlighted on the map; `nil` when none is.
+    var selection: MapSelection? { get }
 
     /// Loads the region outlines and city labels. Safe to call on every appearance.
     func onAppear() async
 
-    /// Opens the details of the tapped threat, or closes them when the tap missed every pin.
-    func didSelectThreat(id: String?)
+    /// Opens the sheet of the tapped threat or region, or closes it when the tap hit neither.
+    func didSelect(_ selection: MapSelection?)
 }
 
 /// Defines the routing capabilities for the Map flow.
