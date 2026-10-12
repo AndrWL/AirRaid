@@ -26,17 +26,6 @@ extension AirRaidMapView.Coordinator {
         )
         radiusFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.placeRadiusFillOpacity)
 
-        // A dark casing under the coloured line, the way labels get a halo: the circle crosses dark, yellow and red
-        // fills, and a single blue line disappears on some of them.
-        let radiusCasing = MapFeatureFactory.makeOutline(
-            identifier: MapLayerStyle.placeRadiusCasingLayerID,
-            source: source,
-            color: MapLayerStyle.placeCasingColor,
-            opacity: MapLayerStyle.placeRadiusCasingOpacity,
-            width: MapLayerStyle.placeRadiusCasingWidth
-        )
-        radiusCasing.predicate = radiusFill.predicate
-
         // The user's own circle is solid, the home's dashed, so the two read apart where they overlap.
         let locationOutline = makeRadiusOutline(
             identifier: MapLayerStyle.placeRadiusOutlineLayerID,
@@ -58,7 +47,7 @@ extension AirRaidMapView.Coordinator {
         homePin.iconAllowsOverlap = NSExpression(forConstantValue: true)
         homePin.iconIgnoresPlacement = NSExpression(forConstantValue: true)
 
-        [radiusFill, radiusCasing, locationOutline, homeOutline, homePin].forEach(style.addLayer)
+        [radiusFill, locationOutline, homeOutline, homePin].forEach(style.addLayer)
     }
 
     func makeRadiusOutline(

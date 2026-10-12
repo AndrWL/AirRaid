@@ -36,7 +36,6 @@ enum MapLayerStyle {
     static let focusDimLayerID = "regions-focus-dim"
     static let placesSourceID = "places"
     static let placeRadiusFillLayerID = "places-radius-fill"
-    static let placeRadiusCasingLayerID = "places-radius-casing"
     static let placeRadiusOutlineLayerID = "places-radius-outline"
     static let homeRadiusOutlineLayerID = "places-home-radius-outline"
     static let homePinLayerID = "places-home-pin"
@@ -104,14 +103,11 @@ enum MapLayerStyle {
     /// The user's location is blue like the system's blue dot; the home is orange (#FF8000), so the two never read as one.
     static let currentLocationColor = UIColor.mapPlace
     static let homeColor = UIColor.mapHome
-    static let placeCasingColor = UIColor.mapHalo
-    static let placeRadiusFillOpacity: Double = 0.14
-    static let placeRadiusCasingOpacity: Double = 0.9
-    static let placeRadiusCasingWidth: Double = 5
+    static let placeRadiusFillOpacity: Double = 0.1
     static let placeRadiusOutlineOpacity: Double = 1
-    static let placeRadiusOutlineWidth: Double = 2.5
+    static let placeRadiusOutlineWidth: Double = 1.5
     /// In line widths: long dashes, so the home's circle still reads as a circle and not as dots.
-    static let placeRadiusDashPattern: [Double] = [2.5, 1.5]
+    static let placeRadiusDashPattern: [Double] = [4, 2]
 
     /// A white house on an orange disc with a white rim, the way the blue dot marks the user.
     ///
