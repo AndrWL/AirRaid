@@ -18,6 +18,7 @@ final class RegionDetailsViewModel: BaseViewModel {
     private(set) var regionName: String?
     private(set) var situation: AirSituation = .empty
     private(set) var isFavorite = false
+    private(set) var isFocused = false
 
     @ObservationIgnored
     private let regionID: String
@@ -32,18 +33,23 @@ final class RegionDetailsViewModel: BaseViewModel {
     private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
 
     @ObservationIgnored
+    private let focusedRegionRepository: FocusedRegionRepositoryProtocol
+
+    @ObservationIgnored
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     init(
         regionID: String,
         airSituationRepository: AirSituationRepositoryProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
-        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
+        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
+        focusedRegionRepository: FocusedRegionRepositoryProtocol
     ) {
         self.regionID = regionID
         self.airSituationRepository = airSituationRepository
         self.regionBoundaryRepository = regionBoundaryRepository
         self.favoriteRegionsRepository = favoriteRegionsRepository
+        self.focusedRegionRepository = focusedRegionRepository
     }
 
     // MARK: - Override methods
@@ -64,6 +70,14 @@ final class RegionDetailsViewModel: BaseViewModel {
             .sink { [weak self] ids in
                 guard let self else { return }
                 isFavorite = ids.contains(regionID)
+            }
+            .store(in: &cancellables)
+
+        focusedRegionRepository.focusedRegionIDPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] focusedID in
+                guard let self else { return }
+                isFocused = focusedID == regionID
             }
             .store(in: &cancellables)
     }
@@ -99,6 +113,10 @@ extension RegionDetailsViewModel: RegionDetailsViewModelProtocol {
 
     func didTapFavorite() {
         favoriteRegionsRepository.setFavorite(!isFavorite, regionID: regionID)
+    }
+
+    func didTapFocus() {
+        focusedRegionRepository.setFocusedRegion(isFocused ? nil : regionID)
     }
 }
 

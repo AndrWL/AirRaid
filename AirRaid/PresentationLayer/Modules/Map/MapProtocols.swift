@@ -37,11 +37,26 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// The followed regions with their alert state, in the order they were added; empty until the outlines load.
     var favoriteChips: [FavoriteRegionChip] { get }
 
+    /// The region the map is narrowed to, or `nil` for the whole country.
+    var focusedRegionID: String? { get }
+
+    /// The focused region's name; `nil` without a focus or until the outlines load.
+    var focusedRegionName: String? { get }
+
+    /// Changes whenever the camera should fit the focused region (or the country) again.
+    var recenterRequest: Int { get }
+
     /// The threat or region whose sheet is open, highlighted on the map; `nil` when none is.
     var selection: MapSelection? { get }
 
     /// Loads the region outlines and city labels. Safe to call on every appearance.
     func onAppear() async
+
+    /// Moves the camera back onto the focused region.
+    func didTapRecenter()
+
+    /// Shows the whole country again.
+    func didTapExitFocus()
 
     /// Opens the sheet of the tapped threat or region, or closes it when the tap hit neither.
     func didSelect(_ selection: MapSelection?)

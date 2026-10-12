@@ -15,6 +15,10 @@ enum MapLayerStyle {
         ne: CLLocationCoordinate2D(latitude: 52.4, longitude: 40.3)
     )
     static let ukraineEdgePadding = UIEdgeInsets(top: 60, left: 8, bottom: 8, right: 8)
+    /// Room for the chips and the focus pill above, and the tab bar below.
+    static let focusEdgePadding = UIEdgeInsets(top: 150, left: 24, bottom: 120, right: 24)
+    /// How far past the focused region's box the camera centre may be panned, as a share of the box.
+    static let focusPanMargin: Double = 0.25
 
     static let regionSourceID = "regions"
     static let districtSourceID = "districts"
@@ -28,6 +32,7 @@ enum MapLayerStyle {
     static let outlineLayerID = "regions-outline"
     static let selectedRegionOutlineLayerID = "regions-selected-outline"
     static let favoriteRegionOutlineLayerID = "regions-favorite-outline"
+    static let focusDimLayerID = "regions-focus-dim"
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
     static let selectedTrailLayerID = "selected-track-trail"
@@ -47,6 +52,7 @@ enum MapLayerStyle {
     static let headingKey = "heading"
     static let selectedKey = "selected"
     static let outsideAlertKey = "outsideAlert"
+    static let outsideFocusKey = "outsideFocus"
     static let captionLabelKey = "captionLabel"
     static let captionNameKey = "captionName"
     static let trackPartKey = "part"
@@ -81,6 +87,9 @@ enum MapLayerStyle {
     static let selectedThreatIconScale: Double = 1
     static let threatCaptionFontSize: Double = 11
     static let outsideAlertOpacity: Double = 0.4
+    static let outsideFocusOpacity: Double = 0.25
+    static let focusDimColor = UIColor.mapDim
+    static let focusDimOpacity: Double = 0.7
     static let captionLabelFontNames = ["Noto Sans Regular"]
     static let captionLabelScale: Double = 0.8
     static let captionLabelColor = UIColor.mapCaption

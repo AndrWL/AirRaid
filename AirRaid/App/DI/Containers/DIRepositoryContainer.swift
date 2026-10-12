@@ -63,6 +63,7 @@ extension DIRepositoryContainer: DIAssembling {
         registerCityRepository()
         registerAirSituationRepository(with: appContainer)
         registerFavoriteRegionsRepository()
+        registerFocusedRegionRepository()
     }
 }
 
@@ -88,6 +89,10 @@ extension DIRepositoryContainer: DIRepositoryContaining {
 
     var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol {
         return container.resolve(FavoriteRegionsRepositoryProtocol.self)
+    }
+
+    var focusedRegionRepository: FocusedRegionRepositoryProtocol {
+        return container.resolve(FocusedRegionRepositoryProtocol.self)
     }
 }
 
@@ -128,6 +133,13 @@ private extension DIRepositoryContainer {
     func registerFavoriteRegionsRepository() {
         container.register(FavoriteRegionsRepositoryProtocol.self, lifetime: .singleton) { _ in
             FavoriteRegionsRepository()
+        }
+    }
+
+    /// A singleton so the map and the region sheet see the same focus as it changes.
+    func registerFocusedRegionRepository() {
+        container.register(FocusedRegionRepositoryProtocol.self, lifetime: .singleton) { _ in
+            FocusedRegionRepository()
         }
     }
 

@@ -23,6 +23,8 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var threats: [Threat] = []
     private(set) var connectionNotice: MapConnectionNotice?
     private(set) var favoriteRegionIDs: [String] = []
+    private(set) var focusedRegionID: String?
+    private(set) var recenterRequest = 0
 
     @ObservationIgnored
     private let router: Router
@@ -45,6 +47,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
 
+    @ObservationIgnored
+    private let focusedRegionRepository: FocusedRegionRepositoryProtocol
+
     /// When the connection last went down, so the banner can say how old the map is.
     @ObservationIgnored
     private var liveUntil: Date?
@@ -60,6 +65,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         airSituationRepository: AirSituationRepositoryProtocol,
         realtimeService: RealtimeServiceProtocol,
         favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
+        focusedRegionRepository: FocusedRegionRepositoryProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -69,6 +75,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.airSituationRepository = airSituationRepository
         self.realtimeService = realtimeService
         self.favoriteRegionsRepository = favoriteRegionsRepository
+        self.focusedRegionRepository = focusedRegionRepository
         self.styleURL = styleURL
     }
 
@@ -98,6 +105,14 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] ids in
                 self?.favoriteRegionIDs = ids
+            }
+            .store(in: &cancellables)
+
+        focusedRegionRepository.focusedRegionIDPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                self?.focusedRegionID = id
             }
             .store(in: &cancellables)
 
@@ -138,6 +153,18 @@ extension MapViewModel: MapViewModelProtocol {
         favoriteRegionIDs.compactMap { id in
             boundaries.first { $0.id == id }.map { FavoriteRegionChip(region: $0, coverage: alertCoverage) }
         }
+    }
+
+    var focusedRegionName: String? {
+        focusedRegionID.flatMap { id in boundaries.first { $0.id == id }?.name }
+    }
+
+    func didTapRecenter() {
+        recenterRequest += 1
+    }
+
+    func didTapExitFocus() {
+        focusedRegionRepository.setFocusedRegion(nil)
     }
 
     func onAppear() async {

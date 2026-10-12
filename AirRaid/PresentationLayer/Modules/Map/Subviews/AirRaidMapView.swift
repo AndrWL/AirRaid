@@ -13,6 +13,9 @@ import SwiftUI
 /// larger, with its track behind it and a dashed line to its target. A tap that hits no pin selects the region under
 /// it, which gets a bright outline. Regions the user follows are outlined in the accent colour.
 ///
+/// With a focused region the rest of the country is dimmed, threats outside it fade, and the camera fits the region
+/// and does not let a pan wander far from it.
+///
 /// Regions, cities, and threats are style layers over GeoJSON sources rather than annotations: the GPU draws
 /// them, and an update replaces one source instead of diffing views.
 /// - Note: MapLibre is imported only in this folder; everything outside works with domain models.
@@ -31,6 +34,12 @@ struct AirRaidMapView: UIViewRepresentable {
     /// ISO codes of the regions the user follows.
     let favoriteRegionIDs: [String]
 
+    /// The region the map is narrowed to, or `nil` for the whole country.
+    let focusedRegionID: String?
+
+    /// Changes whenever the camera should fit the focused region (or the country) again.
+    let recenterRequest: Int
+
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
 
@@ -43,6 +52,7 @@ struct AirRaidMapView: UIViewRepresentable {
     func makeUIView(context: Context) -> MLNMapView {
         let mapView = MLNMapView(frame: .zero, styleURL: styleURL)
         mapView.delegate = context.coordinator
+        context.coordinator.mapView = mapView
         mapView.allowsRotating = false
         mapView.allowsTilting = false
 
@@ -98,6 +108,16 @@ extension AirRaidMapView {
         private var selectedRegionOutline: MLNLineStyleLayer?
 
         private var favoriteRegionIDs: [String] = []
+        private var focusedRegionID: String?
+        private var recenterRequest = 0
+
+        weak var mapView: MLNMapView?
+
+        /// Dims every region but the focused one.
+        private var focusDimFill: MLNFillStyleLayer?
+
+        /// Whether the style has loaded; the camera is fitted only after that, when the view has its size.
+        private var isStyleLoaded = false
 
         /// The followed-regions outline, whose filter follows the favourites.
         private var favoriteRegionOutline: MLNLineStyleLayer?
@@ -117,6 +137,8 @@ extension AirRaidMapView {
             let threats = view.threats
             let selection = view.selection
             let favoriteRegionIDs = view.favoriteRegionIDs
+            let focusChanged = view.focusedRegionID != focusedRegionID
+            let recenterRequested = view.recenterRequest != recenterRequest
 
             let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
             let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
@@ -133,6 +155,8 @@ extension AirRaidMapView {
             self.threats = threats
             self.selection = selection
             self.favoriteRegionIDs = favoriteRegionIDs
+            focusedRegionID = view.focusedRegionID
+            recenterRequest = view.recenterRequest
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
@@ -155,8 +179,15 @@ extension AirRaidMapView {
             if favoritesChanged {
                 applyFavoriteRegions()
             }
+            if focusChanged {
+                applyFocus()
+            }
+            // The region's outline may arrive after the focus did.
+            if focusChanged || recenterRequested || boundariesChanged && focusedRegionID != nil {
+                fitCamera(animated: true)
+            }
             // An area-only threat is placed by the alerts, so its pin moves when they change.
-            if threatsChanged || selectionChanged || alertsChanged || districtsChanged {
+            if threatsChanged || selectionChanged || alertsChanged || districtsChanged || focusChanged {
                 applyThreats()
                 applySelectedTrack()
             }
@@ -194,13 +225,10 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
 
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         // Here rather than in `makeUIView`: the view has its real size only by now, and fitting needs it.
-        mapView.setVisibleCoordinateBounds(
-            MapLayerStyle.ukraineBounds,
-            edgePadding: MapLayerStyle.ukraineEdgePadding,
-            animated: false,
-            completionHandler: nil
-        )
+        isStyleLoaded = true
+        fitCamera(animated: false)
         installLayers(in: style)
+        applyFocus()
         applyRegions()
         applyDistricts()
         applyCities()
@@ -208,6 +236,16 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyFavoriteRegions()
         applyThreats()
         applySelectedTrack()
+    }
+
+    /// Keeps a pan from leaving the focused region: the centre may stray a quarter of the region's size past its box.
+    func mapView(
+        _ mapView: MLNMapView,
+        shouldChangeFrom oldCamera: MLNMapCamera,
+        to newCamera: MLNMapCamera
+    ) -> Bool {
+        guard let box = focusedRegion?.boundingBox else { return true }
+        return box.contains(GeoCoordinate(newCamera.centerCoordinate), margin: MapLayerStyle.focusPanMargin)
     }
 }
 
@@ -290,6 +328,13 @@ private extension AirRaidMapView.Coordinator {
         outline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.outlineOpacity)
         outline.lineWidth = NSExpression(forConstantValue: MapLayerStyle.outlineWidth)
 
+        // Over the alert fills, so the rest of the country reads as background, but under the outlines.
+        let dimFill = MLNFillStyleLayer(identifier: MapLayerStyle.focusDimLayerID, source: regionSource)
+        dimFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.focusDimColor)
+        dimFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.focusDimOpacity)
+        dimFill.predicate = Self.matchesNoRegion
+        focusDimFill = dimFill
+
         let favoriteOutline = MLNLineStyleLayer(identifier: MapLayerStyle.favoriteRegionOutlineLayerID, source: regionSource)
         favoriteOutline.lineColor = NSExpression(forConstantValue: MapLayerStyle.favoriteRegionColor)
         favoriteOutline.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.favoriteRegionOutlineOpacity)
@@ -305,7 +350,10 @@ private extension AirRaidMapView.Coordinator {
         selectedRegionOutline = selectedOutline
 
         // Below the first label layer, so the base map's names stay readable over the fill.
-        let regionLayers = [territoryFill, regionAlertFill, districtAlertFill, districtOutline, outline, favoriteOutline, selectedOutline]
+        let regionLayers = [
+            territoryFill, regionAlertFill, districtAlertFill, dimFill, districtOutline, outline, favoriteOutline,
+            selectedOutline
+        ]
         if let firstLabelLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
             regionLayers.forEach { style.insertLayer($0, below: firstLabelLayer) }
         } else {
@@ -340,13 +388,18 @@ private extension AirRaidMapView.Coordinator {
         threatPins.iconAllowsOverlap = NSExpression(forConstantValue: true)
         threatPins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
         // A pin where there is no alert is probably misplaced (a namesake in another oblast): faded, not hidden.
-        let outsideAlertOpacity = NSExpression(
-            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideAlertKey),
-            trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideAlertOpacity),
-            falseExpression: NSExpression(forConstantValue: 1)
+        // A pin outside the focused region fades further: it is context, not what the user is watching.
+        let pinOpacity = NSExpression(
+            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideFocusKey),
+            trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideFocusOpacity),
+            falseExpression: NSExpression(
+                forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.outsideAlertKey),
+                trueExpression: NSExpression(forConstantValue: MapLayerStyle.outsideAlertOpacity),
+                falseExpression: NSExpression(forConstantValue: 1)
+            )
         )
-        threatPins.iconOpacity = outsideAlertOpacity
-        threatPins.textOpacity = outsideAlertOpacity
+        threatPins.iconOpacity = pinOpacity
+        threatPins.textOpacity = pinOpacity
 
         // The caption under the pin; captions that would collide are hidden, the pins always stay.
         let captionLabel = MLNAttributedExpression(
@@ -439,6 +492,7 @@ private extension AirRaidMapView.Coordinator {
             // Until the outlines load nothing can be checked, so nothing is faded.
             let isOutsideAlert = !boundaries.isEmpty
                 && !alertCoverage.isAlerted(at: coordinate, regions: boundaries, districts: districts)
+            let isOutsideFocus = focusedRegion.map { !$0.contains(coordinate) } ?? false
             let feature = MLNPointFeature()
             feature.coordinate = CLLocationCoordinate2D(coordinate)
             feature.identifier = threat.id
@@ -449,6 +503,7 @@ private extension AirRaidMapView.Coordinator {
                 MapLayerStyle.headingKey: icon.rotatesWithHeading ? threat.course ?? 0 : 0,
                 MapLayerStyle.selectedKey: selection == .threat(id: threat.id),
                 MapLayerStyle.outsideAlertKey: isOutsideAlert,
+                MapLayerStyle.outsideFocusKey: isOutsideFocus,
                 // The line break ends the label's section, so the name always starts a line of its own.
                 MapLayerStyle.captionLabelKey: threat.mapCaption.map { "\($0.label)\n" } ?? "",
                 MapLayerStyle.captionNameKey: threat.mapCaption?.name ?? ""
@@ -494,17 +549,53 @@ private extension AirRaidMapView.Coordinator {
     /// Outlines the selected region, or nothing.
     func applySelectedRegion() {
         guard let selectedRegionOutline else { return }
-        let regionID: String
         if case .region(let id) = selection {
-            regionID = id
+            selectedRegionOutline.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, id)
         } else {
-            regionID = ""
+            selectedRegionOutline.predicate = Self.matchesNoRegion
         }
-        selectedRegionOutline.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, regionID)
+    }
+
+    /// The focused region's outline, or `nil` with no focus or before the outlines load.
+    var focusedRegion: RegionBoundary? {
+        focusedRegionID.flatMap { id in boundaries.first { $0.id == id } }
+    }
+
+    func applyFocus() {
+        focusDimFill?.predicate = focusedRegionID.map { NSPredicate(format: "%K != %@", MapLayerStyle.regionIDKey, $0) }
+            ?? Self.matchesNoRegion
+    }
+
+    /// Fits the focused region, or the whole country without a focus.
+    func fitCamera(animated: Bool) {
+        guard isStyleLoaded, let mapView else { return }
+        if let box = focusedRegion?.boundingBox {
+            mapView.setVisibleCoordinateBounds(
+                MLNCoordinateBounds(sw: CLLocationCoordinate2D(box.southWest), ne: CLLocationCoordinate2D(box.northEast)),
+                edgePadding: MapLayerStyle.focusEdgePadding,
+                animated: animated,
+                completionHandler: nil
+            )
+        } else {
+            mapView.setVisibleCoordinateBounds(
+                MapLayerStyle.ukraineBounds,
+                edgePadding: MapLayerStyle.ukraineEdgePadding,
+                animated: animated,
+                completionHandler: nil
+            )
+        }
     }
 
     func applyFavoriteRegions() {
-        favoriteRegionOutline?.predicate = NSPredicate(format: "%K IN %@", MapLayerStyle.regionIDKey, favoriteRegionIDs)
+        favoriteRegionOutline?.predicate = favoriteRegionIDs.isEmpty
+            ? Self.matchesNoRegion
+            : NSPredicate(format: "%K IN %@", MapLayerStyle.regionIDKey, favoriteRegionIDs)
+    }
+
+    /// A filter no region passes. MapLibre rejects `FALSEPREDICATE` and an empty `IN` list, so it compares with an id
+    /// no region has.
+    static var matchesNoRegion: NSPredicate {
+        NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, "")
     }
 
     /// Screen distance from the tap to a pin, to pick the nearest of overlapping pins.
@@ -541,6 +632,8 @@ private extension AirRaidMapView.Coordinator {
             threats: [],
             selection: nil,
             favoriteRegionIDs: [],
+            focusedRegionID: nil,
+            recenterRequest: 0,
             onSelect: { _ in }
         )
     }

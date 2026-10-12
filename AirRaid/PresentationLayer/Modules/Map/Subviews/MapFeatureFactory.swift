@@ -80,3 +80,12 @@ extension CLLocationCoordinate2D {
         self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
     }
 }
+
+// MARK: - GeoCoordinate
+
+extension GeoCoordinate {
+
+    init(_ coordinate: CLLocationCoordinate2D) {
+        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+}

@@ -52,4 +52,7 @@ protocol DIRepositoryContaining {
 
     /// The regions the user follows.
     var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol { get }
+
+    /// The region the map is narrowed to, if any.
+    var focusedRegionRepository: FocusedRegionRepositoryProtocol { get }
 }

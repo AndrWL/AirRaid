@@ -31,6 +31,8 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             threats: viewModel.threats,
             selection: viewModel.selection,
             favoriteRegionIDs: viewModel.favoriteRegionIDs,
+            focusedRegionID: viewModel.focusedRegionID,
+            recenterRequest: viewModel.recenterRequest,
             onSelect: viewModel.didSelect
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
@@ -40,6 +42,14 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                 if let notice = viewModel.connectionNotice {
                     MapConnectionBanner(notice: notice)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+                if let focusedRegionName = viewModel.focusedRegionName {
+                    RegionFocusPill(
+                        regionName: focusedRegionName,
+                        onRecenter: viewModel.didTapRecenter,
+                        onExit: viewModel.didTapExitFocus
+                    )
+                    .transition(.opacity)
                 }
                 if !viewModel.favoriteChips.isEmpty {
                     FavoriteRegionsBar(
@@ -54,6 +64,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
         .sensoryFeedback(.selection, trigger: viewModel.selection) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
     }
@@ -84,6 +95,7 @@ private extension MapView {
                     airSituationRepository: DemoAirSituationRepository(),
                     realtimeService: container.services.realtimeService,
                     favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
+                    focusedRegionRepository: container.repositories.focusedRegionRepository,
                     styleURL: styleURL
                 )
             )
