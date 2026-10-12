@@ -36,6 +36,19 @@ extension AirRaidMapView.Coordinator {
     }
 }
 
+// MARK: - Long press
+
+extension AirRaidMapView.Coordinator {
+
+    /// Reports the pressed point once, when the press is recognized, not again while the finger moves.
+    @objc
+    func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began, let mapView = recognizer.view as? MLNMapView else { return }
+        let coordinate = mapView.convert(recognizer.location(in: mapView), toCoordinateFrom: mapView)
+        onLongPress(GeoCoordinate(coordinate))
+    }
+}
+
 // MARK: - UIGestureRecognizerDelegate
 
 extension AirRaidMapView.Coordinator: UIGestureRecognizerDelegate {

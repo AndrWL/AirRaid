@@ -49,8 +49,14 @@ struct AirRaidMapView: UIViewRepresentable {
     /// Changes whenever the camera should fly to the user.
     let locateRequest: Int
 
+    /// The user's location and home: a radius circle around each, and a pin on the home.
+    let places: [WatchedPlace]
+
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
+
+    /// Called with the long-pressed point, to put the home there.
+    let onLongPress: (GeoCoordinate) -> Void
 
     // MARK: - UIViewRepresentable
 
@@ -74,11 +80,19 @@ struct AirRaidMapView: UIViewRepresentable {
             }
         }
         mapView.addGestureRecognizer(tap)
+
+        let longPress = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleLongPress)
+        )
+        longPress.delegate = context.coordinator
+        mapView.addGestureRecognizer(longPress)
         return mapView
     }
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.onSelect = onSelect
+        context.coordinator.onLongPress = onLongPress
         context.coordinator.update(from: self)
     }
 }
@@ -121,6 +135,11 @@ extension AirRaidMapView {
         private var recenterRequest = 0
         private var locateRequest = 0
 
+        /// Read by the places extension in its own file, hence not private.
+        var places: [WatchedPlace] = []
+        var placesSource: MLNShapeSource?
+        var onLongPress: (GeoCoordinate) -> Void = { _ in }
+
         weak var mapView: MLNMapView?
 
         /// Dims every region but the focused one.
@@ -161,7 +180,7 @@ extension AirRaidMapView {
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
             locateRequest = view.locateRequest
-            updateUserLocation(from: view, locateRequested: locateRequested)
+            updatePlaces(from: view, locateRequested: locateRequested)
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
@@ -210,6 +229,7 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyCities()
         applySelectedRegion()
         applyFavoriteRegions()
+        applyPlaces()
         applyThreats()
         applySelectedTrack()
     }
@@ -247,6 +267,7 @@ private extension AirRaidMapView.Coordinator {
 
         installRegionLayers(in: style, regionSource: regionSource, districtSource: districtSource)
         installCityLayer(in: style, source: citySource)
+        installPlacesLayers(in: style)
         installSelectedTrackLayers(in: style, source: selectedTrackSource)
         installThreatLayer(in: style, source: threatSource)
     }
@@ -569,29 +590,6 @@ private extension AirRaidMapView.Coordinator {
         }
     }
 
-    /// Shows or hides the blue dot, and flies to the user when asked.
-    func updateUserLocation(
-        from view: AirRaidMapView,
-        locateRequested: Bool
-    ) {
-        if mapView?.showsUserLocation != view.showsUserLocation {
-            mapView?.showsUserLocation = view.showsUserLocation
-        }
-        if locateRequested, let location = view.userLocation {
-            flyToUser(at: location)
-        }
-    }
-
-    /// Centres on the user, zooming in to about a raion unless the map is already closer.
-    func flyToUser(at location: GeoCoordinate) {
-        guard let mapView else { return }
-        mapView.setCenter(
-            CLLocationCoordinate2D(location),
-            zoomLevel: max(mapView.zoomLevel, MapLayerStyle.userZoomLevel),
-            animated: true
-        )
-    }
-
     func applyFavoriteRegions() {
         favoriteRegionOutline?.predicate = favoriteRegionIDs.isEmpty
             ? Self.matchesNoRegion
@@ -633,7 +631,9 @@ private extension AirRaidMapView.Coordinator {
             showsUserLocation: false,
             userLocation: nil,
             locateRequest: 0,
-            onSelect: { _ in }
+            places: [],
+            onSelect: { _ in },
+            onLongPress: { _ in }
         )
     }
 }

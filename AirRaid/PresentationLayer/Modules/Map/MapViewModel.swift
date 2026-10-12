@@ -26,6 +26,8 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var focusedRegionID: String?
     private(set) var recenterRequest = 0
     private(set) var userLocation: GeoCoordinate?
+    private(set) var placeSettings: PlaceSettings = .initial
+    private(set) var pendingHomeCoordinate: GeoCoordinate?
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
     private(set) var locateRequest = 0
     private(set) var isLocationDeniedAlertPresented = false
@@ -57,6 +59,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private let userLocationService: UserLocationServiceProtocol
 
+    @ObservationIgnored
+    private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
+
     /// "To me" was tapped before there was a fix; the camera flies once the first one arrives.
     @ObservationIgnored
     private var isLocatePending = false
@@ -78,6 +83,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
         focusedRegionRepository: FocusedRegionRepositoryProtocol,
         userLocationService: UserLocationServiceProtocol,
+        placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -89,6 +95,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.favoriteRegionsRepository = favoriteRegionsRepository
         self.focusedRegionRepository = focusedRegionRepository
         self.userLocationService = userLocationService
+        self.placeSettingsRepository = placeSettingsRepository
         self.styleURL = styleURL
     }
 
@@ -145,7 +152,7 @@ extension MapViewModel: MapViewModelProtocol {
         switch router.activeSheet {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
-        case nil: nil
+        case .places, nil: nil
         }
     }
 
@@ -163,14 +170,30 @@ extension MapViewModel: MapViewModelProtocol {
         recenterRequest += 1
     }
 
+    var places: [WatchedPlace] {
+        WatchedPlace.places(currentLocation: userLocation, settings: placeSettings)
+    }
+
     func nearestThreat(at date: Date) -> NearestThreatSummary? {
-        guard let userLocation else { return nil }
-        return NearestThreatSummary.nearest(
-            among: threats,
-            to: userLocation,
-            at: date,
-            radiusKm: Constants.nearestThreatRadiusKm
-        )
+        NearestThreatSummary.nearest(among: threats, places: places, at: date)
+    }
+
+    func didTapPlaces() {
+        router.presentSheet(.places)
+    }
+
+    func didLongPress(at coordinate: GeoCoordinate) {
+        pendingHomeCoordinate = coordinate
+    }
+
+    func didConfirmHome() {
+        guard let pendingHomeCoordinate else { return }
+        placeSettingsRepository.setHome(at: pendingHomeCoordinate)
+        self.pendingHomeCoordinate = nil
+    }
+
+    func didCancelHome() {
+        pendingHomeCoordinate = nil
     }
 
     func didTapLocate() {
@@ -260,6 +283,14 @@ private extension MapViewModel {
     }
 
     func bindUserLocation() {
+        placeSettingsRepository.settingsPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] settings in
+                self?.placeSettings = settings
+            }
+            .store(in: &cancellables)
+
         userLocationService.authorizationPublisher
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
@@ -311,6 +342,4 @@ private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Map"
     static let noticeDelay: TimeInterval = 3
-    /// Threats farther than this are not "near" enough to be worth a card.
-    static let nearestThreatRadiusKm: Double = 150
 }

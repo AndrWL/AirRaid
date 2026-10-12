@@ -37,7 +37,9 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             showsUserLocation: viewModel.locationAuthorization == .authorized,
             userLocation: viewModel.userLocation,
             locateRequest: viewModel.locateRequest,
-            onSelect: viewModel.didSelect
+            places: viewModel.places,
+            onSelect: viewModel.didSelect,
+            onLongPress: viewModel.didLongPress
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
@@ -70,6 +72,17 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
         .overlay(alignment: .bottom) { bottomControls }
+        // An alert rather than a confirmation dialog: on iPad and iOS 26 the dialog is a popover, and there is no view
+        // at the pressed point to anchor it to.
+        .alert(
+            viewModel.placeSettings.home == nil ? "Позначити тут дім?" : "Перенести дім сюди?",
+            isPresented: homeConfirmation
+        ) {
+            Button(viewModel.placeSettings.home == nil ? "Позначити дім" : "Перенести дім", action: viewModel.didConfirmHome)
+            Button("Скасувати", role: .cancel, action: viewModel.didCancelHome)
+        } message: {
+            Text("Загрози в радіусі навколо дому з'являтимуться в картці на карті.")
+        }
         .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
             Button("Відкрити Налаштування") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -101,10 +114,25 @@ private extension MapView {
                 }
             }
             Spacer(minLength: 0)
-            locateButton
+            VStack(spacing: Spacing.small) {
+                placesButton
+                locateButton
+            }
         }
         .padding(.horizontal, Spacing.large)
         .padding(.bottom, Constants.bottomControlsInset)
+    }
+
+    var placesButton: some View {
+        Button(action: viewModel.didTapPlaces) {
+            Image(systemName: viewModel.placeSettings.home == nil ? "house" : "house.fill")
+                .font(.app(.body, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
+                .glassBackground(in: .circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Мої місця")
     }
 
     var locateButton: some View {
@@ -117,6 +145,16 @@ private extension MapView {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Показати мене на карті")
+    }
+
+    /// Shown while a long-pressed point waits to become the home.
+    var homeConfirmation: Binding<Bool> {
+        Binding(
+            get: { viewModel.pendingHomeCoordinate != nil },
+            set: { isPresented in
+                if !isPresented { viewModel.didCancelHome() }
+            }
+        )
     }
 
     /// The view model owns the flag; the alert only reports its dismissal.
@@ -161,6 +199,7 @@ private enum Constants {
                     favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
                     focusedRegionRepository: container.repositories.focusedRegionRepository,
                     userLocationService: container.services.userLocationService,
+                    placeSettingsRepository: container.repositories.placeSettingsRepository,
                     styleURL: styleURL
                 )
             )

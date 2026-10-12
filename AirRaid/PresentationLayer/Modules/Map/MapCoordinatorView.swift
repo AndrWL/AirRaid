@@ -33,6 +33,7 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             favoriteRegionsRepository: appContainer.repositories.favoriteRegionsRepository,
             focusedRegionRepository: appContainer.repositories.focusedRegionRepository,
             userLocationService: appContainer.services.userLocationService,
+            placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             styleURL: Self.makeStyleURL()
         )
 

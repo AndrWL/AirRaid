@@ -49,10 +49,16 @@ struct NearestThreatCard: View {
 
 private extension NearestThreatCard {
 
-    /// «42 км від вас · ≈ 14 хв».
+    /// «14 км від дому · ≈ 4 хв · ще 2».
     var detailText: String {
-        let distance = "\(summary.distanceText) від вас"
-        return summary.arrivalText.map { "\(distance) · \($0)" } ?? distance
+        var parts = [summary.distanceText]
+        if let arrivalText = summary.arrivalText {
+            parts.append(arrivalText)
+        }
+        if summary.otherCount > 0 {
+            parts.append("ще \(summary.otherCount)")
+        }
+        return parts.joined(separator: " · ")
     }
 }
 

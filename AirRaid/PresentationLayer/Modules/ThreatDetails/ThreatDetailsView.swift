@@ -122,14 +122,14 @@ private extension ThreatDetailsView {
                     estimated(timeToTargetText)
                 }
             }
-            if let distanceText = content.distanceText {
-                LabeledContent("Від вас") {
-                    estimated(distanceText)
+            ForEach(content.proximityRows) { row in
+                LabeledContent(row.distanceLabel) {
+                    estimated(row.distanceText)
                 }
-            }
-            if let arrivalText = content.arrivalText {
-                LabeledContent("Може бути у вас") {
-                    estimated(arrivalText)
+                if let arrivalText = row.arrivalText {
+                    LabeledContent(row.arrivalLabel) {
+                        estimated(arrivalText)
+                    }
                 }
             }
             LabeledContent("Область", value: content.regionName)
@@ -252,7 +252,8 @@ private enum Constants {
                 viewModel: ThreatDetailsViewModel(
                     threatID: "shahed-1",
                     airSituationRepository: DemoAirSituationRepository(),
-                    userLocationService: UserLocationService()
+                    userLocationService: UserLocationService(),
+                    placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard)
                 ),
                 onClose: {}
             )

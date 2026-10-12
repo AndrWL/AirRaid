@@ -35,6 +35,14 @@ enum MapLayerStyle {
     static let selectedRegionOutlineLayerID = "regions-selected-outline"
     static let favoriteRegionOutlineLayerID = "regions-favorite-outline"
     static let focusDimLayerID = "regions-focus-dim"
+    static let placesSourceID = "places"
+    static let placeRadiusFillLayerID = "places-radius-fill"
+    static let placeRadiusOutlineLayerID = "places-radius-outline"
+    static let homePinLayerID = "places-home-pin"
+    static let placePartKey = "placePart"
+    static let radiusPart = "radius"
+    static let homePart = "home"
+    static let homeIconName = "home-pin"
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
     static let selectedTrailLayerID = "selected-track-trail"
@@ -92,6 +100,36 @@ enum MapLayerStyle {
     static let outsideFocusOpacity: Double = 0.25
     static let focusDimColor = UIColor.mapDim
     static let focusDimOpacity: Double = 0.7
+    static let placeColor = UIColor.mapFavorite
+    static let placeRadiusFillOpacity: Double = 0.08
+    static let placeRadiusOutlineOpacity: Double = 0.8
+    static let placeRadiusOutlineWidth: Double = 1.5
+    static let placeRadiusDashPattern: [Double] = [3, 2]
+
+    /// A white house on an accent disc with a white rim, the way the blue dot marks the user.
+    ///
+    /// Drawn into a bitmap rather than handed over as a palette symbol: MapLibre keeps only the symbol's shape and
+    /// draws it black.
+    static let homeIcon: UIImage = {
+        let size = CGSize(width: homeIconSize, height: homeIconSize)
+        let traits = UITraitCollection(userInterfaceStyle: .dark)
+        let disc = UIColor.mapFavorite.resolvedColor(with: traits)
+        let rim = UIColor.mapTrack.resolvedColor(with: traits)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            let bounds = CGRect(origin: .zero, size: size)
+            rim.setFill()
+            UIBezierPath(ovalIn: bounds).fill()
+            disc.setFill()
+            UIBezierPath(ovalIn: bounds.insetBy(dx: homeIconRim, dy: homeIconRim)).fill()
+            let configuration = UIImage.SymbolConfiguration(pointSize: homeIconSize * 0.45, weight: .bold)
+            if let house = UIImage(systemName: "house.fill", withConfiguration: configuration)?
+                .withTintColor(rim, renderingMode: .alwaysOriginal) {
+                house.draw(at: CGPoint(x: bounds.midX - house.size.width / 2, y: bounds.midY - house.size.height / 2))
+            }
+        }
+    }()
+    static let homeIconSize: CGFloat = 32
+    static let homeIconRim: CGFloat = 2.5
     static let captionLabelFontNames = ["Noto Sans Regular"]
     static let captionLabelScale: Double = 0.8
     static let captionLabelColor = UIColor.mapCaption

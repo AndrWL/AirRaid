@@ -64,9 +64,28 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Loads the region outlines and city labels. Safe to call on every appearance.
     func onAppear() async
 
-    /// The nearest threat with a known position, within reach of the user, at the given moment; `nil` without the
-    /// user's location or such a threat.
+    /// The user's location and home with their radii, drawn on the map.
+    var places: [WatchedPlace] { get }
+
+    /// Where a long press asked to put the home; `nil` unless the confirmation is showing.
+    var pendingHomeCoordinate: GeoCoordinate? { get }
+
+    /// Whether a home is set, so the confirmation can say "move" instead of "set".
+    var placeSettings: PlaceSettings { get }
+
+    /// The nearest threat inside the radius of one of the user's places at the given moment; `nil` when the radii are
+    /// clear.
     func nearestThreat(at date: Date) -> NearestThreatSummary?
+
+    /// Opens the places sheet: the radii and the home.
+    func didTapPlaces()
+
+    /// Offers to put the home where the map was long-pressed.
+    func didLongPress(at coordinate: GeoCoordinate)
+
+    func didConfirmHome()
+
+    func didCancelHome()
 
     /// Flies to the user, asking for permission first if it was never asked.
     func didTapLocate()

@@ -65,11 +65,9 @@ struct ThreatDetailsContent {
     /// «≈ 12 хв»; `nil` when there is no target or the forecast has run out.
     let timeToTargetText: String?
 
-    /// «42 км» from the user to the threat's estimated position; `nil` without the user's location or the threat's.
-    let distanceText: String?
-
-    /// «≈ 14 хв» until the threat could reach the user; `nil` unless it flies their way.
-    let arrivalText: String?
+    /// The distance from each of the user's places to the threat's estimated position; empty without places or
+    /// without the threat's position.
+    let proximityRows: [ProximityRow]
 
     /// «11:42».
     let firstSeenText: String
@@ -90,7 +88,7 @@ struct ThreatDetailsContent {
         threat: Threat,
         alerts: [RegionAlert],
         isGone: Bool,
-        proximity: ThreatProximity?,
+        places: [WatchedPlace],
         now: Date
     ) {
         let icon = ThreatIcon(threat)
@@ -116,8 +114,9 @@ struct ThreatDetailsContent {
         isSpeedEstimated = threat.speedSource == .typical
         timeToTargetText = isGone ? nil : threat.timeToTarget(at: now).map(DisplayTime.estimate)
 
-        distanceText = isGone ? nil : proximity.map { DisplayTime.distance($0.distanceKm) }
-        arrivalText = isGone ? nil : proximity?.timeToArrival.map(DisplayTime.estimate)
+        proximityRows = isGone ? [] : places.compactMap { place in
+            threat.proximity(to: place.coordinate, at: now).map { ProximityRow(place: place.kind, proximity: $0) }
+        }
 
         firstSeenText = threat.firstSeenAt.formatted(DisplayTime.clockStyle)
         updatedText = Self.relativeFormatter.localizedString(for: min(threat.updatedAt, now), relativeTo: now)
@@ -149,6 +148,43 @@ extension ThreatDetailsContent {
             case .medium: label = "Середня"
             case .high: label = "Висока"
             }
+        }
+    }
+}
+
+// MARK: - ProximityRow
+
+extension ThreatDetailsContent {
+
+    /// How far the threat is from one of the user's places, and how soon it could get there.
+    struct ProximityRow: Identifiable {
+
+        let place: WatchedPlaceKind
+
+        /// «Від вас», «Від дому».
+        let distanceLabel: String
+
+        /// «42 км».
+        let distanceText: String
+
+        /// «Може бути у вас».
+        let arrivalLabel: String
+
+        /// «≈ 14 хв»; `nil` unless the threat flies toward the place.
+        let arrivalText: String?
+
+        var id: WatchedPlaceKind { place }
+
+        init(
+            place: WatchedPlaceKind,
+            proximity: ThreatProximity
+        ) {
+            self.place = place
+            let fromText = place.fromText
+            distanceLabel = fromText.prefix(1).uppercased() + fromText.dropFirst()
+            distanceText = DisplayTime.distance(proximity.distanceKm)
+            arrivalLabel = place.arrivalLabel
+            arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)
         }
     }
 }

@@ -31,6 +31,8 @@ extension MapFactory: MapFactoryProtocol {
             ThreatDetailsCoordinatorView(appContainer: appContainer, threatID: id)
         case .regionDetails(let id):
             RegionDetailsCoordinatorView(appContainer: appContainer, regionID: id)
+        case .places:
+            PlacesCoordinatorView(appContainer: appContainer)
         }
     }
 }

@@ -55,4 +55,7 @@ protocol DIRepositoryContaining {
 
     /// The region the map is narrowed to, if any.
     var focusedRegionRepository: FocusedRegionRepositoryProtocol { get }
+
+    /// The home pin and the radius around each watched place.
+    var placeSettingsRepository: PlaceSettingsRepositoryProtocol { get }
 }
