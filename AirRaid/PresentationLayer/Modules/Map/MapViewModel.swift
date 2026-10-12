@@ -112,9 +112,12 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
 
 extension MapViewModel: MapViewModelProtocol {
 
-    var selectedThreatID: String? {
-        guard case .threatDetails(let id) = router.activeSheet else { return nil }
-        return id
+    var selection: MapSelection? {
+        switch router.activeSheet {
+        case .threatDetails(let id): .threat(id: id)
+        case .regionDetails(let id): .region(id: id)
+        case nil: nil
+        }
     }
 
     func onAppear() async {
@@ -141,15 +144,18 @@ extension MapViewModel: MapViewModelProtocol {
         }
     }
 
-    func didSelectThreat(id: String?) {
-        guard let id else {
-            if selectedThreatID != nil {
+    func didSelect(_ selection: MapSelection?) {
+        guard let selection else {
+            if self.selection != nil {
                 router.dismissSheet()
             }
             return
         }
-        guard id != selectedThreatID else { return }
-        router.presentSheet(.threatDetails(id: id))
+        guard selection != self.selection else { return }
+        switch selection {
+        case .threat(let id): router.presentSheet(.threatDetails(id: id))
+        case .region(let id): router.presentSheet(.regionDetails(id: id))
+        }
     }
 }
 

@@ -75,7 +75,7 @@ struct ThreatDetailsContent {
     let staleNote: String?
 
     /// Official alerts in the threat's region, earliest first.
-    let alerts: [AlertRow]
+    let alerts: [RegionAlertRow]
 
     /// The threat is reported for the whole country, so there is no region to show alerts for.
     let isCountryWide: Bool
@@ -109,11 +109,11 @@ struct ThreatDetailsContent {
         isSpeedEstimated = threat.speedSource == .typical
         timeToTargetText = isGone ? nil : threat.timeToTarget(at: now).map(Self.makeTimeToTargetText)
 
-        firstSeenText = threat.firstSeenAt.formatted(Self.timeStyle)
+        firstSeenText = threat.firstSeenAt.formatted(DisplayTime.clockStyle)
         updatedText = Self.relativeFormatter.localizedString(for: min(threat.updatedAt, now), relativeTo: now)
         staleNote = Self.makeStaleNote(for: threat, isGone: isGone, now: now)
 
-        self.alerts = alerts.map { AlertRow(alert: $0, now: now) }
+        self.alerts = alerts.map { RegionAlertRow(alert: $0, now: now) }
         isCountryWide = threat.isCountryWide
     }
 }
@@ -139,44 +139,6 @@ extension ThreatDetailsContent {
             case .medium: label = "Середня"
             case .high: label = "Висока"
             }
-        }
-    }
-}
-
-// MARK: - AlertRow
-
-extension ThreatDetailsContent {
-
-    /// One official alert in the threat's region.
-    struct AlertRow: Identifiable {
-
-        let id: String
-
-        /// «Полтавський район».
-        let name: String
-
-        /// The alert kind when it is not a plain air raid, e.g. «Загроза артобстрілу».
-        let kindText: String?
-
-        /// `nil` for alerts other than air raids, which have no level.
-        let level: RegionAlertLevel?
-
-        /// «з 10:28».
-        let startedText: String
-
-        /// «1 год 52 хв».
-        let durationText: String
-
-        init(
-            alert: RegionAlert,
-            now: Date
-        ) {
-            id = alert.id
-            name = alert.name
-            kindText = ThreatDetailsContent.makeKindText(for: alert.kind)
-            level = alert.kind == .airRaid ? alert.level ?? .red : nil
-            startedText = "з \(alert.startedAt.formatted(ThreatDetailsContent.timeStyle))"
-            durationText = ThreatDetailsContent.formatDuration(max(now.timeIntervalSince(alert.startedAt), 0))
         }
     }
 }
@@ -216,17 +178,6 @@ private extension ThreatDetailsContent {
         return nil
     }
 
-    static func makeKindText(for kind: RegionAlertKind) -> String? {
-        switch kind {
-        case .airRaid: return nil
-        case .artilleryShelling: return "Загроза артобстрілу"
-        case .urbanFights: return "Загроза вуличних боїв"
-        case .chemical: return "Хімічна загроза"
-        case .nuclear: return "Радіаційна загроза"
-        case .unknown: return "Інша загроза"
-        }
-    }
-
     /// The nearest of eight compass points, as Ukrainian abbreviations.
     static func compassPoint(for bearing: Double) -> String {
         let normalized = (bearing.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
@@ -236,17 +187,7 @@ private extension ThreatDetailsContent {
 
     static func makeTimeToTargetText(_ interval: TimeInterval) -> String {
         guard interval >= 60 else { return "менше хвилини" }
-        return "≈ \(formatDuration(interval))"
-    }
-
-    /// «1 год 52 хв», «20 хв»; whole minutes, since seconds would only flicker.
-    static func formatDuration(_ interval: TimeInterval) -> String {
-        let minutes = Int(interval / 60)
-        guard minutes >= 60 else { return "\(minutes) хв" }
-        let hours = minutes / 60
-        let rest = minutes % 60
-        guard hours < 24 else { return "\(hours / 24) д \(hours % 24) год" }
-        return rest > 0 ? "\(hours) год \(rest) хв" : "\(hours) год"
+        return "≈ \(DisplayTime.duration(interval))"
     }
 
     static func makeSourcesText(count: Int) -> String {
@@ -262,8 +203,6 @@ private extension ThreatDetailsContent {
         }
         return count == 1 ? "Повідомив 1 канал" : "Підтвердили \(count) \(noun)"
     }
-
-    static let timeStyle = Date.FormatStyle(locale: Constants.locale).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
 
     static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()

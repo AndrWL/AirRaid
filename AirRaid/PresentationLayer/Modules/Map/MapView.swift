@@ -29,8 +29,8 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             cities: viewModel.cities,
             alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats,
-            selectedThreatID: viewModel.selectedThreatID,
-            onSelectThreat: viewModel.didSelectThreat
+            selection: viewModel.selection,
+            onSelect: viewModel.didSelect
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
@@ -42,7 +42,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             }
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
-        .sensoryFeedback(.selection, trigger: viewModel.selectedThreatID) { _, newValue in newValue != nil }
+        .sensoryFeedback(.selection, trigger: viewModel.selection) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
     }
 }

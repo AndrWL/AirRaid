@@ -29,6 +29,8 @@ extension MapFactory: MapFactoryProtocol {
         switch route {
         case .threatDetails(let id):
             ThreatDetailsCoordinatorView(appContainer: appContainer, threatID: id)
+        case .regionDetails(let id):
+            RegionDetailsCoordinatorView(appContainer: appContainer, regionID: id)
         }
     }
 }
