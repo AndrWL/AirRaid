@@ -53,9 +53,9 @@ private extension ThreatDetailsView {
             header(content)
             if let staleNote = content.staleNote {
                 Section {
-                    Label(staleNote, systemImage: "clock.badge.exclamationmark")
-                        .foregroundStyle(.orange)
+                    InlineNote(staleNote, systemImage: "clock.badge.exclamationmark", tone: .warning)
                 }
+                .listRowBackground(Color.surface)
             }
             locationSection(content)
             movementSection(content)
@@ -66,41 +66,47 @@ private extension ThreatDetailsView {
             disclaimer
         }
         .listSectionSpacing(.compact)
+        .scrollContentBackground(.hidden)
+        .background(Color.appBackground)
     }
 
     func header(_ content: ThreatDetailsContent) -> some View {
         Section {
-            HStack(spacing: 14) {
+            HStack(spacing: Constants.headerSpacing) {
                 Image(content.iconName)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
+                    .frame(width: Constants.threatGlyphSize, height: Constants.threatGlyphSize)
                     .rotationEffect(.degrees(content.iconRotation))
-                    .foregroundStyle(.primary)
-                    .frame(width: 52, height: 52)
-                    .background(.quaternary, in: .circle)
+                    .foregroundStyle(.ink)
+                    .frame(width: Constants.threatBadgeSize, height: Constants.threatBadgeSize)
+                    .background(.surfaceSunken, in: .circle)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.xSmall) {
+                    HStack(alignment: .firstTextBaseline, spacing: Constants.countSpacing) {
                         Text(content.title)
-                            .font(.title2.bold())
+                            .font(.app(.title2, weight: .bold))
+                            .foregroundStyle(.ink)
                         if let countText = content.countText {
                             Text(countText)
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .font(.app(.title3, weight: .semibold))
+                                .foregroundStyle(.inkMuted)
+                                .contentTransition(.numericText())
+                                .animation(Motion.quick, value: countText)
                         }
                     }
                     confidenceBadge(content.confidence)
                 }
-                .padding(.trailing, 36)
+                .padding(.trailing, Constants.closeButtonClearance)
             }
             if let summary = content.summary {
                 Text(summary)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.app(.callout))
+                    .foregroundStyle(.inkMuted)
             }
         }
+        .listRowBackground(Color.surface)
     }
 
     func locationSection(_ content: ThreatDetailsContent) -> some View {
@@ -118,16 +124,13 @@ private extension ThreatDetailsView {
             }
             LabeledContent("Область", value: content.regionName)
             if let locationNote = content.locationNote {
-                Label(locationNote, systemImage: "exclamationmark.triangle")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
+                InlineNote(locationNote, systemImage: "exclamationmark.triangle", tone: .warning)
             }
             if let noAlertNote = content.noAlertNote {
-                Label(noAlertNote, systemImage: "questionmark.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
+                InlineNote(noAlertNote, systemImage: "questionmark.circle", tone: .warning)
             }
         }
+        .listRowBackground(Color.surface)
     }
 
     @ViewBuilder
@@ -150,6 +153,7 @@ private extension ThreatDetailsView {
                     }
                 }
             }
+            .listRowBackground(Color.surface)
         }
     }
 
@@ -159,19 +163,20 @@ private extension ThreatDetailsView {
             LabeledContent("Оновлено", value: content.updatedText)
             LabeledContent("Джерела", value: content.sourcesText)
         }
+        .listRowBackground(Color.surface)
     }
 
     func alertsSection(_ content: ThreatDetailsContent) -> some View {
         Section("Офіційні тривоги · \(content.regionName)") {
             if content.alerts.isEmpty {
-                Label("Тривоги немає", systemImage: "checkmark.shield")
-                    .foregroundStyle(.secondary)
+                InlineNote("Тривоги немає", systemImage: "checkmark.shield", tone: .allClear)
             } else {
                 ForEach(content.alerts) { alert in
                     alertRow(alert)
                 }
             }
         }
+        .listRowBackground(Color.surface)
     }
 
     var disclaimer: some View {
@@ -179,6 +184,8 @@ private extension ThreatDetailsView {
         } footer: {
             Text("Дані зібрано з відкритих каналів моніторингу, положення та прогноз — орієнтовні. "
                 + "Не замінює офіційний сигнал повітряної тривоги.")
+                .font(.app(.footnote))
+                .foregroundStyle(.inkMuted)
         }
     }
 }
@@ -187,87 +194,65 @@ private extension ThreatDetailsView {
 
 private extension ThreatDetailsView {
 
+    /// Confidence grows by fill, never by alert colours.
     func confidenceBadge(_ confidence: ThreatDetailsContent.Confidence) -> some View {
-        Text("Достовірність: \(confidence.label)")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(color(of: confidence.level))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color(of: confidence.level).opacity(0.15), in: .capsule)
+        let tone: Badge.Tone = switch confidence.level {
+        case .low: .neutral
+        case .medium: .accentSoft
+        case .high: .accent
+        }
+        return Badge("Достовірність: \(confidence.label)", tone: tone)
     }
 
     func alertRow(_ alert: ThreatDetailsContent.AlertRow) -> some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(alert.level.map { color(of: $0) } ?? .secondary)
-                .frame(width: 10, height: 10)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: Constants.alertRowSpacing) {
+            StatusDot(dotTone(of: alert.level))
+            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
                 Text(alert.name)
+                    .foregroundStyle(.ink)
                 if let kindText = alert.kindText {
                     Text(kindText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(.app(.footnote))
+                        .foregroundStyle(.inkMuted)
                 }
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: Spacing.xxSmall) {
                 Text(alert.startedText)
+                    .foregroundStyle(.ink)
                 Text(alert.durationText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.app(.footnote))
+                    .foregroundStyle(.inkMuted)
+                    .contentTransition(.numericText())
+                    .animation(Motion.quick, value: alert.durationText)
             }
+            .monospacedDigit()
         }
+        .accessibilityElement(children: .combine)
     }
 
     /// A value computed by the app rather than reported, tagged so it is not read as a fact.
     func estimated(_ text: String) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.small) {
             Text(text)
-            Text("оцінка")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.quaternary, in: .capsule)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(Motion.quick, value: text)
+            Badge.estimated
         }
+        .accessibilityElement(children: .combine)
     }
 
     var closeButton: some View {
-        Button("Закрити", systemImage: "xmark", action: onClose)
-            .labelStyle(.iconOnly)
-            .font(.body.weight(.semibold))
-            .closeButtonStyle()
-            .buttonBorderShape(.circle)
-            .padding()
+        CloseButton(action: onClose)
+            .padding(Spacing.large)
     }
 
-    func color(of level: ThreatLevel) -> Color {
+    func dotTone(of level: RegionAlertLevel?) -> StatusDot.Tone {
         switch level {
-        case .low: return .gray
-        case .medium: return .yellow
-        case .high: return .green
-        }
-    }
-
-    func color(of level: RegionAlertLevel) -> Color {
-        switch level {
-        case .yellow: return .yellow
-        case .red: return .red
-        }
-    }
-}
-
-// MARK: - View
-
-private extension View {
-
-    /// Liquid Glass on iOS 26, a plain bordered circle before it.
-    @ViewBuilder
-    func closeButtonStyle() -> some View {
-        if #available(iOS 26, *) {
-            buttonStyle(.glass)
-        } else {
-            buttonStyle(.bordered)
+        case .red: return .alertRed
+        case .yellow: return .alertYellow
+        case nil: return .unknown
         }
     }
 }
@@ -276,6 +261,13 @@ private extension View {
 
 private enum Constants {
     static let refreshInterval: TimeInterval = 15
+    static let headerSpacing: CGFloat = 14
+    static let threatGlyphSize: CGFloat = 28
+    static let threatBadgeSize: CGFloat = 52
+    static let countSpacing: CGFloat = 6
+    /// Room on the right of the header for the close button overlay.
+    static let closeButtonClearance: CGFloat = 36
+    static let alertRowSpacing: CGFloat = 10
 }
 
 #Preview {

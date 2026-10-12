@@ -5,6 +5,9 @@
 //  Created by ANDRII LEBEDIEV on 06.10.2026.
 //
 
+import SwiftUI
+import UIKit
+
 /// Configures the application environment at launch.
 ///
 /// `AppConfigurator` is called once from ``AppDelegate/application(_:didFinishLaunchingWithOptions:)``
@@ -24,6 +27,35 @@
 struct AppConfigurator {
 
     func configure() {
-
+        configureAppearance()
     }
+}
+
+// MARK: - Private methods
+
+private extension AppConfigurator {
+
+    /// Sets the app typeface on the UIKit bars SwiftUI cannot style: navigation titles and tab items.
+    func configureAppearance() {
+        AppFont.register()
+
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.titleTextAttributes = [
+            .font: AppFont.uiFont(.headline, size: AppFont.size(of: .headline), weight: .bold)
+        ]
+        navigationBar.largeTitleTextAttributes = [
+            .font: AppFont.uiFont(.largeTitle, size: AppFont.size(of: .largeTitle), weight: .heavy)
+        ]
+
+        let tabItem = UITabBarItem.appearance()
+        let tabFont = AppFont.uiFont(.caption2, size: Constants.tabItemFontSize, weight: .semibold)
+        tabItem.setTitleTextAttributes([.font: tabFont], for: .normal)
+        tabItem.setTitleTextAttributes([.font: tabFont], for: .selected)
+    }
+}
+
+// MARK: - Constants
+
+private enum Constants {
+    static let tabItemFontSize: CGFloat = 10
 }

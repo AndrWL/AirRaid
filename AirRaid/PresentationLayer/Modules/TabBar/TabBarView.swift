@@ -48,15 +48,15 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
             
             factory.makeMap()
                 .tag(AppTab.map)
-                .tabItem { Label("Map", systemImage: "map") }
+                .tabItem { Label("Мапа", systemImage: "map") }
 
             factory.makeAlerts()
                 .tag(AppTab.alerts)
-                .tabItem { Label("Alerts", systemImage: "exclamationmark.triangle") }
+                .tabItem { Label("Тривоги", systemImage: "exclamationmark.triangle") }
 
             factory.makeSettings()
                 .tag(AppTab.settings)
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { Label("Налаштування", systemImage: "gearshape") }
         }
         .onAppear {
             viewModel.onAppear()

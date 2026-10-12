@@ -12,6 +12,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
 
     // MARK: - Variables
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let viewModel: ViewModel
 
     init(
@@ -36,11 +37,12 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         .overlay(alignment: .top) {
             if let notice = viewModel.connectionNotice {
                 MapConnectionBanner(notice: notice)
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.top, Spacing.small)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut, value: viewModel.connectionNotice)
+        .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
+        .sensoryFeedback(.selection, trigger: viewModel.selectedThreatID) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
     }
 }
