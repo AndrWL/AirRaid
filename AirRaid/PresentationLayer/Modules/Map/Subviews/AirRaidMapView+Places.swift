@@ -22,15 +22,29 @@ extension AirRaidMapView.Coordinator {
         radiusFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.placeColor)
         radiusFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.placeRadiusFillOpacity)
 
-        let radiusOutline = MapFeatureFactory.makeOutline(
+        // A dark casing under the coloured line, the way labels get a halo: the circle crosses dark, yellow and red
+        // fills, and a single blue line disappears on some of them.
+        let radiusCasing = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.placeRadiusCasingLayerID,
+            source: source,
+            color: MapLayerStyle.placeCasingColor,
+            opacity: MapLayerStyle.placeRadiusCasingOpacity,
+            width: MapLayerStyle.placeRadiusCasingWidth
+        )
+        radiusCasing.predicate = radiusFill.predicate
+
+        // The user's own circle is solid, the home's dashed, so the two read apart where they overlap.
+        let locationOutline = makeRadiusOutline(
             identifier: MapLayerStyle.placeRadiusOutlineLayerID,
             source: source,
-            color: MapLayerStyle.placeColor,
-            opacity: MapLayerStyle.placeRadiusOutlineOpacity,
-            width: MapLayerStyle.placeRadiusOutlineWidth
+            kind: MapLayerStyle.currentLocationKind
         )
-        radiusOutline.predicate = radiusFill.predicate
-        radiusOutline.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.placeRadiusDashPattern)
+        let homeOutline = makeRadiusOutline(
+            identifier: MapLayerStyle.homeRadiusOutlineLayerID,
+            source: source,
+            kind: MapLayerStyle.homeKind
+        )
+        homeOutline.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.placeRadiusDashPattern)
 
         let homePin = MLNSymbolStyleLayer(identifier: MapLayerStyle.homePinLayerID, source: source)
         homePin.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.homePart)
@@ -38,7 +52,27 @@ extension AirRaidMapView.Coordinator {
         homePin.iconAllowsOverlap = NSExpression(forConstantValue: true)
         homePin.iconIgnoresPlacement = NSExpression(forConstantValue: true)
 
-        [radiusFill, radiusOutline, homePin].forEach(style.addLayer)
+        [radiusFill, radiusCasing, locationOutline, homeOutline, homePin].forEach(style.addLayer)
+    }
+
+    func makeRadiusOutline(
+        identifier: String,
+        source: MLNShapeSource,
+        kind: String
+    ) -> MLNLineStyleLayer {
+        let outline = MapFeatureFactory.makeOutline(
+            identifier: identifier,
+            source: source,
+            color: MapLayerStyle.placeColor,
+            opacity: MapLayerStyle.placeRadiusOutlineOpacity,
+            width: MapLayerStyle.placeRadiusOutlineWidth
+        )
+        outline.predicate = NSPredicate(
+            format: "%K == %@ AND %K == %@",
+            MapLayerStyle.placePartKey, MapLayerStyle.radiusPart,
+            MapLayerStyle.placeKindKey, kind
+        )
+        return outline
     }
 
     func applyPlaces() {
@@ -46,7 +80,10 @@ extension AirRaidMapView.Coordinator {
         var shapes: [MLNShape] = places.map { place in
             var ring = place.coordinate.circle(radiusKm: place.radiusKm).map(CLLocationCoordinate2D.init)
             let circle = MLNPolygonFeature(coordinates: &ring, count: UInt(ring.count))
-            circle.attributes = [MapLayerStyle.placePartKey: MapLayerStyle.radiusPart]
+            circle.attributes = [
+                MapLayerStyle.placePartKey: MapLayerStyle.radiusPart,
+                MapLayerStyle.placeKindKey: place.kind == .home ? MapLayerStyle.homeKind : MapLayerStyle.currentLocationKind
+            ]
             return circle
         }
         if let home = places.first(where: { $0.kind == .home }) {

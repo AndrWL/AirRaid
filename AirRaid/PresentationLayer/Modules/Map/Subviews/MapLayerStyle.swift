@@ -36,9 +36,14 @@ enum MapLayerStyle {
     static let focusDimLayerID = "regions-focus-dim"
     static let placesSourceID = "places"
     static let placeRadiusFillLayerID = "places-radius-fill"
+    static let placeRadiusCasingLayerID = "places-radius-casing"
     static let placeRadiusOutlineLayerID = "places-radius-outline"
+    static let homeRadiusOutlineLayerID = "places-home-radius-outline"
     static let homePinLayerID = "places-home-pin"
     static let placePartKey = "placePart"
+    static let placeKindKey = "placeKind"
+    static let currentLocationKind = "currentLocation"
+    static let homeKind = "home"
     static let radiusPart = "radius"
     static let homePart = "home"
     static let homeIconName = "home-pin"
@@ -96,11 +101,15 @@ enum MapLayerStyle {
     static let outsideFocusOpacity: Double = 0.25
     static let focusDimColor = UIColor.mapDim
     static let focusDimOpacity: Double = 0.7
-    static let placeColor = UIColor.mapFavorite
-    static let placeRadiusFillOpacity: Double = 0.08
-    static let placeRadiusOutlineOpacity: Double = 0.8
-    static let placeRadiusOutlineWidth: Double = 1.5
-    static let placeRadiusDashPattern: [Double] = [3, 2]
+    static let placeColor = UIColor.mapPlace
+    static let placeCasingColor = UIColor.mapHalo
+    static let placeRadiusFillOpacity: Double = 0.14
+    static let placeRadiusCasingOpacity: Double = 0.9
+    static let placeRadiusCasingWidth: Double = 5
+    static let placeRadiusOutlineOpacity: Double = 1
+    static let placeRadiusOutlineWidth: Double = 2.5
+    /// In line widths: long dashes, so the home's circle still reads as a circle and not as dots.
+    static let placeRadiusDashPattern: [Double] = [2.5, 1.5]
 
     /// A white house on an accent disc with a white rim, the way the blue dot marks the user.
     ///
@@ -109,7 +118,7 @@ enum MapLayerStyle {
     static let homeIcon: UIImage = {
         let size = CGSize(width: homeIconSize, height: homeIconSize)
         let traits = UITraitCollection(userInterfaceStyle: .dark)
-        let disc = UIColor.mapFavorite.resolvedColor(with: traits)
+        let disc = UIColor.mapPlace.resolvedColor(with: traits)
         let rim = UIColor.mapTrack.resolvedColor(with: traits)
         return UIGraphicsImageRenderer(size: size).image { _ in
             let bounds = CGRect(origin: .zero, size: size)
