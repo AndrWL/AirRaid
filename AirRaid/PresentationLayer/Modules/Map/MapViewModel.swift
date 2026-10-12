@@ -21,6 +21,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var cities: [City] = []
     private(set) var alertCoverage: AirRaidCoverage = .none
     private(set) var threats: [Threat] = []
+    private(set) var connectionNotice: MapConnectionNotice?
 
     @ObservationIgnored
     private let router: Router
@@ -38,6 +39,13 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private let airSituationRepository: AirSituationRepositoryProtocol
 
     @ObservationIgnored
+    private let realtimeService: RealtimeServiceProtocol
+
+    /// When the connection last went down, so the banner can say how old the map is.
+    @ObservationIgnored
+    private var liveUntil: Date?
+
+    @ObservationIgnored
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     init(
@@ -46,6 +54,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         districtBoundaryRepository: DistrictBoundaryRepositoryProtocol,
         cityRepository: CityRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
+        realtimeService: RealtimeServiceProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -53,6 +62,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.districtBoundaryRepository = districtBoundaryRepository
         self.cityRepository = cityRepository
         self.airSituationRepository = airSituationRepository
+        self.realtimeService = realtimeService
         self.styleURL = styleURL
     }
 
@@ -66,6 +76,33 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] situation in
                 self?.apply(situation)
+            }
+            .store(in: &cancellables)
+
+        realtimeService.connectionStatePublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.trackLiveness(state)
+            }
+            .store(in: &cancellables)
+
+        // A reconnect usually takes a second or two; the banner appears only when it takes longer,
+        // and disappears as soon as the map is live again.
+        realtimeService.connectionStatePublisher
+            .removeDuplicates()
+            .map { state -> AnyPublisher<RealtimeConnectionState, Never> in
+                let current = Just(state)
+                guard state != .connected else { return current.eraseToAnyPublisher() }
+                return current
+                    .delay(for: .seconds(Constants.noticeDelay), scheduler: DispatchQueue.main)
+                    .eraseToAnyPublisher()
+            }
+            .switchToLatest()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                connectionNotice = MapConnectionNotice(state: state, liveUntil: liveUntil)
             }
             .store(in: &cancellables)
     }
@@ -120,6 +157,14 @@ extension MapViewModel: MapViewModelProtocol {
 
 private extension MapViewModel {
 
+    func trackLiveness(_ state: RealtimeConnectionState) {
+        if state == .connected {
+            liveUntil = nil
+        } else if liveUntil == nil, !threats.isEmpty || alertCoverage != .none {
+            liveUntil = Date()
+        }
+    }
+
     func apply(_ situation: AirSituation) {
         alertCoverage = situation.airRaidCoverage
         threats = situation.threats
@@ -137,4 +182,5 @@ private extension MapViewModel {
 private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Map"
+    static let noticeDelay: TimeInterval = 3
 }

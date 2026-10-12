@@ -28,6 +28,9 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Threats to show as pins.
     var threats: [Threat] { get }
 
+    /// Why the map is not live right now; `nil` while it is.
+    var connectionNotice: MapConnectionNotice? { get }
+
     /// The threat whose details are open, highlighted on the map with its track; `nil` when none is.
     var selectedThreatID: String? { get }
 

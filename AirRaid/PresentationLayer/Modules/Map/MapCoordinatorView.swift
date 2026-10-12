@@ -29,6 +29,7 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             districtBoundaryRepository: appContainer.repositories.districtBoundaryRepository,
             cityRepository: appContainer.repositories.cityRepository,
             airSituationRepository: appContainer.repositories.airSituationRepository,
+            realtimeService: appContainer.services.realtimeService,
             styleURL: Self.makeStyleURL()
         )
 
