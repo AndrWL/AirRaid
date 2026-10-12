@@ -46,6 +46,7 @@ extension DIServiceContainer: DIAssembling {
         registerKeychainService()
         registerAuthTokenProvider()
         registerRealtimeService()
+        registerUserLocationService()
     }
 }
 
@@ -63,6 +64,10 @@ extension DIServiceContainer: DIServiceContaining {
 
     var realtimeVersionStore: RealtimeVersionStore {
         return container.resolve(RealtimeVersionStore.self)
+    }
+
+    var userLocationService: UserLocationServiceProtocol {
+        return container.resolve(UserLocationServiceProtocol.self)
     }
 }
 
@@ -151,6 +156,18 @@ private extension DIServiceContainer {
                 )
             )
             return RealtimeService(client: client)
+        }
+    }
+}
+
+// MARK: - Location
+
+private extension DIServiceContainer {
+
+    /// One instance: one location manager, one permission prompt.
+    func registerUserLocationService() {
+        container.register(UserLocationServiceProtocol.self, lifetime: .singleton) { _ in
+            UserLocationService()
         }
     }
 }

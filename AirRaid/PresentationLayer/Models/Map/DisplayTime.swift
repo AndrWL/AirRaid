@@ -26,6 +26,18 @@ enum DisplayTime {
         return rest > 0 ? "\(hours) год \(rest) хв" : "\(hours) год"
     }
 
+    /// «≈ 14 хв», «менше хвилини» — an estimated time left.
+    static func estimate(_ interval: TimeInterval) -> String {
+        guard interval >= 60 else { return "менше хвилини" }
+        return "≈ \(duration(interval))"
+    }
+
+    /// «42 км», «менше 1 км» — whole kilometres: the threat's position is an estimate, decimals would overstate it.
+    static func distance(_ kilometres: Double) -> String {
+        guard kilometres >= 1 else { return "менше 1 км" }
+        return "\(Int(kilometres.rounded())) км"
+    }
+
     /// «з 10:28» today, «з 3 жовт., 22:10» earlier this year, «з 04.04.2022» before that.
     static func since(
         _ date: Date,

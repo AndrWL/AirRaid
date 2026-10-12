@@ -13,6 +13,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
     // MARK: - Variables
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     private let viewModel: ViewModel
 
     init(
@@ -30,21 +31,117 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats,
             selection: viewModel.selection,
+            favoriteRegionIDs: viewModel.favoriteRegionIDs,
+            focusedRegionID: viewModel.focusedRegionID,
+            recenterRequest: viewModel.recenterRequest,
+            showsUserLocation: viewModel.locationAuthorization == .authorized,
+            userLocation: viewModel.userLocation,
+            locateRequest: viewModel.locateRequest,
             onSelect: viewModel.didSelect
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
         .overlay(alignment: .top) {
-            if let notice = viewModel.connectionNotice {
-                MapConnectionBanner(notice: notice)
-                    .padding(.top, Spacing.small)
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            VStack(spacing: Spacing.small) {
+                if let notice = viewModel.connectionNotice {
+                    MapConnectionBanner(notice: notice)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+                if let focusedRegionName = viewModel.focusedRegionName {
+                    RegionFocusPill(
+                        regionName: focusedRegionName,
+                        onRecenter: viewModel.didTapRecenter,
+                        onExit: viewModel.didTapExitFocus
+                    )
+                    .transition(.opacity)
+                }
+                if !viewModel.favoriteChips.isEmpty {
+                    FavoriteRegionsBar(
+                        chips: viewModel.favoriteChips,
+                        selectedRegionID: selectedRegionID,
+                        onSelect: { viewModel.didSelect(.region(id: $0)) }
+                    )
+                    .transition(.opacity)
+                }
             }
+            .padding(.top, Spacing.small)
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
+        .overlay(alignment: .bottom) { bottomControls }
+        .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
+            Button("Відкрити Налаштування") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(url)
+                }
+            }
+            Button("Скасувати", role: .cancel) {}
+        } message: {
+            Text("Дозвольте AirRaid бачити локацію «під час використання», щоб показати вас на карті та відстань до загроз.")
+        }
         .sensoryFeedback(.selection, trigger: viewModel.selection) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
     }
+}
+
+// MARK: - Private methods
+
+private extension MapView {
+
+    /// The nearest threat on the left, "to me" on the right; above the map's attribution and the tab bar.
+    var bottomControls: some View {
+        HStack(alignment: .bottom, spacing: Spacing.small) {
+            TimelineView(.periodic(from: .now, by: Constants.nearestThreatRefreshInterval)) { timeline in
+                if let summary = viewModel.nearestThreat(at: timeline.date) {
+                    NearestThreatCard(summary: summary) {
+                        viewModel.didSelect(.threat(id: summary.threatID))
+                    }
+                    .transition(.opacity)
+                }
+            }
+            Spacer(minLength: 0)
+            locateButton
+        }
+        .padding(.horizontal, Spacing.large)
+        .padding(.bottom, Constants.bottomControlsInset)
+    }
+
+    var locateButton: some View {
+        Button(action: viewModel.didTapLocate) {
+            Image(systemName: viewModel.locationAuthorization == .denied ? "location.slash" : "location.fill")
+                .font(.app(.body, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
+                .glassBackground(in: .circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Показати мене на карті")
+    }
+
+    /// The view model owns the flag; the alert only reports its dismissal.
+    var locationDeniedAlert: Binding<Bool> {
+        Binding(
+            get: { viewModel.isLocationDeniedAlertPresented },
+            set: { isPresented in
+                if !isPresented { viewModel.didDismissLocationDeniedAlert() }
+            }
+        )
+    }
+
+    var selectedRegionID: String? {
+        guard case .region(let id) = viewModel.selection else { return nil }
+        return id
+    }
+}
+
+// MARK: - Constants
+
+private enum Constants {
+    static let nearestThreatRefreshInterval: TimeInterval = 15
+    static let locateButtonSize: CGFloat = 48
+    /// Clears the map's logo and attribution button at the bottom edge.
+    static let bottomControlsInset: CGFloat = 40
 }
 
 #Preview {
@@ -61,6 +158,9 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     cityRepository: CityRepository(),
                     airSituationRepository: DemoAirSituationRepository(),
                     realtimeService: container.services.realtimeService,
+                    favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
+                    focusedRegionRepository: container.repositories.focusedRegionRepository,
+                    userLocationService: container.services.userLocationService,
                     styleURL: styleURL
                 )
             )

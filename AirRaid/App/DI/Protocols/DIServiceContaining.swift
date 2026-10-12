@@ -41,4 +41,7 @@ protocol DIServiceContaining {
 
     /// The last applied server version, for resuming the realtime stream with `since`.
     var realtimeVersionStore: RealtimeVersionStore { get }
+
+    /// The user's location while the app is in use.
+    var userLocationService: UserLocationServiceProtocol { get }
 }

@@ -79,6 +79,8 @@ private extension RegionDetailsView {
                 }
             }
             .accessibilityElement(children: .combine)
+            favoriteButton
+            focusButton
         }
         .listRowBackground(Color.surface)
     }
@@ -128,12 +130,44 @@ private extension RegionDetailsView {
         .accessibilityElement(children: .combine)
     }
 
+    var favoriteButton: some View {
+        Button {
+            viewModel.didTapFavorite()
+        } label: {
+            Label(
+                viewModel.isFavorite ? "В обраних" : "Додати в обрані",
+                systemImage: viewModel.isFavorite ? "star.fill" : "star"
+            )
+            .font(.app(.body, weight: .semibold))
+            .contentTransition(.symbolEffect(.replace))
+        }
+        .sensoryFeedback(.selection, trigger: viewModel.isFavorite)
+        .accessibilityHint(viewModel.isFavorite ? "Прибрати область з обраних" : "Область буде виділено на карті")
+    }
+
+    /// Focusing closes the sheet, so the region the camera moves to is not hidden behind it.
+    var focusButton: some View {
+        Button {
+            let isEntering = !viewModel.isFocused
+            viewModel.didTapFocus()
+            if isEntering {
+                onClose()
+            }
+        } label: {
+            Label(
+                viewModel.isFocused ? "Показати всю Україну" : "Лише ця область на карті",
+                systemImage: viewModel.isFocused ? "arrow.up.left.and.arrow.down.right" : "scope"
+            )
+            .font(.app(.body, weight: .semibold))
+        }
+    }
+
     var closeButton: some View {
         CloseButton(action: onClose)
             .padding(Spacing.large)
     }
 
-    func badgeTone(of status: RegionDetailsContent.Status) -> Badge.Tone {
+    func badgeTone(of status: RegionAlertStatus) -> Badge.Tone {
         switch status.level {
         case .red: return .alertRed
         case .yellow: return .alertYellow
@@ -150,6 +184,8 @@ private enum Constants {
     static let threatRowSpacing: CGFloat = 12
     /// Room on the right of the header for the close button overlay.
     static let closeButtonClearance: CGFloat = 36
+    /// Keeps previews from touching the app's own favourites and focus.
+    static let previewDefaults = UserDefaults(suiteName: "preview") ?? .standard
 }
 
 #Preview {
@@ -159,7 +195,9 @@ private enum Constants {
                 viewModel: RegionDetailsViewModel(
                     regionID: "UA-30",
                     airSituationRepository: DemoAirSituationRepository(),
-                    regionBoundaryRepository: RegionBoundaryRepository()
+                    regionBoundaryRepository: RegionBoundaryRepository(),
+                    favoriteRegionsRepository: FavoriteRegionsRepository(defaults: Constants.previewDefaults),
+                    focusedRegionRepository: FocusedRegionRepository(defaults: Constants.previewDefaults)
                 ),
                 onClose: {}
             )

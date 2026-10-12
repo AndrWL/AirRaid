@@ -65,6 +65,12 @@ struct ThreatDetailsContent {
     /// «≈ 12 хв»; `nil` when there is no target or the forecast has run out.
     let timeToTargetText: String?
 
+    /// «42 км» from the user to the threat's estimated position; `nil` without the user's location or the threat's.
+    let distanceText: String?
+
+    /// «≈ 14 хв» until the threat could reach the user; `nil` unless it flies their way.
+    let arrivalText: String?
+
     /// «11:42».
     let firstSeenText: String
 
@@ -84,6 +90,7 @@ struct ThreatDetailsContent {
         threat: Threat,
         alerts: [RegionAlert],
         isGone: Bool,
+        proximity: ThreatProximity?,
         now: Date
     ) {
         let icon = ThreatIcon(threat)
@@ -107,7 +114,10 @@ struct ThreatDetailsContent {
         approachText = threat.approachBearing.map(Self.compassPoint)
         speedText = threat.speedKmh > 0 ? "~\(Int(threat.speedKmh.rounded())) км/год" : nil
         isSpeedEstimated = threat.speedSource == .typical
-        timeToTargetText = isGone ? nil : threat.timeToTarget(at: now).map(Self.makeTimeToTargetText)
+        timeToTargetText = isGone ? nil : threat.timeToTarget(at: now).map(DisplayTime.estimate)
+
+        distanceText = isGone ? nil : proximity.map { DisplayTime.distance($0.distanceKm) }
+        arrivalText = isGone ? nil : proximity?.timeToArrival.map(DisplayTime.estimate)
 
         firstSeenText = threat.firstSeenAt.formatted(DisplayTime.clockStyle)
         updatedText = Self.relativeFormatter.localizedString(for: min(threat.updatedAt, now), relativeTo: now)
@@ -183,11 +193,6 @@ private extension ThreatDetailsContent {
         let normalized = (bearing.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
         let index = Int((normalized / 45).rounded()) % Constants.compassPoints.count
         return Constants.compassPoints[index]
-    }
-
-    static func makeTimeToTargetText(_ interval: TimeInterval) -> String {
-        guard interval >= 60 else { return "менше хвилини" }
-        return "≈ \(DisplayTime.duration(interval))"
     }
 
     static func makeSourcesText(count: Int) -> String {

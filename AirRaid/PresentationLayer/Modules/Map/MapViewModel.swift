@@ -22,6 +22,13 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var alertCoverage: AirRaidCoverage = .none
     private(set) var threats: [Threat] = []
     private(set) var connectionNotice: MapConnectionNotice?
+    private(set) var favoriteRegionIDs: [String] = []
+    private(set) var focusedRegionID: String?
+    private(set) var recenterRequest = 0
+    private(set) var userLocation: GeoCoordinate?
+    private(set) var locationAuthorization: LocationAuthorization = .notDetermined
+    private(set) var locateRequest = 0
+    private(set) var isLocationDeniedAlertPresented = false
 
     @ObservationIgnored
     private let router: Router
@@ -41,6 +48,19 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private let realtimeService: RealtimeServiceProtocol
 
+    @ObservationIgnored
+    private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
+
+    @ObservationIgnored
+    private let focusedRegionRepository: FocusedRegionRepositoryProtocol
+
+    @ObservationIgnored
+    private let userLocationService: UserLocationServiceProtocol
+
+    /// "To me" was tapped before there was a fix; the camera flies once the first one arrives.
+    @ObservationIgnored
+    private var isLocatePending = false
+
     /// When the connection last went down, so the banner can say how old the map is.
     @ObservationIgnored
     private var liveUntil: Date?
@@ -55,6 +75,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         cityRepository: CityRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
         realtimeService: RealtimeServiceProtocol,
+        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
+        focusedRegionRepository: FocusedRegionRepositoryProtocol,
+        userLocationService: UserLocationServiceProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -63,6 +86,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.cityRepository = cityRepository
         self.airSituationRepository = airSituationRepository
         self.realtimeService = realtimeService
+        self.favoriteRegionsRepository = favoriteRegionsRepository
+        self.focusedRegionRepository = focusedRegionRepository
+        self.userLocationService = userLocationService
         self.styleURL = styleURL
     }
 
@@ -86,6 +112,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
                 self?.trackLiveness(state)
             }
             .store(in: &cancellables)
+
+        bindPreferences()
+        bindUserLocation()
 
         // A reconnect usually takes a second or two; the banner appears only when it takes longer,
         // and disappears as soon as the map is live again.
@@ -118,6 +147,54 @@ extension MapViewModel: MapViewModelProtocol {
         case .regionDetails(let id): .region(id: id)
         case nil: nil
         }
+    }
+
+    var favoriteChips: [FavoriteRegionChip] {
+        favoriteRegionIDs.compactMap { id in
+            boundaries.first { $0.id == id }.map { FavoriteRegionChip(region: $0, coverage: alertCoverage) }
+        }
+    }
+
+    var focusedRegionName: String? {
+        focusedRegionID.flatMap { id in boundaries.first { $0.id == id }?.name }
+    }
+
+    func didTapRecenter() {
+        recenterRequest += 1
+    }
+
+    func nearestThreat(at date: Date) -> NearestThreatSummary? {
+        guard let userLocation else { return nil }
+        return NearestThreatSummary.nearest(
+            among: threats,
+            to: userLocation,
+            at: date,
+            radiusKm: Constants.nearestThreatRadiusKm
+        )
+    }
+
+    func didTapLocate() {
+        switch locationAuthorization {
+        case .notDetermined:
+            isLocatePending = true
+            userLocationService.requestAuthorization()
+        case .denied:
+            isLocationDeniedAlertPresented = true
+        case .authorized:
+            if userLocation != nil {
+                locateRequest += 1
+            } else {
+                isLocatePending = true
+            }
+        }
+    }
+
+    func didDismissLocationDeniedAlert() {
+        isLocationDeniedAlertPresented = false
+    }
+
+    func didTapExitFocus() {
+        focusedRegionRepository.setFocusedRegion(nil)
     }
 
     func onAppear() async {
@@ -163,11 +240,56 @@ extension MapViewModel: MapViewModelProtocol {
 
 private extension MapViewModel {
 
+    /// The followed and the focused regions, which the region sheet changes.
+    func bindPreferences() {
+        favoriteRegionsRepository.favoriteRegionIDsPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] ids in
+                self?.favoriteRegionIDs = ids
+            }
+            .store(in: &cancellables)
+
+        focusedRegionRepository.focusedRegionIDPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                self?.focusedRegionID = id
+            }
+            .store(in: &cancellables)
+    }
+
+    func bindUserLocation() {
+        userLocationService.authorizationPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] authorization in
+                self?.locationAuthorization = authorization
+            }
+            .store(in: &cancellables)
+
+        userLocationService.locationPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] location in
+                self?.apply(location)
+            }
+            .store(in: &cancellables)
+    }
+
     func trackLiveness(_ state: RealtimeConnectionState) {
         if state == .connected {
             liveUntil = nil
         } else if liveUntil == nil, !threats.isEmpty || alertCoverage != .none {
             liveUntil = Date()
+        }
+    }
+
+    func apply(_ location: GeoCoordinate?) {
+        userLocation = location
+        if location != nil, isLocatePending {
+            isLocatePending = false
+            locateRequest += 1
         }
     }
 
@@ -189,4 +311,6 @@ private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Map"
     static let noticeDelay: TimeInterval = 3
+    /// Threats farther than this are not "near" enough to be worth a card.
+    static let nearestThreatRadiusKm: Double = 150
 }

@@ -25,7 +25,9 @@ struct RegionDetailsCoordinatorView: View {
         let viewModel = RegionDetailsViewModel(
             regionID: regionID,
             airSituationRepository: appContainer.repositories.airSituationRepository,
-            regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository
+            regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
+            favoriteRegionsRepository: appContainer.repositories.favoriteRegionsRepository,
+            focusedRegionRepository: appContainer.repositories.focusedRegionRepository
         )
         self._viewModel = State(wrappedValue: viewModel)
     }

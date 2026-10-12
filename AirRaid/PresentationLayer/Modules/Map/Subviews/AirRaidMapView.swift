@@ -11,7 +11,10 @@ import SwiftUI
 /// A MapLibre map of Ukraine with air raid alerts filled by oblast or raion (color by alert level),
 /// regional centers labelled, and threats shown as pins. Tapping a pin selects it; the selected threat is drawn
 /// larger, with its track behind it and a dashed line to its target. A tap that hits no pin selects the region under
-/// it, which gets a bright outline.
+/// it, which gets a bright outline. Regions the user follows are outlined in the accent colour.
+///
+/// With a focused region the rest of the country is dimmed, threats outside it fade, and the camera fits the region
+/// and does not let a pan wander far from it.
 ///
 /// Regions, cities, and threats are style layers over GeoJSON sources rather than annotations: the GPU draws
 /// them, and an update replaces one source instead of diffing views.
@@ -28,6 +31,24 @@ struct AirRaidMapView: UIViewRepresentable {
     let threats: [Threat]
     let selection: MapSelection?
 
+    /// ISO codes of the regions the user follows.
+    let favoriteRegionIDs: [String]
+
+    /// The region the map is narrowed to, or `nil` for the whole country.
+    let focusedRegionID: String?
+
+    /// Changes whenever the camera should fit the focused region (or the country) again.
+    let recenterRequest: Int
+
+    /// Draws the user's blue dot; only once the user has allowed location, or the map would ask for it on its own.
+    let showsUserLocation: Bool
+
+    /// Where the camera flies on a ``locateRequest``.
+    let userLocation: GeoCoordinate?
+
+    /// Changes whenever the camera should fly to the user.
+    let locateRequest: Int
+
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
 
@@ -40,6 +61,7 @@ struct AirRaidMapView: UIViewRepresentable {
     func makeUIView(context: Context) -> MLNMapView {
         let mapView = MLNMapView(frame: .zero, styleURL: styleURL)
         mapView.delegate = context.coordinator
+        context.coordinator.mapView = mapView
         mapView.allowsRotating = false
         mapView.allowsTilting = false
 
@@ -57,14 +79,7 @@ struct AirRaidMapView: UIViewRepresentable {
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.onSelect = onSelect
-        context.coordinator.update(
-            boundaries: boundaries,
-            districts: districts,
-            cities: cities,
-            alertCoverage: alertCoverage,
-            threats: threats,
-            selection: selection
-        )
+        context.coordinator.update(from: self)
     }
 }
 
@@ -101,42 +116,61 @@ extension AirRaidMapView {
         /// The selected-region outline, whose filter follows the selection.
         private var selectedRegionOutline: MLNLineStyleLayer?
 
+        private var favoriteRegionIDs: [String] = []
+        private var focusedRegionID: String?
+        private var recenterRequest = 0
+        private var locateRequest = 0
+
+        weak var mapView: MLNMapView?
+
+        /// Dims every region but the focused one.
+        private var focusDimFill: MLNFillStyleLayer?
+
+        /// Whether the style has loaded; the camera is fitted only after that, when the view has its size.
+        private var isStyleLoaded = false
+
+        /// The followed-regions outline, whose filter follows the favourites.
+        private var favoriteRegionOutline: MLNLineStyleLayer?
+
         /// Region features by region ID, rebuilt only when the outlines change.
         private var regionFeatures: [String: MLNMultiPolygonFeature] = [:]
 
         /// Raion features by how alerts name them, rebuilt only when the outlines change.
         private var districtFeatures: [DistrictKey: MLNMultiPolygonFeature] = [:]
 
-        func update(
-            boundaries: [RegionBoundary],
-            districts: [DistrictBoundary],
-            cities: [City],
-            alertCoverage: AirRaidCoverage,
-            threats: [Threat],
-            selection: MapSelection?
-        ) {
-            let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
-            let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
-            let citiesChanged = cities != self.cities
-            let alertsChanged = alertCoverage != self.alertCoverage
-            let threatsChanged = threats != self.threats
-            let selectionChanged = selection != self.selection
+        /// Applies the view's latest data, rebuilding only the sources whose input changed.
+        func update(from view: AirRaidMapView) {
+            let boundariesChanged = view.boundaries.map(\.id) != boundaries.map(\.id)
+            let districtsChanged = view.districts.map(\.id) != districts.map(\.id)
+            let citiesChanged = view.cities != cities
+            let alertsChanged = view.alertCoverage != alertCoverage
+            let threatsChanged = view.threats != threats
+            let selectionChanged = view.selection != selection
+            let favoritesChanged = view.favoriteRegionIDs != favoriteRegionIDs
+            let focusChanged = view.focusedRegionID != focusedRegionID
+            let recenterRequested = view.recenterRequest != recenterRequest
+            let locateRequested = view.locateRequest != locateRequest
 
-            self.boundaries = boundaries
-            self.districts = districts
-            self.cities = cities
-            self.alertCoverage = alertCoverage
-            self.threats = threats
-            self.selection = selection
+            boundaries = view.boundaries
+            districts = view.districts
+            cities = view.cities
+            alertCoverage = view.alertCoverage
+            threats = view.threats
+            selection = view.selection
+            favoriteRegionIDs = view.favoriteRegionIDs
+            focusedRegionID = view.focusedRegionID
+            recenterRequest = view.recenterRequest
+            locateRequest = view.locateRequest
+            updateUserLocation(from: view, locateRequested: locateRequested)
 
             if boundariesChanged {
-                regionFeatures = Self.makeRegionFeatures(from: boundaries)
+                regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
             }
             if boundariesChanged || alertsChanged {
                 applyRegions()
             }
             if districtsChanged {
-                districtFeatures = Self.makeDistrictFeatures(from: districts)
+                districtFeatures = MapFeatureFactory.makeDistrictFeatures(from: districts)
             }
             if districtsChanged || alertsChanged {
                 applyDistricts()
@@ -147,36 +181,17 @@ extension AirRaidMapView {
             if selectionChanged {
                 applySelectedRegion()
             }
+            if favoritesChanged {
+                applyFavoriteRegions()
+            }
+            updateFocus(focusChanged: focusChanged, recenterRequested: recenterRequested, boundariesChanged: boundariesChanged)
             // An area-only threat is placed by the alerts, so its pin moves when they change.
-            if threatsChanged || selectionChanged || alertsChanged || districtsChanged {
+            if threatsChanged || selectionChanged || alertsChanged || districtsChanged || focusChanged {
                 applyThreats()
                 applySelectedTrack()
             }
         }
 
-        /// Selects the pin nearest to the tap, else the region under it, or clears the selection when the tap hits
-        /// neither — outside Ukraine.
-        @objc
-        func handleTap(_ recognizer: UITapGestureRecognizer) {
-            guard recognizer.state == .ended, let mapView = recognizer.view as? MLNMapView else { return }
-            let point = recognizer.location(in: mapView)
-            let hitArea = CGRect(
-                x: point.x - Constants.tapRadius,
-                y: point.y - Constants.tapRadius,
-                width: Constants.tapRadius * 2,
-                height: Constants.tapRadius * 2
-            )
-            let nearest = mapView.visibleFeatures(in: hitArea, styleLayerIdentifiers: [Constants.threatLayerID])
-                .min { lhs, rhs in
-                    Self.distance(from: point, to: lhs, in: mapView) < Self.distance(from: point, to: rhs, in: mapView)
-                }
-            if let threatID = nearest?.identifier as? String {
-                onSelect(.threat(id: threatID))
-                return
-            }
-            let region = mapView.visibleFeatures(at: point, styleLayerIdentifiers: [Constants.territoryFillLayerID]).first
-            onSelect((region?.attributes[Constants.regionIDKey] as? String).map { .region(id: $0) })
-        }
     }
 }
 
@@ -186,32 +201,27 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
 
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         // Here rather than in `makeUIView`: the view has its real size only by now, and fitting needs it.
-        mapView.setVisibleCoordinateBounds(
-            Constants.ukraineBounds,
-            edgePadding: Constants.ukraineEdgePadding,
-            animated: false,
-            completionHandler: nil
-        )
+        isStyleLoaded = true
+        fitCamera(animated: false)
         installLayers(in: style)
+        applyFocus()
         applyRegions()
         applyDistricts()
         applyCities()
         applySelectedRegion()
+        applyFavoriteRegions()
         applyThreats()
         applySelectedTrack()
     }
-}
 
-// MARK: - UIGestureRecognizerDelegate
-
-extension AirRaidMapView.Coordinator: UIGestureRecognizerDelegate {
-
-    /// The map has its own single tap (for annotations) that would otherwise swallow ours.
-    func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    /// Keeps a pan from leaving the focused region: the centre may stray a quarter of the region's size past its box.
+    func mapView(
+        _ mapView: MLNMapView,
+        shouldChangeFrom oldCamera: MLNMapCamera,
+        to newCamera: MLNMapCamera
     ) -> Bool {
-        true
+        guard let box = focusedRegion?.boundingBox else { return true }
+        return box.contains(GeoCoordinate(newCamera.centerCoordinate), margin: MapLayerStyle.focusPanMargin)
     }
 }
 
@@ -220,11 +230,11 @@ extension AirRaidMapView.Coordinator: UIGestureRecognizerDelegate {
 private extension AirRaidMapView.Coordinator {
 
     func installLayers(in style: MLNStyle) {
-        let regionSource = MLNShapeSource(identifier: Constants.regionSourceID, shape: nil)
-        let districtSource = MLNShapeSource(identifier: Constants.districtSourceID, shape: nil)
-        let citySource = MLNShapeSource(identifier: Constants.citySourceID, shape: nil)
-        let threatSource = MLNShapeSource(identifier: Constants.threatSourceID, shape: nil)
-        let selectedTrackSource = MLNShapeSource(identifier: Constants.selectedTrackSourceID, shape: nil)
+        let regionSource = MLNShapeSource(identifier: MapLayerStyle.regionSourceID, shape: nil)
+        let districtSource = MLNShapeSource(identifier: MapLayerStyle.districtSourceID, shape: nil)
+        let citySource = MLNShapeSource(identifier: MapLayerStyle.citySourceID, shape: nil)
+        let threatSource = MLNShapeSource(identifier: MapLayerStyle.threatSourceID, shape: nil)
+        let selectedTrackSource = MLNShapeSource(identifier: MapLayerStyle.selectedTrackSourceID, shape: nil)
         [regionSource, districtSource, citySource, threatSource, selectedTrackSource].forEach(style.addSource)
         self.regionSource = regionSource
         self.districtSource = districtSource
@@ -247,48 +257,49 @@ private extension AirRaidMapView.Coordinator {
         districtSource: MLNShapeSource
     ) {
         // Tints the whole country, so Ukraine stands out from the dark base map.
-        let territoryFill = MLNFillStyleLayer(identifier: Constants.territoryFillLayerID, source: regionSource)
-        territoryFill.fillColor = NSExpression(forConstantValue: Constants.territoryColor)
-        territoryFill.fillOpacity = NSExpression(forConstantValue: Constants.territoryFillOpacity)
+        let territoryFill = MLNFillStyleLayer(identifier: MapLayerStyle.territoryFillLayerID, source: regionSource)
+        territoryFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.territoryColor)
+        territoryFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.territoryFillOpacity)
 
-        let regionAlertFill = Self.makeAlertFill(
-            identifier: Constants.regionAlertFillLayerID,
+        let regionAlertFill = MapFeatureFactory.makeAlertFill(
+            identifier: MapLayerStyle.regionAlertFillLayerID,
             source: regionSource,
-            opacity: NSExpression(forConstantValue: Constants.wholeAlertFillOpacity)
+            opacity: NSExpression(forConstantValue: MapLayerStyle.wholeAlertFillOpacity)
         )
         // A raion alert is filled as strongly as an oblast one; a hromada inside the raion only faintly.
-        let districtAlertFill = Self.makeAlertFill(
-            identifier: Constants.districtAlertFillLayerID,
+        let districtAlertFill = MapFeatureFactory.makeAlertFill(
+            identifier: MapLayerStyle.districtAlertFillLayerID,
             source: districtSource,
             opacity: NSExpression(
-                forMLNMatchingKey: NSExpression(forKeyPath: Constants.alertExtentKey),
+                forMLNMatchingKey: NSExpression(forKeyPath: MapLayerStyle.alertExtentKey),
                 in: [
-                    NSExpression(forConstantValue: Constants.wholeExtent): NSExpression(forConstantValue: Constants.wholeAlertFillOpacity)
+                    NSExpression(forConstantValue: MapLayerStyle.wholeExtent):
+                        NSExpression(forConstantValue: MapLayerStyle.wholeAlertFillOpacity)
                 ],
-                default: NSExpression(forConstantValue: Constants.partialAlertFillOpacity)
+                default: NSExpression(forConstantValue: MapLayerStyle.partialAlertFillOpacity)
             )
         )
 
         // Raion borders only inside alerted raions, so the alerted part reads as such without cluttering the map.
-        let districtOutline = MLNLineStyleLayer(identifier: Constants.districtOutlineLayerID, source: districtSource)
-        districtOutline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
-        districtOutline.lineOpacity = NSExpression(forConstantValue: Constants.districtOutlineOpacity)
-        districtOutline.lineWidth = NSExpression(forConstantValue: Constants.districtOutlineWidth)
-
-        let outline = MLNLineStyleLayer(identifier: Constants.outlineLayerID, source: regionSource)
-        outline.lineColor = NSExpression(forConstantValue: UIColor.mapOutline)
-        outline.lineOpacity = NSExpression(forConstantValue: Constants.outlineOpacity)
-        outline.lineWidth = NSExpression(forConstantValue: Constants.outlineWidth)
-
-        let selectedOutline = MLNLineStyleLayer(identifier: Constants.selectedRegionOutlineLayerID, source: regionSource)
-        selectedOutline.lineColor = NSExpression(forConstantValue: Constants.selectedRegionColor)
-        selectedOutline.lineOpacity = NSExpression(forConstantValue: Constants.selectedRegionOutlineOpacity)
-        selectedOutline.lineWidth = NSExpression(forConstantValue: Constants.selectedRegionOutlineWidth)
-        selectedOutline.lineJoin = NSExpression(forConstantValue: Constants.roundJoin)
-        selectedRegionOutline = selectedOutline
+        let districtOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.districtOutlineLayerID,
+            source: districtSource,
+            color: .mapOutline,
+            opacity: MapLayerStyle.districtOutlineOpacity,
+            width: MapLayerStyle.districtOutlineWidth
+        )
+        let outline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.outlineLayerID,
+            source: regionSource,
+            color: .mapOutline,
+            opacity: MapLayerStyle.outlineOpacity,
+            width: MapLayerStyle.outlineWidth
+        )
 
         // Below the first label layer, so the base map's names stay readable over the fill.
-        let regionLayers = [territoryFill, regionAlertFill, districtAlertFill, districtOutline, outline, selectedOutline]
+        let regionLayers = [
+            territoryFill, regionAlertFill, districtAlertFill, makeFocusDim(source: regionSource), districtOutline, outline
+        ] + makeHighlightOutlines(source: regionSource)
         if let firstLabelLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
             regionLayers.forEach { style.insertLayer($0, below: firstLabelLayer) }
         } else {
@@ -296,14 +307,46 @@ private extension AirRaidMapView.Coordinator {
         }
     }
 
+    /// Over the alert fills, so the rest of the country reads as background, but under the outlines.
+    func makeFocusDim(source: MLNShapeSource) -> MLNFillStyleLayer {
+        let dimFill = MLNFillStyleLayer(identifier: MapLayerStyle.focusDimLayerID, source: source)
+        dimFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.focusDimColor)
+        dimFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.focusDimOpacity)
+        dimFill.predicate = Self.matchesNoRegion
+        focusDimFill = dimFill
+        return dimFill
+    }
+
+    /// The followed regions' outlines and, over them, the selected region's.
+    func makeHighlightOutlines(source: MLNShapeSource) -> [MLNLineStyleLayer] {
+        let favoriteOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.favoriteRegionOutlineLayerID,
+            source: source,
+            color: MapLayerStyle.favoriteRegionColor,
+            opacity: MapLayerStyle.favoriteRegionOutlineOpacity,
+            width: MapLayerStyle.favoriteRegionOutlineWidth
+        )
+        favoriteRegionOutline = favoriteOutline
+
+        let selectedOutline = MapFeatureFactory.makeOutline(
+            identifier: MapLayerStyle.selectedRegionOutlineLayerID,
+            source: source,
+            color: MapLayerStyle.selectedRegionColor,
+            opacity: MapLayerStyle.selectedRegionOutlineOpacity,
+            width: MapLayerStyle.selectedRegionOutlineWidth
+        )
+        selectedRegionOutline = selectedOutline
+        return [favoriteOutline, selectedOutline]
+    }
+
     func installCityLayer(in style: MLNStyle, source: MLNShapeSource) {
-        let cityLabels = MLNSymbolStyleLayer(identifier: Constants.cityLayerID, source: source)
-        cityLabels.text = NSExpression(forKeyPath: Constants.nameKey)
-        cityLabels.textFontNames = NSExpression(forConstantValue: Constants.cityFontNames)
-        cityLabels.textFontSize = NSExpression(forConstantValue: Constants.cityFontSize)
+        let cityLabels = MLNSymbolStyleLayer(identifier: MapLayerStyle.cityLayerID, source: source)
+        cityLabels.text = NSExpression(forKeyPath: MapLayerStyle.nameKey)
+        cityLabels.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
+        cityLabels.textFontSize = NSExpression(forConstantValue: MapLayerStyle.cityFontSize)
         cityLabels.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
         cityLabels.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
-        cityLabels.textHaloWidth = NSExpression(forConstantValue: Constants.cityHaloWidth)
+        cityLabels.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
         style.addLayer(cityLabels)
     }
 
@@ -311,49 +354,44 @@ private extension AirRaidMapView.Coordinator {
         for icon in ThreatIcon.allCases {
             style.setImage(icon.image, forName: icon.name)
         }
-        let threatPins = MLNSymbolStyleLayer(identifier: Constants.threatLayerID, source: source)
-        threatPins.iconImageName = NSExpression(forKeyPath: Constants.iconNameKey)
-        threatPins.iconRotation = NSExpression(forKeyPath: Constants.headingKey)
-        threatPins.iconRotationAlignment = NSExpression(forConstantValue: Constants.mapAlignment)
+        let threatPins = MLNSymbolStyleLayer(identifier: MapLayerStyle.threatLayerID, source: source)
+        threatPins.iconImageName = NSExpression(forKeyPath: MapLayerStyle.iconNameKey)
+        threatPins.iconRotation = NSExpression(forKeyPath: MapLayerStyle.headingKey)
+        threatPins.iconRotationAlignment = NSExpression(forConstantValue: MapLayerStyle.mapAlignment)
         threatPins.iconScale = NSExpression(
-            forMLNConditional: NSPredicate(format: "%K == YES", Constants.selectedKey),
-            trueExpression: NSExpression(forConstantValue: Constants.selectedThreatIconScale),
-            falseExpression: NSExpression(forConstantValue: Constants.threatIconScale)
+            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.selectedKey),
+            trueExpression: NSExpression(forConstantValue: MapLayerStyle.selectedThreatIconScale),
+            falseExpression: NSExpression(forConstantValue: MapLayerStyle.threatIconScale)
         )
         threatPins.iconAllowsOverlap = NSExpression(forConstantValue: true)
         threatPins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        // A pin where there is no alert is probably misplaced (a namesake in another oblast): faded, not hidden.
-        let outsideAlertOpacity = NSExpression(
-            forMLNConditional: NSPredicate(format: "%K == YES", Constants.outsideAlertKey),
-            trueExpression: NSExpression(forConstantValue: Constants.outsideAlertOpacity),
-            falseExpression: NSExpression(forConstantValue: 1)
-        )
-        threatPins.iconOpacity = outsideAlertOpacity
-        threatPins.textOpacity = outsideAlertOpacity
+        let pinOpacity = MapFeatureFactory.makePinOpacity()
+        threatPins.iconOpacity = pinOpacity
+        threatPins.textOpacity = pinOpacity
 
         // The caption under the pin; captions that would collide are hidden, the pins always stay.
         let captionLabel = MLNAttributedExpression(
-            NSExpression(forKeyPath: Constants.captionLabelKey),
+            NSExpression(forKeyPath: MapLayerStyle.captionLabelKey),
             attributes: [
-                .fontNamesAttribute: NSExpression(forConstantValue: Constants.captionLabelFontNames),
-                .fontScaleAttribute: NSExpression(forConstantValue: Constants.captionLabelScale),
-                .fontColorAttribute: NSExpression(forConstantValue: Constants.captionLabelColor)
+                .fontNamesAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelFontNames),
+                .fontScaleAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelScale),
+                .fontColorAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelColor)
             ]
         )
-        let captionName = MLNAttributedExpression(NSExpression(forKeyPath: Constants.captionNameKey))
+        let captionName = MLNAttributedExpression(NSExpression(forKeyPath: MapLayerStyle.captionNameKey))
         threatPins.text = NSExpression(forAttributedExpressions: [captionLabel, captionName].map {
             NSExpression(forConstantValue: $0)
         })
-        threatPins.textFontNames = NSExpression(forConstantValue: Constants.cityFontNames)
-        threatPins.textFontSize = NSExpression(forConstantValue: Constants.threatCaptionFontSize)
+        threatPins.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
+        threatPins.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
         threatPins.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
         threatPins.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
-        threatPins.textHaloWidth = NSExpression(forConstantValue: Constants.cityHaloWidth)
-        threatPins.textAnchor = NSExpression(forConstantValue: Constants.topAnchor)
+        threatPins.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
+        threatPins.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
         threatPins.textOffset = NSExpression(
-            forMLNConditional: NSPredicate(format: "%K == YES", Constants.selectedKey),
-            trueExpression: NSExpression(forConstantValue: NSValue(cgVector: Constants.selectedThreatCaptionOffset)),
-            falseExpression: NSExpression(forConstantValue: NSValue(cgVector: Constants.threatCaptionOffset))
+            forMLNConditional: NSPredicate(format: "%K == YES", MapLayerStyle.selectedKey),
+            trueExpression: NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.selectedThreatCaptionOffset)),
+            falseExpression: NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.threatCaptionOffset))
         )
         threatPins.textOptional = NSExpression(forConstantValue: true)
         threatPins.textAllowsOverlap = NSExpression(forConstantValue: false)
@@ -362,27 +400,27 @@ private extension AirRaidMapView.Coordinator {
 
     /// The selected threat's path: where it has been (solid) and where it is heading (dashed).
     func installSelectedTrackLayers(in style: MLNStyle, source: MLNShapeSource) {
-        let trail = MLNLineStyleLayer(identifier: Constants.selectedTrailLayerID, source: source)
-        trail.predicate = NSPredicate(format: "%K == %@", Constants.trackPartKey, Constants.trailPart)
-        trail.lineColor = NSExpression(forConstantValue: Constants.trackColor)
-        trail.lineOpacity = NSExpression(forConstantValue: Constants.trailOpacity)
-        trail.lineWidth = NSExpression(forConstantValue: Constants.trackWidth)
-        trail.lineJoin = NSExpression(forConstantValue: Constants.roundJoin)
+        let trail = MLNLineStyleLayer(identifier: MapLayerStyle.selectedTrailLayerID, source: source)
+        trail.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.trailPart)
+        trail.lineColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        trail.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.trailOpacity)
+        trail.lineWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
+        trail.lineJoin = NSExpression(forConstantValue: MapLayerStyle.roundJoin)
 
-        let forecast = MLNLineStyleLayer(identifier: Constants.selectedForecastLayerID, source: source)
-        forecast.predicate = NSPredicate(format: "%K == %@", Constants.trackPartKey, Constants.forecastPart)
-        forecast.lineColor = NSExpression(forConstantValue: Constants.trackColor)
-        forecast.lineOpacity = NSExpression(forConstantValue: Constants.forecastOpacity)
-        forecast.lineWidth = NSExpression(forConstantValue: Constants.trackWidth)
-        forecast.lineDashPattern = NSExpression(forConstantValue: Constants.forecastDashPattern)
+        let forecast = MLNLineStyleLayer(identifier: MapLayerStyle.selectedForecastLayerID, source: source)
+        forecast.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.forecastPart)
+        forecast.lineColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        forecast.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.forecastOpacity)
+        forecast.lineWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
+        forecast.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.forecastDashPattern)
 
-        let targetDot = MLNCircleStyleLayer(identifier: Constants.selectedTargetLayerID, source: source)
-        targetDot.predicate = NSPredicate(format: "%K == %@", Constants.trackPartKey, Constants.targetPart)
-        targetDot.circleRadius = NSExpression(forConstantValue: Constants.targetDotRadius)
+        let targetDot = MLNCircleStyleLayer(identifier: MapLayerStyle.selectedTargetLayerID, source: source)
+        targetDot.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.targetPart)
+        targetDot.circleRadius = NSExpression(forConstantValue: MapLayerStyle.targetDotRadius)
         targetDot.circleColor = NSExpression(forConstantValue: UIColor.clear)
-        targetDot.circleStrokeColor = NSExpression(forConstantValue: Constants.trackColor)
-        targetDot.circleStrokeWidth = NSExpression(forConstantValue: Constants.trackWidth)
-        targetDot.circleStrokeOpacity = NSExpression(forConstantValue: Constants.forecastOpacity)
+        targetDot.circleStrokeColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        targetDot.circleStrokeWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
+        targetDot.circleStrokeOpacity = NSExpression(forConstantValue: MapLayerStyle.forecastOpacity)
 
         [trail, forecast, targetDot].forEach(style.addLayer)
     }
@@ -391,7 +429,7 @@ private extension AirRaidMapView.Coordinator {
         guard let regionSource else { return }
         for (regionID, feature) in regionFeatures {
             let level = alertCoverage.regions[regionID]
-            feature.attributes[Constants.alertLevelKey] = level.map(Self.value) ?? Constants.noAlert
+            feature.attributes[MapLayerStyle.alertLevelKey] = level.map(MapFeatureFactory.value) ?? MapLayerStyle.noAlert
         }
         regionSource.shape = MLNShapeCollectionFeature(shapes: Array(regionFeatures.values))
     }
@@ -401,7 +439,7 @@ private extension AirRaidMapView.Coordinator {
         citySource.shape = MLNShapeCollectionFeature(shapes: cities.map { city in
             let feature = MLNPointFeature()
             feature.coordinate = CLLocationCoordinate2D(city.coordinate)
-            feature.attributes = [Constants.nameKey: city.name]
+            feature.attributes = [MapLayerStyle.nameKey: city.name]
             return feature
         })
 
@@ -422,19 +460,21 @@ private extension AirRaidMapView.Coordinator {
             // Until the outlines load nothing can be checked, so nothing is faded.
             let isOutsideAlert = !boundaries.isEmpty
                 && !alertCoverage.isAlerted(at: coordinate, regions: boundaries, districts: districts)
+            let isOutsideFocus = focusedRegion.map { !$0.contains(coordinate) } ?? false
             let feature = MLNPointFeature()
             feature.coordinate = CLLocationCoordinate2D(coordinate)
             feature.identifier = threat.id
             let icon = ThreatIcon(threat)
             feature.attributes = [
-                Constants.iconNameKey: icon.name,
+                MapLayerStyle.iconNameKey: icon.name,
                 // Unknown course draws the icon pointing north.
-                Constants.headingKey: icon.rotatesWithHeading ? threat.course ?? 0 : 0,
-                Constants.selectedKey: selection == .threat(id: threat.id),
-                Constants.outsideAlertKey: isOutsideAlert,
+                MapLayerStyle.headingKey: icon.rotatesWithHeading ? threat.course ?? 0 : 0,
+                MapLayerStyle.selectedKey: selection == .threat(id: threat.id),
+                MapLayerStyle.outsideAlertKey: isOutsideAlert,
+                MapLayerStyle.outsideFocusKey: isOutsideFocus,
                 // The line break ends the label's section, so the name always starts a line of its own.
-                Constants.captionLabelKey: threat.mapCaption.map { "\($0.label)\n" } ?? "",
-                Constants.captionNameKey: threat.mapCaption?.name ?? ""
+                MapLayerStyle.captionLabelKey: threat.mapCaption.map { "\($0.label)\n" } ?? "",
+                MapLayerStyle.captionNameKey: threat.mapCaption?.name ?? ""
             ]
             return feature
         })
@@ -459,16 +499,16 @@ private extension AirRaidMapView.Coordinator {
         }
         if trailCoordinates.count >= 2 {
             let trail = MLNPolylineFeature(coordinates: &trailCoordinates, count: UInt(trailCoordinates.count))
-            trail.attributes = [Constants.trackPartKey: Constants.trailPart]
+            trail.attributes = [MapLayerStyle.trackPartKey: MapLayerStyle.trailPart]
             shapes.append(trail)
         }
         if let target = threat.target, target.coordinate != marker {
             var forecastCoordinates = [CLLocationCoordinate2D(marker), CLLocationCoordinate2D(target.coordinate)]
             let forecast = MLNPolylineFeature(coordinates: &forecastCoordinates, count: UInt(forecastCoordinates.count))
-            forecast.attributes = [Constants.trackPartKey: Constants.forecastPart]
+            forecast.attributes = [MapLayerStyle.trackPartKey: MapLayerStyle.forecastPart]
             let targetDot = MLNPointFeature()
             targetDot.coordinate = CLLocationCoordinate2D(target.coordinate)
-            targetDot.attributes = [Constants.trackPartKey: Constants.targetPart]
+            targetDot.attributes = [MapLayerStyle.trackPartKey: MapLayerStyle.targetPart]
             shapes.append(contentsOf: [forecast, targetDot])
         }
         selectedTrackSource.shape = MLNShapeCollectionFeature(shapes: shapes)
@@ -477,23 +517,91 @@ private extension AirRaidMapView.Coordinator {
     /// Outlines the selected region, or nothing.
     func applySelectedRegion() {
         guard let selectedRegionOutline else { return }
-        let regionID: String
         if case .region(let id) = selection {
-            regionID = id
+            selectedRegionOutline.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, id)
         } else {
-            regionID = ""
+            selectedRegionOutline.predicate = Self.matchesNoRegion
         }
-        selectedRegionOutline.predicate = NSPredicate(format: "%K == %@", Constants.regionIDKey, regionID)
     }
 
-    /// Screen distance from the tap to a pin, to pick the nearest of overlapping pins.
-    static func distance(
-        from point: CGPoint,
-        to feature: MLNFeature,
-        in mapView: MLNMapView
-    ) -> CGFloat {
-        let featurePoint = mapView.convert(feature.coordinate, toPointTo: mapView)
-        return hypot(featurePoint.x - point.x, featurePoint.y - point.y)
+    /// The focused region's outline, or `nil` with no focus or before the outlines load.
+    var focusedRegion: RegionBoundary? {
+        focusedRegionID.flatMap { id in boundaries.first { $0.id == id } }
+    }
+
+    func applyFocus() {
+        focusDimFill?.predicate = focusedRegionID.map { NSPredicate(format: "%K != %@", MapLayerStyle.regionIDKey, $0) }
+            ?? Self.matchesNoRegion
+    }
+
+    /// Fits the focused region, or the whole country without a focus.
+    func fitCamera(animated: Bool) {
+        guard isStyleLoaded, let mapView else { return }
+        if let box = focusedRegion?.boundingBox {
+            mapView.setVisibleCoordinateBounds(
+                MLNCoordinateBounds(sw: CLLocationCoordinate2D(box.southWest), ne: CLLocationCoordinate2D(box.northEast)),
+                edgePadding: MapLayerStyle.focusEdgePadding,
+                animated: animated,
+                completionHandler: nil
+            )
+        } else {
+            mapView.setVisibleCoordinateBounds(
+                MapLayerStyle.ukraineBounds,
+                edgePadding: MapLayerStyle.ukraineEdgePadding,
+                animated: animated,
+                completionHandler: nil
+            )
+        }
+    }
+
+    /// Dims for a new focus and fits the camera to it, or again when asked.
+    func updateFocus(
+        focusChanged: Bool,
+        recenterRequested: Bool,
+        boundariesChanged: Bool
+    ) {
+        if focusChanged {
+            applyFocus()
+        }
+        // The region's outline may arrive after the focus did.
+        if focusChanged || recenterRequested || boundariesChanged && focusedRegionID != nil {
+            fitCamera(animated: true)
+        }
+    }
+
+    /// Shows or hides the blue dot, and flies to the user when asked.
+    func updateUserLocation(
+        from view: AirRaidMapView,
+        locateRequested: Bool
+    ) {
+        if mapView?.showsUserLocation != view.showsUserLocation {
+            mapView?.showsUserLocation = view.showsUserLocation
+        }
+        if locateRequested, let location = view.userLocation {
+            flyToUser(at: location)
+        }
+    }
+
+    /// Centres on the user, zooming in to about a raion unless the map is already closer.
+    func flyToUser(at location: GeoCoordinate) {
+        guard let mapView else { return }
+        mapView.setCenter(
+            CLLocationCoordinate2D(location),
+            zoomLevel: max(mapView.zoomLevel, MapLayerStyle.userZoomLevel),
+            animated: true
+        )
+    }
+
+    func applyFavoriteRegions() {
+        favoriteRegionOutline?.predicate = favoriteRegionIDs.isEmpty
+            ? Self.matchesNoRegion
+            : NSPredicate(format: "%K IN %@", MapLayerStyle.regionIDKey, favoriteRegionIDs)
+    }
+
+    /// A filter no region passes. MapLibre rejects `FALSEPREDICATE` and an empty `IN` list, so it compares with an id
+    /// no region has.
+    static var matchesNoRegion: NSPredicate {
+        NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, "")
     }
 
     /// Only alerted raions go into the source: drawing all 137 just to hide them would cost for nothing.
@@ -501,171 +609,12 @@ private extension AirRaidMapView.Coordinator {
         guard let districtSource else { return }
         let alerted = alertCoverage.districts.compactMap { key, coverage -> MLNMultiPolygonFeature? in
             guard let feature = districtFeatures[key] else { return nil }
-            feature.attributes[Constants.alertLevelKey] = Self.value(of: coverage.level)
-            feature.attributes[Constants.alertExtentKey] = Self.value(of: coverage.extent)
+            feature.attributes[MapLayerStyle.alertLevelKey] = MapFeatureFactory.value(of: coverage.level)
+            feature.attributes[MapLayerStyle.alertExtentKey] = MapFeatureFactory.value(of: coverage.extent)
             return feature
         }
         districtSource.shape = MLNShapeCollectionFeature(shapes: alerted)
     }
-
-    /// A fill colored by the official level.
-    static func makeAlertFill(
-        identifier: String,
-        source: MLNShapeSource,
-        opacity: NSExpression
-    ) -> MLNFillStyleLayer {
-        let fill = MLNFillStyleLayer(identifier: identifier, source: source)
-        fill.predicate = NSPredicate(format: "%K != %@", Constants.alertLevelKey, Constants.noAlert)
-        fill.fillColor = NSExpression(
-            forMLNMatchingKey: NSExpression(forKeyPath: Constants.alertLevelKey),
-            in: [NSExpression(forConstantValue: Constants.yellowLevel): NSExpression(forConstantValue: Constants.yellowAlertColor)],
-            default: NSExpression(forConstantValue: Constants.redAlertColor)
-        )
-        fill.fillOpacity = opacity
-        return fill
-    }
-
-    static func makeDistrictFeatures(from districts: [DistrictBoundary]) -> [DistrictKey: MLNMultiPolygonFeature] {
-        Dictionary(
-            districts.map { district in
-                let feature = MLNMultiPolygonFeature(polygons: district.polygons.map(makePolygon))
-                feature.identifier = district.id
-                return (district.key, feature)
-            },
-            uniquingKeysWith: { first, _ in first }
-        )
-    }
-
-    static func value(of level: RegionAlertLevel) -> String {
-        switch level {
-        case .yellow: return Constants.yellowLevel
-        case .red: return Constants.redLevel
-        }
-    }
-
-    static func value(of extent: RegionAlertExtent) -> String {
-        switch extent {
-        case .partial: return Constants.partialExtent
-        case .whole: return Constants.wholeExtent
-        }
-    }
-
-    static func makeRegionFeatures(from boundaries: [RegionBoundary]) -> [String: MLNMultiPolygonFeature] {
-        Dictionary(uniqueKeysWithValues: boundaries.map { boundary in
-            let feature = MLNMultiPolygonFeature(polygons: boundary.polygons.map(makePolygon))
-            feature.identifier = boundary.id
-            // An attribute too: filters and tap queries read attributes, not identifiers, reliably.
-            feature.attributes[Constants.regionIDKey] = boundary.id
-            return (boundary.id, feature)
-        })
-    }
-
-    static func makePolygon(from polygon: GeoPolygon) -> MLNPolygon {
-        let holes = polygon.holes.map { ring in
-            var coordinates = ring.map(CLLocationCoordinate2D.init)
-            return MLNPolygon(coordinates: &coordinates, count: UInt(coordinates.count))
-        }
-        var exterior = polygon.exterior.map(CLLocationCoordinate2D.init)
-        return MLNPolygon(coordinates: &exterior, count: UInt(exterior.count), interiorPolygons: holes)
-    }
-}
-
-// MARK: - CLLocationCoordinate2D
-
-private extension CLLocationCoordinate2D {
-
-    init(_ coordinate: GeoCoordinate) {
-        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
-    }
-}
-
-// MARK: - Constants
-
-private enum Constants {
-    /// Ukraine's bounding box; the camera fits it on load so the whole country is visible on any screen.
-    static let ukraineBounds = MLNCoordinateBounds(
-        sw: CLLocationCoordinate2D(latitude: 44.3, longitude: 22.1),
-        ne: CLLocationCoordinate2D(latitude: 52.4, longitude: 40.3)
-    )
-    static let ukraineEdgePadding = UIEdgeInsets(top: 60, left: 8, bottom: 8, right: 8)
-
-    static let regionSourceID = "regions"
-    static let districtSourceID = "districts"
-    static let citySourceID = "cities"
-    static let threatSourceID = "threats"
-    static let selectedTrackSourceID = "selected-track"
-    static let territoryFillLayerID = "regions-territory-fill"
-    static let regionAlertFillLayerID = "regions-alert-fill"
-    static let districtAlertFillLayerID = "districts-alert-fill"
-    static let districtOutlineLayerID = "districts-outline"
-    static let outlineLayerID = "regions-outline"
-    static let selectedRegionOutlineLayerID = "regions-selected-outline"
-    static let cityLayerID = "cities-labels"
-    static let threatLayerID = "threats-pins"
-    static let selectedTrailLayerID = "selected-track-trail"
-    static let selectedForecastLayerID = "selected-track-forecast"
-    static let selectedTargetLayerID = "selected-track-target"
-
-    static let regionIDKey = "regionID"
-    static let alertLevelKey = "alertLevel"
-    static let alertExtentKey = "alertExtent"
-    static let noAlert = "none"
-    static let yellowLevel = "yellow"
-    static let redLevel = "red"
-    static let partialExtent = "partial"
-    static let wholeExtent = "whole"
-    static let nameKey = "name"
-    static let iconNameKey = "iconName"
-    static let headingKey = "heading"
-    static let selectedKey = "selected"
-    static let outsideAlertKey = "outsideAlert"
-    static let captionLabelKey = "captionLabel"
-    static let captionNameKey = "captionName"
-    static let trackPartKey = "part"
-    static let trailPart = "trail"
-    static let forecastPart = "forecast"
-    static let targetPart = "target"
-    static let roundJoin = "round"
-    static let mapAlignment = "map"
-    static let topAnchor = "top"
-
-    static let territoryColor = UIColor.mapTerritory
-    static let territoryFillOpacity: Double = 0.55
-    static let redAlertColor = UIColor.mapAlertRed
-    static let yellowAlertColor = UIColor.mapAlertYellow
-    static let wholeAlertFillOpacity: Double = 0.7
-    static let partialAlertFillOpacity: Double = 0.35
-    static let outlineOpacity: Double = 0.35
-    static let outlineWidth: Double = 0.8
-    static let districtOutlineOpacity: Double = 0.2
-    static let districtOutlineWidth: Double = 0.5
-    static let selectedRegionColor = UIColor.mapTrack
-    static let selectedRegionOutlineOpacity: Double = 0.9
-    static let selectedRegionOutlineWidth: Double = 2
-
-    /// A font the OpenFreeMap glyph server provides.
-    static let cityFontNames = ["Noto Sans Bold"]
-    static let cityFontSize: Double = 11
-    static let threatIconScale: Double = 0.75
-    static let selectedThreatIconScale: Double = 1
-    static let threatCaptionFontSize: Double = 11
-    static let outsideAlertOpacity: Double = 0.4
-    static let captionLabelFontNames = ["Noto Sans Regular"]
-    static let captionLabelScale: Double = 0.8
-    static let captionLabelColor = UIColor.mapCaption
-    /// Below the pin, in ems of the caption font; the selected pin is drawn larger, so its caption sits lower.
-    static let threatCaptionOffset = CGVector(dx: 0, dy: 1.3)
-    static let selectedThreatCaptionOffset = CGVector(dx: 0, dy: 1.8)
-    static let trackColor = UIColor.mapTrack
-    static let trailOpacity: Double = 0.7
-    static let forecastOpacity: Double = 0.55
-    static let trackWidth: Double = 2
-    static let forecastDashPattern: [Double] = [2, 2]
-    static let targetDotRadius: Double = 5
-
-    /// Half the side of the square a tap searches for pins: about a fingertip.
-    static let tapRadius: CGFloat = 22
-    static let cityHaloWidth: Double = 1.2
 }
 
 #Preview {
@@ -678,6 +627,12 @@ private enum Constants {
             alertCoverage: .none,
             threats: [],
             selection: nil,
+            favoriteRegionIDs: [],
+            focusedRegionID: nil,
+            recenterRequest: 0,
+            showsUserLocation: false,
+            userLocation: nil,
+            locateRequest: 0,
             onSelect: { _ in }
         )
     }
