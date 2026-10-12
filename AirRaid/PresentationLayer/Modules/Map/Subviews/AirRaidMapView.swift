@@ -60,15 +60,7 @@ struct AirRaidMapView: UIViewRepresentable {
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.onSelect = onSelect
-        context.coordinator.update(
-            boundaries: boundaries,
-            districts: districts,
-            cities: cities,
-            alertCoverage: alertCoverage,
-            threats: threats,
-            selection: selection,
-            favoriteRegionIDs: favoriteRegionIDs
-        )
+        context.coordinator.update(from: self)
     }
 }
 
@@ -116,15 +108,16 @@ extension AirRaidMapView {
         /// Raion features by how alerts name them, rebuilt only when the outlines change.
         private var districtFeatures: [DistrictKey: MLNMultiPolygonFeature] = [:]
 
-        func update(
-            boundaries: [RegionBoundary],
-            districts: [DistrictBoundary],
-            cities: [City],
-            alertCoverage: AirRaidCoverage,
-            threats: [Threat],
-            selection: MapSelection?,
-            favoriteRegionIDs: [String]
-        ) {
+        /// Applies the view's latest data, rebuilding only the sources whose input changed.
+        func update(from view: AirRaidMapView) {
+            let boundaries = view.boundaries
+            let districts = view.districts
+            let cities = view.cities
+            let alertCoverage = view.alertCoverage
+            let threats = view.threats
+            let selection = view.selection
+            let favoriteRegionIDs = view.favoriteRegionIDs
+
             let boundariesChanged = boundaries.map(\.id) != self.boundaries.map(\.id)
             let districtsChanged = districts.map(\.id) != self.districts.map(\.id)
             let citiesChanged = cities != self.cities
