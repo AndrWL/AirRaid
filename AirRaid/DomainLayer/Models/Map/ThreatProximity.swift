@@ -15,6 +15,14 @@ nonisolated struct ThreatProximity: Hashable, Sendable {
     /// The great-circle distance from the threat's estimated position, in kilometres.
     let distanceKm: Double
 
+    /// How far off the threat's position may be, in kilometres; `0` for a confirmed one.
+    let uncertaintyKm: Double
+
+    /// The distance is smaller than the position's own error, so it says nothing more than "somewhere around here".
+    var isWithinUncertainty: Bool {
+        uncertaintyKm > 0 && distanceKm < uncertaintyKm
+    }
+
     /// The time to cover that distance at the threat's speed; `nil` unless its course points at the user.
     let timeToArrival: TimeInterval?
 }
@@ -34,6 +42,7 @@ nonisolated extension Threat {
         let distanceKm = current.distance(to: user)
         return ThreatProximity(
             distanceKm: distanceKm,
+            uncertaintyKm: positionQuality == .confirmed ? 0 : accuracyKm,
             timeToArrival: timeToArrival(from: current, to: user, distanceKm: distanceKm, at: date)
         )
     }

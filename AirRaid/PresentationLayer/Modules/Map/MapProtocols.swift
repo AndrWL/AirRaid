@@ -52,6 +52,12 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Set when "to me" is tapped with location denied: only the Settings app can allow it.
     var isLocationDeniedAlertPresented: Bool { get }
 
+    /// Threats whose reported position is inside the radius of the user's location or home; drawn red.
+    var nearThreatIDs: Set<String> { get }
+
+    /// Grows each time a threat comes within a radius, for a haptic alongside the sound.
+    var nearThreatAlertCount: Int { get }
+
     /// The threat or region whose sheet is open, highlighted on the map; `nil` when none is.
     var selection: MapSelection? { get }
 
@@ -67,9 +73,9 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Whether a home is set, so the confirmation can say "move" instead of "set".
     var placeSettings: PlaceSettings { get }
 
-    /// The nearest threat inside the radius of one of the user's places at the given moment; `nil` when the radii are
-    /// clear.
-    func nearestThreat(at date: Date) -> NearestThreatSummary?
+    /// For each of the user's places, the nearest threat inside its radius at the given moment; empty when the radii
+    /// are clear.
+    func placeThreats(at date: Date) -> [NearestThreatSummary]
 
     /// Opens the places sheet: the radii and the home.
     func didTapPlaces()

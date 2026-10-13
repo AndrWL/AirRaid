@@ -17,6 +17,9 @@ nonisolated struct PlaceSettings: Hashable, Sendable {
     /// The radius a place starts with: a city and its outskirts.
     static let defaultRadiusKm: Double = 25
 
+    /// The radii to pick from: from a district of a city to a whole region around it.
+    static let radiusOptions: [Double] = [5, 10, 25, 50, 100]
+
     /// No home and the default radius.
     static let initial = PlaceSettings(home: nil, currentLocationRadiusKm: defaultRadiusKm)
 }
@@ -27,4 +30,17 @@ nonisolated struct HomePlace: Hashable, Sendable {
     let coordinate: GeoCoordinate
 
     let radiusKm: Double
+
+    /// Where the home is, once the geocoder has named it; `nil` until then or when it could not.
+    let address: PlaceAddress?
+
+    init(
+        coordinate: GeoCoordinate,
+        radiusKm: Double,
+        address: PlaceAddress? = nil
+    ) {
+        self.coordinate = coordinate
+        self.radiusKm = radiusKm
+        self.address = address
+    }
 }

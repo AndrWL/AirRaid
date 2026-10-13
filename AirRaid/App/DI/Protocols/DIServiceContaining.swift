@@ -44,4 +44,7 @@ protocol DIServiceContaining {
 
     /// The user's location while the app is in use.
     var userLocationService: UserLocationServiceProtocol { get }
+
+    /// The app's alert sounds while it is open.
+    var alertSoundService: AlertSoundServiceProtocol { get }
 }

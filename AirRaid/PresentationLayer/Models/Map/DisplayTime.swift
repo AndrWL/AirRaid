@@ -32,6 +32,13 @@ enum DisplayTime {
         return "≈ \(duration(interval))"
     }
 
+    /// «42 км», or «у межах ±62 км» when the position is too rough for a distance to mean anything.
+    static func distance(_ proximity: ThreatProximity) -> String {
+        proximity.isWithinUncertainty
+            ? "у межах ±\(Int(proximity.uncertaintyKm.rounded())) км"
+            : distance(proximity.distanceKm)
+    }
+
     /// «42 км», «менше 1 км» — whole kilometres: the threat's position is an estimate, decimals would overstate it.
     static func distance(_ kilometres: Double) -> String {
         guard kilometres >= 1 else { return "менше 1 км" }

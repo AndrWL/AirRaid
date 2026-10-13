@@ -33,6 +33,7 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             focusedRegionRepository: appContainer.repositories.focusedRegionRepository,
             userLocationService: appContainer.services.userLocationService,
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+            alertSoundService: appContainer.services.alertSoundService,
             styleURL: Self.makeStyleURL()
         )
 
@@ -93,7 +94,13 @@ private extension MapCoordinatorView {
     }
 
     func sheetContent(for route: MapSheetRoute) -> some View {
-        factory.sheet(for: route, actions: MapSheetActions(pickHomeOnMap: viewModel.didStartPickingHome))
+        factory.sheet(
+            for: route,
+            actions: MapSheetActions(
+                pickHomeOnMap: viewModel.didStartPickingHome,
+                showThreat: { viewModel.didSelect(.threat(id: $0)) }
+            )
+        )
             // Tapping another pin swaps the route of the sheet already on screen (see `MapSheetRoute.id`);
             // a new identity rebuilds the module, whose view model would otherwise keep the old threat.
             .id(route)

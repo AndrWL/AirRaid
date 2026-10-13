@@ -182,7 +182,7 @@ extension ThreatDetailsContent {
             self.place = place
             let fromText = place.fromText
             distanceLabel = fromText.prefix(1).uppercased() + fromText.dropFirst()
-            distanceText = DisplayTime.distance(proximity.distanceKm)
+            distanceText = DisplayTime.distance(proximity)
             arrivalLabel = place.arrivalLabel
             arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)
         }

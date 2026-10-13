@@ -11,4 +11,7 @@ struct MapSheetActions {
 
     /// Closes the sheet and lets the user place the home under a pin at the centre of the map.
     let pickHomeOnMap: () -> Void
+
+    /// Swaps the sheet for the details of the threat with this id.
+    let showThreat: (String) -> Void
 }

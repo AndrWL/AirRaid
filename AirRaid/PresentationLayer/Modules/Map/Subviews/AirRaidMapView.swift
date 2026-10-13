@@ -29,6 +29,9 @@ struct AirRaidMapView: UIViewRepresentable {
     let cities: [City]
     let alertCoverage: AirRaidCoverage
     let threats: [Threat]
+
+    /// Threats inside the radius of one of the user's places, drawn red.
+    let nearThreatIDs: Set<String>
     let selection: MapSelection?
 
     /// The region the map is narrowed to, or `nil` for the whole country.
@@ -49,6 +52,9 @@ struct AirRaidMapView: UIViewRepresentable {
 
     /// The user's location and home: a radius circle around each, and a pin on the home.
     let places: [WatchedPlace]
+
+    /// The moment the forecast ghosts are drawn for; advanced on a timer by the view.
+    let forecastDate: Date
 
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
@@ -116,6 +122,7 @@ extension AirRaidMapView {
         private var cities: [City] = []
         private var alertCoverage: AirRaidCoverage = .none
         private var threats: [Threat] = []
+        private var nearThreatIDs: Set<String> = []
         private var selection: MapSelection?
 
         /// The selected-region outline, whose filter follows the selection.
@@ -130,6 +137,10 @@ extension AirRaidMapView {
         var places: [WatchedPlace] = []
         var placesSource: MLNShapeSource?
         var onCenterChange: (GeoCoordinate) -> Void = { _ in }
+
+        /// Read by the forecast extension in its own file, hence not private.
+        var forecastSource: MLNShapeSource?
+        private var forecastDate = Date.distantPast
 
         weak var mapView: MLNMapView?
 
@@ -151,7 +162,7 @@ extension AirRaidMapView {
             let districtsChanged = view.districts.map(\.id) != districts.map(\.id)
             let citiesChanged = view.cities != cities
             let alertsChanged = view.alertCoverage != alertCoverage
-            let threatsChanged = view.threats != threats
+            let threatsChanged = view.threats != threats || view.nearThreatIDs != nearThreatIDs
             let selectionChanged = view.selection != selection
             let focusChanged = view.focusedRegionID != focusedRegionID
             let recenterRequested = view.recenterRequest != recenterRequest
@@ -162,6 +173,7 @@ extension AirRaidMapView {
             cities = view.cities
             alertCoverage = view.alertCoverage
             threats = view.threats
+            nearThreatIDs = view.nearThreatIDs
             selection = view.selection
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
@@ -189,6 +201,10 @@ extension AirRaidMapView {
             }
             updateFocus(focusChanged: focusChanged, recenterRequested: recenterRequested, boundariesChanged: boundariesChanged)
             // An area-only threat is placed by the alerts, so its pin moves when they change.
+            if threatsChanged || view.forecastDate != forecastDate {
+                forecastDate = view.forecastDate
+                applyForecast(threats: threats, at: forecastDate)
+            }
             if threatsChanged || selectionChanged || alertsChanged || districtsChanged || focusChanged {
                 applyThreats()
                 applySelectedTrack()
@@ -215,6 +231,7 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyPlaces()
         applyThreats()
         applySelectedTrack()
+        applyForecast(threats: threats, at: forecastDate)
     }
 
     /// Also while the camera is still moving: "here" may be tapped before a fling has settled.
@@ -263,6 +280,7 @@ private extension AirRaidMapView.Coordinator {
         installPlacesLayers(in: style)
         installSelectedTrackLayers(in: style, source: selectedTrackSource)
         installThreatLayer(in: style, source: threatSource)
+        installForecastLayers(in: style)
     }
 
     func installRegionLayers(
@@ -358,6 +376,7 @@ private extension AirRaidMapView.Coordinator {
     func installThreatLayer(in style: MLNStyle, source: MLNShapeSource) {
         for icon in ThreatIcon.allCases {
             style.setImage(icon.image, forName: icon.name)
+            style.setImage(icon.nearImage, forName: icon.nearName)
         }
         let threatPins = MLNSymbolStyleLayer(identifier: MapLayerStyle.threatLayerID, source: source)
         threatPins.iconImageName = NSExpression(forKeyPath: MapLayerStyle.iconNameKey)
@@ -471,7 +490,7 @@ private extension AirRaidMapView.Coordinator {
             feature.identifier = threat.id
             let icon = ThreatIcon(threat)
             feature.attributes = [
-                MapLayerStyle.iconNameKey: icon.name,
+                MapLayerStyle.iconNameKey: nearThreatIDs.contains(threat.id) ? icon.nearName : icon.name,
                 // Unknown course draws the icon pointing north.
                 MapLayerStyle.headingKey: icon.rotatesWithHeading ? threat.course ?? 0 : 0,
                 MapLayerStyle.selectedKey: selection == .threat(id: threat.id),
@@ -602,6 +621,7 @@ private extension AirRaidMapView.Coordinator {
             cities: [],
             alertCoverage: .none,
             threats: [],
+            nearThreatIDs: [],
             selection: nil,
             focusedRegionID: nil,
             recenterRequest: 0,
@@ -609,6 +629,7 @@ private extension AirRaidMapView.Coordinator {
             flyRequest: nil,
             isPickingLocation: false,
             places: [],
+            forecastDate: .now,
             onSelect: { _ in },
             onCenterChange: { _ in }
         )
