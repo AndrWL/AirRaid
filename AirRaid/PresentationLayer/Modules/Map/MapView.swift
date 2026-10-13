@@ -31,13 +31,14 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
             alertCoverage: viewModel.alertCoverage,
             threats: viewModel.threats,
             selection: viewModel.selection,
-            favoriteRegionIDs: viewModel.favoriteRegionIDs,
             focusedRegionID: viewModel.focusedRegionID,
             recenterRequest: viewModel.recenterRequest,
             showsUserLocation: viewModel.locationAuthorization == .authorized,
-            userLocation: viewModel.userLocation,
-            locateRequest: viewModel.locateRequest,
-            onSelect: viewModel.didSelect
+            flyRequest: viewModel.flyRequest,
+            isPickingLocation: viewModel.isPickingHome,
+            places: viewModel.places,
+            onSelect: viewModel.didSelect,
+            onCenterChange: viewModel.didChangeMapCenter
         )
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
@@ -55,21 +56,24 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     )
                     .transition(.opacity)
                 }
-                if !viewModel.favoriteChips.isEmpty {
-                    FavoriteRegionsBar(
-                        chips: viewModel.favoriteChips,
-                        selectedRegionID: selectedRegionID,
-                        onSelect: { viewModel.didSelect(.region(id: $0)) }
-                    )
-                    .transition(.opacity)
-                }
             }
             .padding(.top, Spacing.small)
         }
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
-        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.favoriteChips)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
-        .overlay(alignment: .bottom) { bottomControls }
+        .overlay {
+            if viewModel.isPickingHome {
+                HomePickerOverlay(
+                    isMovingHome: viewModel.placeSettings.home != nil,
+                    onConfirm: viewModel.didConfirmHomePick,
+                    onCancel: viewModel.didCancelHomePick
+                )
+            } else {
+                bottomControls
+            }
+        }
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.isPickingHome)
+        .sensoryFeedback(.success, trigger: viewModel.placeSettings.home)
         .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
             Button("Відкрити Налаштування") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -91,6 +95,13 @@ private extension MapView {
 
     /// The nearest threat on the left, "to me" on the right; above the map's attribution and the tab bar.
     var bottomControls: some View {
+        VStack {
+            Spacer()
+            bottomControlsRow
+        }
+    }
+
+    var bottomControlsRow: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
             TimelineView(.periodic(from: .now, by: Constants.nearestThreatRefreshInterval)) { timeline in
                 if let summary = viewModel.nearestThreat(at: timeline.date) {
@@ -101,10 +112,27 @@ private extension MapView {
                 }
             }
             Spacer(minLength: 0)
-            locateButton
+            VStack(spacing: Spacing.small) {
+                placesButton
+                locateButton
+            }
         }
         .padding(.horizontal, Spacing.large)
         .padding(.bottom, Constants.bottomControlsInset)
+    }
+
+    var placesButton: some View {
+        Button(action: viewModel.didTapPlaces) {
+            Image(systemName: viewModel.placeSettings.home == nil ? "house" : "house.fill")
+                .font(.app(.body, weight: .semibold))
+                .foregroundStyle(WatchedPlaceKind.home.tint)
+                .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
+                .glassBackground(in: .circle)
+                // The whole disc, not only the glyph: a tap on the glass edge would fall through to the map.
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Мої місця")
     }
 
     var locateButton: some View {
@@ -114,6 +142,7 @@ private extension MapView {
                 .foregroundStyle(Color.accentColor)
                 .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
                 .glassBackground(in: .circle)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Показати мене на карті")
@@ -158,9 +187,9 @@ private enum Constants {
                     cityRepository: CityRepository(),
                     airSituationRepository: DemoAirSituationRepository(),
                     realtimeService: container.services.realtimeService,
-                    favoriteRegionsRepository: container.repositories.favoriteRegionsRepository,
                     focusedRegionRepository: container.repositories.focusedRegionRepository,
                     userLocationService: container.services.userLocationService,
+                    placeSettingsRepository: container.repositories.placeSettingsRepository,
                     styleURL: styleURL
                 )
             )

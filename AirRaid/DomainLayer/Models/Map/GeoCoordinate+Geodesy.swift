@@ -32,6 +32,34 @@ nonisolated extension GeoCoordinate {
         let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(deltaLon)
         return atan2(y, x).degrees
     }
+
+    /// The point `distanceKm` away along the great circle that starts at `bearing` degrees from north.
+    func moved(
+        bearing: Double,
+        distanceKm: Double
+    ) -> GeoCoordinate {
+        let angularDistance = distanceKm / Self.earthRadiusKm
+        let bearingRad = bearing.radians
+        let lat1 = latitude.radians
+        let lon1 = longitude.radians
+
+        let lat2 = asin(sin(lat1) * cos(angularDistance) + cos(lat1) * sin(angularDistance) * cos(bearingRad))
+        let lon2 = lon1 + atan2(
+            sin(bearingRad) * sin(angularDistance) * cos(lat1),
+            cos(angularDistance) - sin(lat1) * sin(lat2)
+        )
+        return GeoCoordinate(latitude: lat2.degrees, longitude: lon2.degrees)
+    }
+
+    /// A ring of points `radiusKm` around this one, for drawing a radius on the map; the first point is not repeated.
+    func circle(
+        radiusKm: Double,
+        segments: Int = 72
+    ) -> [GeoCoordinate] {
+        (0..<segments).map { index in
+            moved(bearing: Double(index) * 360 / Double(segments), distanceKm: radiusKm)
+        }
+    }
 }
 
 // MARK: - Double

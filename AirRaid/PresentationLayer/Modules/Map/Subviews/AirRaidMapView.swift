@@ -11,7 +11,7 @@ import SwiftUI
 /// A MapLibre map of Ukraine with air raid alerts filled by oblast or raion (color by alert level),
 /// regional centers labelled, and threats shown as pins. Tapping a pin selects it; the selected threat is drawn
 /// larger, with its track behind it and a dashed line to its target. A tap that hits no pin selects the region under
-/// it, which gets a bright outline. Regions the user follows are outlined in the accent colour.
+/// it, which gets a bright outline.
 ///
 /// With a focused region the rest of the country is dimmed, threats outside it fade, and the camera fits the region
 /// and does not let a pan wander far from it.
@@ -31,9 +31,6 @@ struct AirRaidMapView: UIViewRepresentable {
     let threats: [Threat]
     let selection: MapSelection?
 
-    /// ISO codes of the regions the user follows.
-    let favoriteRegionIDs: [String]
-
     /// The region the map is narrowed to, or `nil` for the whole country.
     let focusedRegionID: String?
 
@@ -43,14 +40,21 @@ struct AirRaidMapView: UIViewRepresentable {
     /// Draws the user's blue dot; only once the user has allowed location, or the map would ask for it on its own.
     let showsUserLocation: Bool
 
-    /// Where the camera flies on a ``locateRequest``.
-    let userLocation: GeoCoordinate?
+    /// A new request flies the camera to its point.
+    let flyRequest: MapFlyRequest?
 
-    /// Changes whenever the camera should fly to the user.
-    let locateRequest: Int
+    /// While the user picks a point under a fixed centre pin: taps select nothing and the focus does not hold the
+    /// camera.
+    let isPickingLocation: Bool
+
+    /// The user's location and home: a radius circle around each, and a pin on the home.
+    let places: [WatchedPlace]
 
     /// Called with the tapped pin, else the tapped region, or `nil` when a tap hits neither.
     let onSelect: (MapSelection?) -> Void
+
+    /// Called with the point under the centre of the map whenever the camera stops, and as it moves while picking.
+    let onCenterChange: (GeoCoordinate) -> Void
 
     // MARK: - UIViewRepresentable
 
@@ -79,6 +83,7 @@ struct AirRaidMapView: UIViewRepresentable {
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         context.coordinator.onSelect = onSelect
+        context.coordinator.onCenterChange = onCenterChange
         context.coordinator.update(from: self)
     }
 }
@@ -116,10 +121,15 @@ extension AirRaidMapView {
         /// The selected-region outline, whose filter follows the selection.
         private var selectedRegionOutline: MLNLineStyleLayer?
 
-        private var favoriteRegionIDs: [String] = []
         private var focusedRegionID: String?
         private var recenterRequest = 0
-        private var locateRequest = 0
+        private var flyRequest: MapFlyRequest?
+        var isPickingLocation = false
+
+        /// Read by the places extension in its own file, hence not private.
+        var places: [WatchedPlace] = []
+        var placesSource: MLNShapeSource?
+        var onCenterChange: (GeoCoordinate) -> Void = { _ in }
 
         weak var mapView: MLNMapView?
 
@@ -128,9 +138,6 @@ extension AirRaidMapView {
 
         /// Whether the style has loaded; the camera is fitted only after that, when the view has its size.
         private var isStyleLoaded = false
-
-        /// The followed-regions outline, whose filter follows the favourites.
-        private var favoriteRegionOutline: MLNLineStyleLayer?
 
         /// Region features by region ID, rebuilt only when the outlines change.
         private var regionFeatures: [String: MLNMultiPolygonFeature] = [:]
@@ -146,10 +153,9 @@ extension AirRaidMapView {
             let alertsChanged = view.alertCoverage != alertCoverage
             let threatsChanged = view.threats != threats
             let selectionChanged = view.selection != selection
-            let favoritesChanged = view.favoriteRegionIDs != favoriteRegionIDs
             let focusChanged = view.focusedRegionID != focusedRegionID
             let recenterRequested = view.recenterRequest != recenterRequest
-            let locateRequested = view.locateRequest != locateRequest
+            let flyRequested = view.flyRequest != flyRequest
 
             boundaries = view.boundaries
             districts = view.districts
@@ -157,11 +163,11 @@ extension AirRaidMapView {
             alertCoverage = view.alertCoverage
             threats = view.threats
             selection = view.selection
-            favoriteRegionIDs = view.favoriteRegionIDs
             focusedRegionID = view.focusedRegionID
             recenterRequest = view.recenterRequest
-            locateRequest = view.locateRequest
-            updateUserLocation(from: view, locateRequested: locateRequested)
+            flyRequest = view.flyRequest
+            isPickingLocation = view.isPickingLocation
+            updatePlaces(from: view, flyRequested: flyRequested)
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
@@ -180,9 +186,6 @@ extension AirRaidMapView {
             }
             if selectionChanged {
                 applySelectedRegion()
-            }
-            if favoritesChanged {
-                applyFavoriteRegions()
             }
             updateFocus(focusChanged: focusChanged, recenterRequested: recenterRequested, boundariesChanged: boundariesChanged)
             // An area-only threat is placed by the alerts, so its pin moves when they change.
@@ -209,9 +212,19 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyDistricts()
         applyCities()
         applySelectedRegion()
-        applyFavoriteRegions()
+        applyPlaces()
         applyThreats()
         applySelectedTrack()
+    }
+
+    /// Also while the camera is still moving: "here" may be tapped before a fling has settled.
+    func mapViewRegionIsChanging(_ mapView: MLNMapView) {
+        guard isPickingLocation else { return }
+        onCenterChange(GeoCoordinate(mapView.centerCoordinate))
+    }
+
+    func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
+        onCenterChange(GeoCoordinate(mapView.centerCoordinate))
     }
 
     /// Keeps a pan from leaving the focused region: the centre may stray a quarter of the region's size past its box.
@@ -220,7 +233,7 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         shouldChangeFrom oldCamera: MLNMapCamera,
         to newCamera: MLNMapCamera
     ) -> Bool {
-        guard let box = focusedRegion?.boundingBox else { return true }
+        guard !isPickingLocation, let box = focusedRegion?.boundingBox else { return true }
         return box.contains(GeoCoordinate(newCamera.centerCoordinate), margin: MapLayerStyle.focusPanMargin)
     }
 }
@@ -247,6 +260,7 @@ private extension AirRaidMapView.Coordinator {
 
         installRegionLayers(in: style, regionSource: regionSource, districtSource: districtSource)
         installCityLayer(in: style, source: citySource)
+        installPlacesLayers(in: style)
         installSelectedTrackLayers(in: style, source: selectedTrackSource)
         installThreatLayer(in: style, source: threatSource)
     }
@@ -317,17 +331,8 @@ private extension AirRaidMapView.Coordinator {
         return dimFill
     }
 
-    /// The followed regions' outlines and, over them, the selected region's.
+    /// The selected region's outline.
     func makeHighlightOutlines(source: MLNShapeSource) -> [MLNLineStyleLayer] {
-        let favoriteOutline = MapFeatureFactory.makeOutline(
-            identifier: MapLayerStyle.favoriteRegionOutlineLayerID,
-            source: source,
-            color: MapLayerStyle.favoriteRegionColor,
-            opacity: MapLayerStyle.favoriteRegionOutlineOpacity,
-            width: MapLayerStyle.favoriteRegionOutlineWidth
-        )
-        favoriteRegionOutline = favoriteOutline
-
         let selectedOutline = MapFeatureFactory.makeOutline(
             identifier: MapLayerStyle.selectedRegionOutlineLayerID,
             source: source,
@@ -336,7 +341,7 @@ private extension AirRaidMapView.Coordinator {
             width: MapLayerStyle.selectedRegionOutlineWidth
         )
         selectedRegionOutline = selectedOutline
-        return [favoriteOutline, selectedOutline]
+        return [selectedOutline]
     }
 
     func installCityLayer(in style: MLNStyle, source: MLNShapeSource) {
@@ -569,37 +574,8 @@ private extension AirRaidMapView.Coordinator {
         }
     }
 
-    /// Shows or hides the blue dot, and flies to the user when asked.
-    func updateUserLocation(
-        from view: AirRaidMapView,
-        locateRequested: Bool
-    ) {
-        if mapView?.showsUserLocation != view.showsUserLocation {
-            mapView?.showsUserLocation = view.showsUserLocation
-        }
-        if locateRequested, let location = view.userLocation {
-            flyToUser(at: location)
-        }
-    }
-
-    /// Centres on the user, zooming in to about a raion unless the map is already closer.
-    func flyToUser(at location: GeoCoordinate) {
-        guard let mapView else { return }
-        mapView.setCenter(
-            CLLocationCoordinate2D(location),
-            zoomLevel: max(mapView.zoomLevel, MapLayerStyle.userZoomLevel),
-            animated: true
-        )
-    }
-
-    func applyFavoriteRegions() {
-        favoriteRegionOutline?.predicate = favoriteRegionIDs.isEmpty
-            ? Self.matchesNoRegion
-            : NSPredicate(format: "%K IN %@", MapLayerStyle.regionIDKey, favoriteRegionIDs)
-    }
-
-    /// A filter no region passes. MapLibre rejects `FALSEPREDICATE` and an empty `IN` list, so it compares with an id
-    /// no region has.
+    /// A filter no region passes. MapLibre rejects `FALSEPREDICATE` as a layer filter, so it compares with an id no
+    /// region has.
     static var matchesNoRegion: NSPredicate {
         NSPredicate(format: "%K == %@", MapLayerStyle.regionIDKey, "")
     }
@@ -627,13 +603,14 @@ private extension AirRaidMapView.Coordinator {
             alertCoverage: .none,
             threats: [],
             selection: nil,
-            favoriteRegionIDs: [],
             focusedRegionID: nil,
             recenterRequest: 0,
             showsUserLocation: false,
-            userLocation: nil,
-            locateRequest: 0,
-            onSelect: { _ in }
+            flyRequest: nil,
+            isPickingLocation: false,
+            places: [],
+            onSelect: { _ in },
+            onCenterChange: { _ in }
         )
     }
 }

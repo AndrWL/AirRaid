@@ -21,7 +21,7 @@ final class ThreatDetailsViewModel: BaseViewModel {
     private(set) var threat: Threat?
     private(set) var regionAlerts: [RegionAlert] = []
     private(set) var isGone = false
-    private(set) var userLocation: GeoCoordinate?
+    private(set) var places: [WatchedPlace] = []
 
     @ObservationIgnored
     private let threatID: String
@@ -32,14 +32,19 @@ final class ThreatDetailsViewModel: BaseViewModel {
     @ObservationIgnored
     private let userLocationService: UserLocationServiceProtocol
 
+    @ObservationIgnored
+    private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
+
     init(
         threatID: String,
         airSituationRepository: AirSituationRepositoryProtocol,
-        userLocationService: UserLocationServiceProtocol
+        userLocationService: UserLocationServiceProtocol,
+        placeSettingsRepository: PlaceSettingsRepositoryProtocol
     ) {
         self.threatID = threatID
         self.airSituationRepository = airSituationRepository
         self.userLocationService = userLocationService
+        self.placeSettingsRepository = placeSettingsRepository
     }
 
     // MARK: - Override methods
@@ -56,9 +61,11 @@ final class ThreatDetailsViewModel: BaseViewModel {
             .store(in: &cancellables)
 
         userLocationService.locationPublisher
+            .combineLatest(placeSettingsRepository.settingsPublisher)
+            .map { WatchedPlace.places(currentLocation: $0, settings: $1) }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] location in
-                self?.userLocation = location
+            .sink { [weak self] places in
+                self?.places = places
             }
             .store(in: &cancellables)
     }
@@ -74,7 +81,7 @@ extension ThreatDetailsViewModel: ThreatDetailsViewModelProtocol {
             threat: threat,
             alerts: regionAlerts,
             isGone: isGone,
-            proximity: userLocation.flatMap { threat.proximity(to: $0, at: date) },
+            places: places,
             now: date
         )
     }

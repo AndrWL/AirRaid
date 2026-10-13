@@ -31,12 +31,6 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Why the map is not live right now; `nil` while it is.
     var connectionNotice: MapConnectionNotice? { get }
 
-    /// ISO codes of the regions the user follows, outlined on the map.
-    var favoriteRegionIDs: [String] { get }
-
-    /// The followed regions with their alert state, in the order they were added; empty until the outlines load.
-    var favoriteChips: [FavoriteRegionChip] { get }
-
     /// The region the map is narrowed to, or `nil` for the whole country.
     var focusedRegionID: String? { get }
 
@@ -52,8 +46,8 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Whether the app may read the user's location.
     var locationAuthorization: LocationAuthorization { get }
 
-    /// Changes whenever the camera should fly to the user.
-    var locateRequest: Int { get }
+    /// Where the camera should fly next: to the user, or to the home when picking it.
+    var flyRequest: MapFlyRequest? { get }
 
     /// Set when "to me" is tapped with location denied: only the Settings app can allow it.
     var isLocationDeniedAlertPresented: Bool { get }
@@ -64,9 +58,32 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Loads the region outlines and city labels. Safe to call on every appearance.
     func onAppear() async
 
-    /// The nearest threat with a known position, within reach of the user, at the given moment; `nil` without the
-    /// user's location or such a threat.
+    /// The user's location and home with their radii, drawn on the map.
+    var places: [WatchedPlace] { get }
+
+    /// Whether the map is in home-picking mode: a fixed pin in the centre, the map moves under it.
+    var isPickingHome: Bool { get }
+
+    /// Whether a home is set, so the confirmation can say "move" instead of "set".
+    var placeSettings: PlaceSettings { get }
+
+    /// The nearest threat inside the radius of one of the user's places at the given moment; `nil` when the radii are
+    /// clear.
     func nearestThreat(at date: Date) -> NearestThreatSummary?
+
+    /// Opens the places sheet: the radii and the home.
+    func didTapPlaces()
+
+    /// Closes the places sheet and lets the user move the map under a centre pin to place the home.
+    func didStartPickingHome()
+
+    /// Follows the point under the centre of the map.
+    func didChangeMapCenter(_ center: GeoCoordinate)
+
+    /// Puts the home under the centre pin and leaves picking mode.
+    func didConfirmHomePick()
+
+    func didCancelHomePick()
 
     /// Flies to the user, asking for permission first if it was never asked.
     func didTapLocate()
@@ -92,5 +109,5 @@ protocol MapRouterProtocol: BaseRouterProtocol, SheetPresenting where SheetRoute
 protocol MapFactoryProtocol {
     associatedtype Sheet: View
 
-    @ViewBuilder func sheet(for route: MapSheetRoute) -> Sheet
+    @ViewBuilder func sheet(for route: MapSheetRoute, actions: MapSheetActions) -> Sheet
 }

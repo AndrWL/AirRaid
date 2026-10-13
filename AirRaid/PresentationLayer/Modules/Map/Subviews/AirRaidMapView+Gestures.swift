@@ -15,7 +15,7 @@ extension AirRaidMapView.Coordinator {
     /// neither — outside Ukraine.
     @objc
     func handleTap(_ recognizer: UITapGestureRecognizer) {
-        guard recognizer.state == .ended, let mapView = recognizer.view as? MLNMapView else { return }
+        guard recognizer.state == .ended, !isPickingLocation, let mapView = recognizer.view as? MLNMapView else { return }
         let point = recognizer.location(in: mapView)
         let hitArea = CGRect(
             x: point.x - MapLayerStyle.tapRadius,

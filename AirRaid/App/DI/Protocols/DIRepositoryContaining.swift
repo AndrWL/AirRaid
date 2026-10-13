@@ -50,9 +50,9 @@ protocol DIRepositoryContaining {
     /// The live air situation: active alerts and spotted threats.
     var airSituationRepository: AirSituationRepositoryProtocol { get }
 
-    /// The regions the user follows.
-    var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol { get }
-
     /// The region the map is narrowed to, if any.
     var focusedRegionRepository: FocusedRegionRepositoryProtocol { get }
+
+    /// The home pin and the radius around each watched place.
+    var placeSettingsRepository: PlaceSettingsRepositoryProtocol { get }
 }

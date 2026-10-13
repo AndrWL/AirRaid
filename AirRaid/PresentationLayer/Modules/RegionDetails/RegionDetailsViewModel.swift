@@ -17,7 +17,6 @@ final class RegionDetailsViewModel: BaseViewModel {
 
     private(set) var regionName: String?
     private(set) var situation: AirSituation = .empty
-    private(set) var isFavorite = false
     private(set) var isFocused = false
 
     @ObservationIgnored
@@ -30,9 +29,6 @@ final class RegionDetailsViewModel: BaseViewModel {
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
 
     @ObservationIgnored
-    private let favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol
-
-    @ObservationIgnored
     private let focusedRegionRepository: FocusedRegionRepositoryProtocol
 
     @ObservationIgnored
@@ -42,13 +38,11 @@ final class RegionDetailsViewModel: BaseViewModel {
         regionID: String,
         airSituationRepository: AirSituationRepositoryProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
-        favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol,
         focusedRegionRepository: FocusedRegionRepositoryProtocol
     ) {
         self.regionID = regionID
         self.airSituationRepository = airSituationRepository
         self.regionBoundaryRepository = regionBoundaryRepository
-        self.favoriteRegionsRepository = favoriteRegionsRepository
         self.focusedRegionRepository = focusedRegionRepository
     }
 
@@ -62,14 +56,6 @@ final class RegionDetailsViewModel: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] situation in
                 self?.situation = situation
-            }
-            .store(in: &cancellables)
-
-        favoriteRegionsRepository.favoriteRegionIDsPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] ids in
-                guard let self else { return }
-                isFavorite = ids.contains(regionID)
             }
             .store(in: &cancellables)
 
@@ -109,10 +95,6 @@ extension RegionDetailsViewModel: RegionDetailsViewModelProtocol {
             logger.error("Failed to load region boundaries: \(String(describing: error), privacy: .public)")
             regionName = regionID
         }
-    }
-
-    func didTapFavorite() {
-        favoriteRegionsRepository.setFavorite(!isFavorite, regionID: regionID)
     }
 
     func didTapFocus() {

@@ -62,8 +62,8 @@ extension DIRepositoryContainer: DIAssembling {
         registerDistrictBoundaryRepository()
         registerCityRepository()
         registerAirSituationRepository(with: appContainer)
-        registerFavoriteRegionsRepository()
         registerFocusedRegionRepository()
+        registerPlaceSettingsRepository()
     }
 }
 
@@ -87,12 +87,12 @@ extension DIRepositoryContainer: DIRepositoryContaining {
         return container.resolve(AirSituationRepositoryProtocol.self)
     }
 
-    var favoriteRegionsRepository: FavoriteRegionsRepositoryProtocol {
-        return container.resolve(FavoriteRegionsRepositoryProtocol.self)
-    }
-
     var focusedRegionRepository: FocusedRegionRepositoryProtocol {
         return container.resolve(FocusedRegionRepositoryProtocol.self)
+    }
+
+    var placeSettingsRepository: PlaceSettingsRepositoryProtocol {
+        return container.resolve(PlaceSettingsRepositoryProtocol.self)
     }
 }
 
@@ -129,17 +129,17 @@ private extension DIRepositoryContainer {
         }
     }
 
-    /// A singleton so the map and the region sheet see the same list as it changes.
-    func registerFavoriteRegionsRepository() {
-        container.register(FavoriteRegionsRepositoryProtocol.self, lifetime: .singleton) { _ in
-            FavoriteRegionsRepository()
-        }
-    }
-
     /// A singleton so the map and the region sheet see the same focus as it changes.
     func registerFocusedRegionRepository() {
         container.register(FocusedRegionRepositoryProtocol.self, lifetime: .singleton) { _ in
             FocusedRegionRepository()
+        }
+    }
+
+    /// A singleton so the map, the places sheet and the threat details see the same home and radii.
+    func registerPlaceSettingsRepository() {
+        container.register(PlaceSettingsRepositoryProtocol.self, lifetime: .singleton) { _ in
+            PlaceSettingsRepository()
         }
     }
 

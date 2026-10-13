@@ -16,6 +16,9 @@ nonisolated enum MapSheetRoute: Identifiable, Hashable {
     /// The alerts and threats of the region with this ISO 3166-2 code.
     case regionDetails(id: String)
 
+    /// The user's location and home, and the radius around each.
+    case places
+
     /// One identity for every threat and region, so tapping another pin or region while the sheet is open updates
     /// the sheet in place instead of presenting a new one — which would drop the height the user chose.
     var id: String {
@@ -25,7 +28,7 @@ nonisolated enum MapSheetRoute: Identifiable, Hashable {
     /// Starts at half height so the threat or region stays visible on the map above.
     var detents: Set<PresentationDetent> {
         switch self {
-        case .threatDetails, .regionDetails: [.medium, .large]
+        case .threatDetails, .regionDetails, .places: [.medium, .large]
         }
     }
 }

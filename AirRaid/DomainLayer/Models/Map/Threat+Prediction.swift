@@ -78,24 +78,6 @@ nonisolated private extension GeoCoordinate {
         guard distanceKm < totalKm else { return destination }
         return moved(bearing: initialBearing(to: destination), distanceKm: distanceKm)
     }
-
-    /// The point `distanceKm` away along the great circle that starts at `bearing` degrees from north.
-    func moved(
-        bearing: Double,
-        distanceKm: Double
-    ) -> GeoCoordinate {
-        let angularDistance = distanceKm / GeoCoordinate.earthRadiusKm
-        let bearingRad = bearing.radians
-        let lat1 = latitude.radians
-        let lon1 = longitude.radians
-
-        let lat2 = asin(sin(lat1) * cos(angularDistance) + cos(lat1) * sin(angularDistance) * cos(bearingRad))
-        let lon2 = lon1 + atan2(
-            sin(bearingRad) * sin(angularDistance) * cos(lat1),
-            cos(angularDistance) - sin(lat1) * sin(lat2)
-        )
-        return GeoCoordinate(latitude: lat2.degrees, longitude: lon2.degrees)
-    }
 }
 
 // MARK: - Constants
