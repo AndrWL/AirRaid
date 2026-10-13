@@ -14,7 +14,7 @@ final class PlacesViewModel: BaseViewModel {
 
     // MARK: - Variables
 
-    let radiusOptions = Constants.radiusOptions
+    let radiusOptions = PlaceSettings.radiusOptions
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
     private(set) var settings: PlaceSettings = .initial
     private(set) var boundaries: [RegionBoundary] = []
@@ -95,6 +95,19 @@ extension PlacesViewModel: PlacesViewModelProtocol {
     }
 
     func didSelectRadius(_ radiusKm: Double, for kind: WatchedPlaceKind) {
+        // Shown at once: the repository's update arrives a run loop later, and until then the picker would read the
+        // old radius and jump back.
+        switch kind {
+        case .currentLocation:
+            settings = PlaceSettings(home: settings.home, currentLocationRadiusKm: radiusKm)
+        case .home:
+            if let home = settings.home {
+                settings = PlaceSettings(
+                    home: HomePlace(coordinate: home.coordinate, radiusKm: radiusKm, address: home.address),
+                    currentLocationRadiusKm: settings.currentLocationRadiusKm
+                )
+            }
+        }
         placeSettingsRepository.setRadius(radiusKm, for: kind)
     }
 
@@ -106,11 +119,4 @@ extension PlacesViewModel: PlacesViewModelProtocol {
         guard let userLocation else { return }
         placeSettingsRepository.setHome(at: userLocation)
     }
-}
-
-// MARK: - Constants
-
-private enum Constants {
-    /// From a district of a city to a whole region around it.
-    static let radiusOptions: [Double] = [5, 10, 25, 50, 100]
 }

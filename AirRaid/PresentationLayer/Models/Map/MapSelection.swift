@@ -13,4 +13,7 @@ enum MapSelection: Hashable {
 
     /// The region with this ISO 3166-2 code.
     case region(id: String)
+
+    /// The home pin.
+    case home
 }

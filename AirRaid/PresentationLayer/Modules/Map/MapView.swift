@@ -23,23 +23,28 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
     }
 
     var body: some View {
-        AirRaidMapView(
-            styleURL: viewModel.styleURL,
-            boundaries: viewModel.boundaries,
-            districts: viewModel.districts,
-            cities: viewModel.cities,
-            alertCoverage: viewModel.alertCoverage,
-            threats: viewModel.threats,
-            selection: viewModel.selection,
-            focusedRegionID: viewModel.focusedRegionID,
-            recenterRequest: viewModel.recenterRequest,
-            showsUserLocation: viewModel.locationAuthorization == .authorized,
-            flyRequest: viewModel.flyRequest,
-            isPickingLocation: viewModel.isPickingHome,
-            places: viewModel.places,
-            onSelect: viewModel.didSelect,
-            onCenterChange: viewModel.didChangeMapCenter
-        )
+        // Ghosts of reliable threats move on between reports; the rest of the map updates only with the data.
+        TimelineView(.periodic(from: .now, by: Constants.forecastRefreshInterval)) { timeline in
+            AirRaidMapView(
+                styleURL: viewModel.styleURL,
+                boundaries: viewModel.boundaries,
+                districts: viewModel.districts,
+                cities: viewModel.cities,
+                alertCoverage: viewModel.alertCoverage,
+                threats: viewModel.threats,
+                nearThreatIDs: viewModel.nearThreatIDs,
+                selection: viewModel.selection,
+                focusedRegionID: viewModel.focusedRegionID,
+                recenterRequest: viewModel.recenterRequest,
+                showsUserLocation: viewModel.locationAuthorization == .authorized,
+                flyRequest: viewModel.flyRequest,
+                isPickingLocation: viewModel.isPickingHome,
+                places: viewModel.places,
+                forecastDate: timeline.date,
+                onSelect: viewModel.didSelect,
+                onCenterChange: viewModel.didChangeMapCenter
+            )
+        }
         // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
         .ignoresSafeArea()
         .overlay(alignment: .top) {
@@ -55,6 +60,9 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                         onExit: viewModel.didTapExitFocus
                     )
                     .transition(.opacity)
+                }
+                if !viewModel.isPickingHome {
+                    placeThreatBanners
                 }
             }
             .padding(.top, Spacing.small)
@@ -74,6 +82,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         }
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.isPickingHome)
         .sensoryFeedback(.success, trigger: viewModel.placeSettings.home)
+        .sensoryFeedback(.warning, trigger: viewModel.nearThreatAlertCount)
         .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
             Button("Відкрити Налаштування") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -93,7 +102,22 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
 
 private extension MapView {
 
-    /// The nearest threat on the left, "to me" on the right; above the map's attribution and the tab bar.
+    /// A banner per place with a threat inside its radius; distances and times move on between reports.
+    var placeThreatBanners: some View {
+        TimelineView(.periodic(from: .now, by: Constants.nearestThreatRefreshInterval)) { timeline in
+            VStack(spacing: Spacing.small) {
+                ForEach(viewModel.placeThreats(at: timeline.date)) { summary in
+                    PlaceThreatBanner(summary: summary) {
+                        viewModel.didSelect(.threat(id: summary.threatID))
+                    }
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.placeThreats(at: timeline.date))
+        }
+    }
+
+    /// The places and "to me" buttons on the right; above the map's attribution and the tab bar.
     var bottomControls: some View {
         VStack {
             Spacer()
@@ -103,14 +127,6 @@ private extension MapView {
 
     var bottomControlsRow: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
-            TimelineView(.periodic(from: .now, by: Constants.nearestThreatRefreshInterval)) { timeline in
-                if let summary = viewModel.nearestThreat(at: timeline.date) {
-                    NearestThreatCard(summary: summary) {
-                        viewModel.didSelect(.threat(id: summary.threatID))
-                    }
-                    .transition(.opacity)
-                }
-            }
             Spacer(minLength: 0)
             VStack(spacing: Spacing.small) {
                 placesButton
@@ -157,17 +173,13 @@ private extension MapView {
             }
         )
     }
-
-    var selectedRegionID: String? {
-        guard case .region(let id) = viewModel.selection else { return nil }
-        return id
-    }
 }
 
 // MARK: - Constants
 
 private enum Constants {
     static let nearestThreatRefreshInterval: TimeInterval = 15
+    static let forecastRefreshInterval: TimeInterval = 5
     static let locateButtonSize: CGFloat = 48
     /// Clears the map's logo and attribution button at the bottom edge.
     static let bottomControlsInset: CGFloat = 40
@@ -190,6 +202,7 @@ private enum Constants {
                     focusedRegionRepository: container.repositories.focusedRegionRepository,
                     userLocationService: container.services.userLocationService,
                     placeSettingsRepository: container.repositories.placeSettingsRepository,
+                    alertSoundService: container.services.alertSoundService,
                     styleURL: styleURL
                 )
             )

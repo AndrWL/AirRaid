@@ -47,6 +47,7 @@ extension DIServiceContainer: DIAssembling {
         registerAuthTokenProvider()
         registerRealtimeService()
         registerUserLocationService()
+        registerAlertSoundService()
     }
 }
 
@@ -68,6 +69,10 @@ extension DIServiceContainer: DIServiceContaining {
 
     var userLocationService: UserLocationServiceProtocol {
         return container.resolve(UserLocationServiceProtocol.self)
+    }
+
+    var alertSoundService: AlertSoundServiceProtocol {
+        return container.resolve(AlertSoundServiceProtocol.self)
     }
 }
 
@@ -168,6 +173,12 @@ private extension DIServiceContainer {
     func registerUserLocationService() {
         container.register(UserLocationServiceProtocol.self, lifetime: .singleton) { _ in
             UserLocationService()
+        }
+    }
+
+    func registerAlertSoundService() {
+        container.register(AlertSoundServiceProtocol.self, lifetime: .transient) { _ in
+            AlertSoundService()
         }
     }
 }

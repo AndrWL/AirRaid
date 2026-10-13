@@ -45,6 +45,16 @@ extension AirRaidMapView.Coordinator {
         homePin.iconImageName = NSExpression(forConstantValue: MapLayerStyle.homeIconName)
         homePin.iconAllowsOverlap = NSExpression(forConstantValue: true)
         homePin.iconIgnoresPlacement = NSExpression(forConstantValue: true)
+        // «Дім · Ірпінь» under the pin, like a threat's caption; hidden rather than overlapping other labels.
+        homePin.text = NSExpression(forKeyPath: MapLayerStyle.homeCaptionKey)
+        homePin.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
+        homePin.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
+        homePin.textColor = NSExpression(forConstantValue: MapLayerStyle.homeColor)
+        homePin.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        homePin.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
+        homePin.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
+        homePin.textOffset = NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.homeCaptionOffset))
+        homePin.textOptional = NSExpression(forConstantValue: true)
 
         [radiusFill, locationOutline, homeOutline, homePin].forEach(style.addLayer)
     }
@@ -83,7 +93,10 @@ extension AirRaidMapView.Coordinator {
         if let home = places.first(where: { $0.kind == .home }) {
             let pin = MLNPointFeature()
             pin.coordinate = CLLocationCoordinate2D(home.coordinate)
-            pin.attributes = [MapLayerStyle.placePartKey: MapLayerStyle.homePart]
+            pin.attributes = [
+                MapLayerStyle.placePartKey: MapLayerStyle.homePart,
+                MapLayerStyle.homeCaptionKey: home.address?.locality.map { "Дім · \($0)" } ?? "Дім"
+            ]
             shapes.append(pin)
         }
         placesSource.shape = MLNShapeCollectionFeature(shapes: shapes)

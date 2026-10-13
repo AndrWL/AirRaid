@@ -7,10 +7,12 @@
 
 import Foundation
 
-/// The threat closest to one of the user's places, inside that place's radius, as a card over the map.
-struct NearestThreatSummary: Hashable {
+/// The threat closest to one of the user's places, inside that place's radius, as a banner over the map.
+struct NearestThreatSummary: Hashable, Identifiable {
 
     // MARK: - Variables
+
+    let place: WatchedPlaceKind
 
     let threatID: String
 
@@ -26,8 +28,11 @@ struct NearestThreatSummary: Hashable {
     /// «≈ 4 хв»; `nil` unless the threat flies toward the place.
     let arrivalText: String?
 
-    /// How many more threats are inside the radii; `0` when this is the only one.
+    /// How many more threats are inside this place's radius; `0` when this is the only one.
     let otherCount: Int
+
+    /// One banner per place.
+    var id: WatchedPlaceKind { place }
 
     init(
         threat: Threat,
@@ -35,11 +40,12 @@ struct NearestThreatSummary: Hashable {
         proximity: ThreatProximity,
         otherCount: Int
     ) {
+        self.place = place
         threatID = threat.id
         let countText = threat.count.flatMap { $0 > 1 ? " ×\($0)" : nil } ?? ""
         title = threat.displayName + countText
         iconName = ThreatIcon(threat).name
-        distanceText = "\(DisplayTime.distance(proximity.distanceKm)) \(place.fromText)"
+        distanceText = "\(DisplayTime.distance(proximity)) \(place.fromText)"
         arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)
         self.otherCount = otherCount
     }
@@ -49,27 +55,26 @@ struct NearestThreatSummary: Hashable {
 
 extension NearestThreatSummary {
 
-    /// The nearest threat with a known position inside the radius of any place, or `nil` when the radii are clear.
+    /// For each place, the nearest threat inside its radius; places with a clear radius get none.
+    ///
+    /// Whether a threat is inside is decided by its reported position, the same rule that turns its pin red
+    /// (``Threat/isNear(_:)``); the distance and the time shown are the estimate at `date`.
     static func nearest(
         among threats: [Threat],
         places: [WatchedPlace],
         at date: Date
-    ) -> NearestThreatSummary? {
-        // Each threat once, measured from the place it is closest to among those whose radius it is in.
-        let inside = threats.compactMap { threat -> (Threat, WatchedPlaceKind, ThreatProximity)? in
-            places
-                .compactMap { place in
-                    threat.proximity(to: place.coordinate, at: date)
-                        .flatMap { $0.distanceKm <= place.radiusKm ? (threat, place.kind, $0) : nil }
-                }
-                .min { $0.2.distanceKm < $1.2.distanceKm }
+    ) -> [NearestThreatSummary] {
+        places.compactMap { place in
+            let inside = threats
+                .filter { $0.isNear([place]) }
+                .compactMap { threat in threat.proximity(to: place.coordinate, at: date).map { (threat, $0) } }
+            guard let nearest = inside.min(by: { $0.1.distanceKm < $1.1.distanceKm }) else { return nil }
+            return NearestThreatSummary(
+                threat: nearest.0,
+                place: place.kind,
+                proximity: nearest.1,
+                otherCount: inside.count - 1
+            )
         }
-        guard let nearest = inside.min(by: { $0.2.distanceKm < $1.2.distanceKm }) else { return nil }
-        return NearestThreatSummary(
-            threat: nearest.0,
-            place: nearest.1,
-            proximity: nearest.2,
-            otherCount: inside.count - 1
-        )
     }
 }

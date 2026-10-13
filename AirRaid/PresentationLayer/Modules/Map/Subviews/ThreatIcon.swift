@@ -41,14 +41,30 @@ enum ThreatIcon: String, CaseIterable {
         self != .unknown
     }
 
+    /// The name of the red variant, for a threat inside the radius of one of the user's places.
+    var nearName: String {
+        name + Constants.nearSuffix
+    }
+
     /// The asset with a soft dark glow, so it reads on both the dark map and the red alert fill.
     ///
     /// The glow is drawn here because asset-catalog SVGs do not support blur.
     var image: UIImage {
-        guard let silhouette = UIImage(named: name) else {
+        image(tint: nil)
+    }
+
+    /// The red variant: the same silhouette filled with the alert red inside a white rim, so it stays readable on a red
+    /// alert fill. A separate image because the map cannot tint a bitmap with a glow.
+    var nearImage: UIImage {
+        image(tint: .mapAlertRed)
+    }
+
+    private func image(tint: UIColor?) -> UIImage {
+        guard let asset = UIImage(named: name) else {
             assertionFailure("[ThreatIcon] Missing asset: \(name)")
             return UIImage()
         }
+        let silhouette = tint.map { asset.withTintColor($0, renderingMode: .alwaysOriginal) } ?? asset
         let padding = Constants.glowBlur
         let size = CGSize(
             width: silhouette.size.width + padding * 2,
@@ -56,7 +72,20 @@ enum ThreatIcon: String, CaseIterable {
         )
         return UIGraphicsImageRenderer(size: size).image { context in
             context.cgContext.setShadow(offset: .zero, blur: Constants.glowBlur, color: UIColor.black.cgColor)
-            silhouette.draw(at: CGPoint(x: padding, y: padding))
+            let origin = CGPoint(x: padding, y: padding)
+            if tint != nil {
+                // The rim: the white silhouette stamped around the red one.
+                let rim = asset.withTintColor(.white, renderingMode: .alwaysOriginal)
+                for step in 0..<Constants.rimSteps {
+                    let angle = Double(step) / Double(Constants.rimSteps) * 2 * .pi
+                    rim.draw(at: CGPoint(
+                        x: origin.x + Constants.rimWidth * cos(angle),
+                        y: origin.y + Constants.rimWidth * sin(angle)
+                    ))
+                }
+                context.cgContext.setShadow(offset: .zero, blur: 0, color: nil)
+            }
+            silhouette.draw(at: origin)
         }
     }
 
@@ -110,4 +139,7 @@ private extension ThreatIcon {
 private enum Constants {
     static let namePrefix = "threat-"
     static let glowBlur: CGFloat = 3
+    static let nearSuffix = "-near"
+    static let rimWidth: CGFloat = 1.5
+    static let rimSteps = 12
 }

@@ -25,6 +25,8 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var focusedRegionID: String?
     private(set) var recenterRequest = 0
     private(set) var userLocation: GeoCoordinate?
+    private(set) var nearThreatIDs: Set<String> = []
+    private(set) var nearThreatAlertCount = 0
     private(set) var placeSettings: PlaceSettings = .initial
     private(set) var isPickingHome = false
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
@@ -58,6 +60,13 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
 
+    @ObservationIgnored
+    private let alertSoundService: AlertSoundServiceProtocol
+
+    /// Threats already announced by a sound, so one that stays near is announced once, not on every update.
+    @ObservationIgnored
+    private var announcedThreatIDs: Set<String> = []
+
     /// "To me" was tapped before there was a fix; the camera flies once the first one arrives.
     @ObservationIgnored
     private var isLocatePending = false
@@ -84,6 +93,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         focusedRegionRepository: FocusedRegionRepositoryProtocol,
         userLocationService: UserLocationServiceProtocol,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
+        alertSoundService: AlertSoundServiceProtocol,
         styleURL: URL
     ) {
         self.router = router
@@ -95,6 +105,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.focusedRegionRepository = focusedRegionRepository
         self.userLocationService = userLocationService
         self.placeSettingsRepository = placeSettingsRepository
+        self.alertSoundService = alertSoundService
         self.styleURL = styleURL
     }
 
@@ -151,6 +162,7 @@ extension MapViewModel: MapViewModelProtocol {
         switch router.activeSheet {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
+        case .homeDetails: .home
         case .places, nil: nil
         }
     }
@@ -167,7 +179,7 @@ extension MapViewModel: MapViewModelProtocol {
         WatchedPlace.places(currentLocation: userLocation, settings: placeSettings)
     }
 
-    func nearestThreat(at date: Date) -> NearestThreatSummary? {
+    func placeThreats(at date: Date) -> [NearestThreatSummary] {
         NearestThreatSummary.nearest(among: threats, places: places, at: date)
     }
 
@@ -260,6 +272,7 @@ extension MapViewModel: MapViewModelProtocol {
         switch selection {
         case .threat(let id): router.presentSheet(.threatDetails(id: id))
         case .region(let id): router.presentSheet(.regionDetails(id: id))
+        case .home: router.presentSheet(.homeDetails)
         }
     }
 }
@@ -285,6 +298,7 @@ private extension MapViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
                 self?.placeSettings = settings
+                self?.updateNearThreats()
             }
             .store(in: &cancellables)
 
@@ -319,6 +333,7 @@ private extension MapViewModel {
             isLocatePending = false
             fly(to: location)
         }
+        updateNearThreats()
     }
 
     func fly(to coordinate: GeoCoordinate) {
@@ -328,6 +343,23 @@ private extension MapViewModel {
     func apply(_ situation: AirSituation) {
         alertCoverage = situation.airRaidCoverage
         threats = situation.threats
+        updateNearThreats()
+    }
+
+    /// Marks the threats inside a place's radius and sounds once for each that has just come in.
+    func updateNearThreats() {
+        let places = places
+        let near = Set(threats.filter { $0.isNear(places) }.map(\.id))
+        if near != nearThreatIDs {
+            nearThreatIDs = near
+        }
+        let new = near.subtracting(announcedThreatIDs)
+        if !new.isEmpty {
+            alertSoundService.playThreatNearby()
+            nearThreatAlertCount += 1
+        }
+        // Forget threats that left, so one that comes back is announced again.
+        announcedThreatIDs = near
     }
 
     /// Map data ships with the app, so a failure here is a build problem, not a user-facing one.

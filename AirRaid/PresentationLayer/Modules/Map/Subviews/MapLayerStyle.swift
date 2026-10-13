@@ -27,6 +27,12 @@ enum MapLayerStyle {
     static let citySourceID = "cities"
     static let threatSourceID = "threats"
     static let selectedTrackSourceID = "selected-track"
+    static let forecastSourceID = "forecast"
+    static let forecastLinkLayerID = "forecast-link"
+    static let forecastGhostLayerID = "forecast-ghost"
+    static let forecastPartKey = "forecastPart"
+    static let forecastLinkPart = "link"
+    static let forecastGhostPart = "ghost"
     static let territoryFillLayerID = "regions-territory-fill"
     static let regionAlertFillLayerID = "regions-alert-fill"
     static let districtAlertFillLayerID = "districts-alert-fill"
@@ -46,6 +52,9 @@ enum MapLayerStyle {
     static let radiusPart = "radius"
     static let homePart = "home"
     static let homeIconName = "home-pin"
+    static let homeCaptionKey = "homeCaption"
+    /// Below the pin, in ems: the pin is a 32 pt disc.
+    static let homeCaptionOffset = CGVector(dx: 0, dy: 1.6)
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
     static let selectedTrailLayerID = "selected-track-trail"
@@ -143,6 +152,11 @@ enum MapLayerStyle {
     static let trackWidth: Double = 2
     static let forecastDashPattern: [Double] = [2, 2]
     static let targetDotRadius: Double = 5
+    /// Faint enough that the ghost never reads as a second threat.
+    static let forecastGhostOpacity: Double = 0.35
+    static let forecastLinkOpacity: Double = 0.4
+    static let forecastLinkWidth: Double = 1.2
+    static let forecastLinkDashPattern: [Double] = [1, 2]
 
     /// Half the side of the square a tap searches for pins: about a fingertip.
     static let tapRadius: CGFloat = 22

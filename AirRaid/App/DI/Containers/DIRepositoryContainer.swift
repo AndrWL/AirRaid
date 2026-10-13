@@ -139,7 +139,7 @@ private extension DIRepositoryContainer {
     /// A singleton so the map, the places sheet and the threat details see the same home and radii.
     func registerPlaceSettingsRepository() {
         container.register(PlaceSettingsRepositoryProtocol.self, lifetime: .singleton) { _ in
-            PlaceSettingsRepository()
+            PlaceSettingsRepository(addressResolver: PlaceAddressService())
         }
     }
 
