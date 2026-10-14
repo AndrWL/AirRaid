@@ -45,6 +45,7 @@ final class DIRouterContainer {
 extension DIRouterContainer: DIAssembling {
 
     func assemble(with appContainer: DIAppContaining) {
+        registerMapIntentChannel()
         registerMapStackRouter()
         registerAlertsStackRouter()
         registerSettingsStackRouter()
@@ -58,6 +59,10 @@ extension DIRouterContainer: DIRouterContaining {
 
     var tabBarRouter: TabBarRouter {
         return container.resolve(TabBarRouter.self)
+    }
+
+    var mapIntentChannel: MapIntentChannel {
+        return container.resolve(MapIntentChannel.self)
     }
 
     var mapStackRouter: StackRouter {
@@ -76,6 +81,13 @@ extension DIRouterContainer: DIRouterContaining {
 // MARK: - Configuration
 
 private extension DIRouterContainer {
+
+    /// A singleton: the tab bar router sends on it and the map's router, rebuilt with its tab, listens.
+    func registerMapIntentChannel() {
+        container.register(MapIntentChannel.self, lifetime: .singleton) { _ in
+            MapIntentChannel()
+        }
+    }
 
     func registerMapStackRouter() {
         container.register(StackRouter.self, name: Constants.map, lifetime: .weak) { _ in
@@ -103,7 +115,8 @@ private extension DIRouterContainer {
             TabBarRouter(
                 mapStackRouter: resolver.resolve(StackRouter.self, name: Constants.map),
                 alertsStackRouter: resolver.resolve(StackRouter.self, name: Constants.alerts),
-                settingsStackRouter: resolver.resolve(StackRouter.self, name: Constants.settings)
+                settingsStackRouter: resolver.resolve(StackRouter.self, name: Constants.settings),
+                mapIntentChannel: resolver.resolve(MapIntentChannel.self)
             )
         }
     }

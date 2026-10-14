@@ -48,6 +48,9 @@ extension DIServiceContainer: DIAssembling {
         registerRealtimeService()
         registerUserLocationService()
         registerAlertSoundService()
+        registerNotificationPermissionService()
+        registerLiveActivitySettingsService()
+        registerHomeStatusBroadcaster(with: appContainer)
     }
 }
 
@@ -73,6 +76,18 @@ extension DIServiceContainer: DIServiceContaining {
 
     var alertSoundService: AlertSoundServiceProtocol {
         return container.resolve(AlertSoundServiceProtocol.self)
+    }
+
+    var notificationPermissionService: NotificationPermissionServiceProtocol {
+        return container.resolve(NotificationPermissionServiceProtocol.self)
+    }
+
+    var liveActivitySettingsService: LiveActivitySettingsServiceProtocol {
+        return container.resolve(LiveActivitySettingsServiceProtocol.self)
+    }
+
+    var homeStatusBroadcaster: HomeStatusBroadcasting {
+        return container.resolve(HomeStatusBroadcasting.self)
     }
 }
 
@@ -165,7 +180,7 @@ private extension DIServiceContainer {
     }
 }
 
-// MARK: - Location
+// MARK: - Device
 
 private extension DIServiceContainer {
 
@@ -176,9 +191,47 @@ private extension DIServiceContainer {
         }
     }
 
+    /// A singleton so the map plays in the mode the settings just picked.
     func registerAlertSoundService() {
-        container.register(AlertSoundServiceProtocol.self, lifetime: .transient) { _ in
+        container.register(AlertSoundServiceProtocol.self, lifetime: .singleton) { _ in
             AlertSoundService()
+        }
+    }
+
+    func registerNotificationPermissionService() {
+        container.register(NotificationPermissionServiceProtocol.self, lifetime: .transient) { _ in
+            NotificationPermissionService()
+        }
+    }
+}
+
+// MARK: - System surfaces
+
+private extension DIServiceContainer {
+
+    /// A singleton so the broadcaster hears the switch the settings just flipped.
+    func registerLiveActivitySettingsService() {
+        container.register(LiveActivitySettingsServiceProtocol.self, lifetime: .singleton) { _ in
+            LiveActivitySettingsService()
+        }
+    }
+
+    /// One instance: it owns the single Live Activity and the widget's last snapshot. Resolves repositories lazily,
+    /// so registering it before the repository container is assembled is fine.
+    func registerHomeStatusBroadcaster(with appContainer: DIAppContaining) {
+        container.register(HomeStatusBroadcasting.self, lifetime: .singleton) { resolver in
+            let repositories = appContainer.repositories
+            return HomeStatusBroadcaster(
+                realtimeService: resolver.resolve(RealtimeServiceProtocol.self),
+                airSituationRepository: repositories.airSituationRepository,
+                placeSettingsRepository: repositories.placeSettingsRepository,
+                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                regionBoundaryRepository: repositories.regionBoundaryRepository,
+                districtBoundaryRepository: repositories.districtBoundaryRepository,
+                widgetPublisher: HomeWidgetPublisher(),
+                activityController: HomeAlertActivityController(),
+                liveActivitySettingsService: resolver.resolve(LiveActivitySettingsServiceProtocol.self)
+            )
         }
     }
 }

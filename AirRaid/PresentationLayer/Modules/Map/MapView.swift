@@ -193,7 +193,7 @@ private enum Constants {
         if let styleURL = URL(string: AppEnvironment.mapStyleURLString) {
             MapView(
                 viewModel: MapViewModel(
-                    router: MapRouter(stackRouter: StackRouter()),
+                    router: MapRouter(stackRouter: StackRouter(), intentChannel: MapIntentChannel()),
                     regionBoundaryRepository: RegionBoundaryRepository(),
                     districtBoundaryRepository: DistrictBoundaryRepository(),
                     cityRepository: CityRepository(),

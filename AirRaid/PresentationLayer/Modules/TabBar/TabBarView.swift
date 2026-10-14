@@ -74,9 +74,11 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
             router: TabBarRouter(
                 mapStackRouter: StackRouter(),
                 alertsStackRouter: StackRouter(),
-                settingsStackRouter: StackRouter()
+                settingsStackRouter: StackRouter(),
+                mapIntentChannel: MapIntentChannel()
             ),
-            realtimeService: container.services.realtimeService
+            realtimeService: container.services.realtimeService,
+            homeStatusBroadcaster: container.services.homeStatusBroadcaster
         ),
         factory: TabBarFactory(appContainer: container),
         selectedTab: $selectedTab

@@ -22,17 +22,24 @@ final class TabBarViewModel: BaseViewModel {
     @ObservationIgnored
     private let realtimeService: RealtimeServiceProtocol
 
+    /// Keeps the widgets and the Live Activity in step with the home; follows the connection for the whole session.
+    @ObservationIgnored
+    private let homeStatusBroadcaster: HomeStatusBroadcasting
+
     /// Initializes the view model with its required router.
     ///
     /// - Parameters:
     ///   - router: An object conforming to `TabBarRouterProtocol`.
     ///   - realtimeService: The live connection every tab reads from.
+    ///   - homeStatusBroadcaster: Feeds the widgets and the Live Activity from the same connection.
     init(
         router: TabBarRouterProtocol,
-        realtimeService: RealtimeServiceProtocol
+        realtimeService: RealtimeServiceProtocol,
+        homeStatusBroadcaster: HomeStatusBroadcasting
     ) {
         self.router = router
         self.realtimeService = realtimeService
+        self.homeStatusBroadcaster = homeStatusBroadcaster
     }
 }
 
@@ -43,5 +50,6 @@ extension TabBarViewModel: TabBarViewModelProtocol {
     func onAppear() {
         // Idempotent; the service pauses in the background on its own.
         realtimeService.start()
+        homeStatusBroadcaster.start()
     }
 }

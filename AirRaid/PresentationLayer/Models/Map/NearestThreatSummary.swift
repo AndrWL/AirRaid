@@ -42,8 +42,7 @@ struct NearestThreatSummary: Hashable, Identifiable {
     ) {
         self.place = place
         threatID = threat.id
-        let countText = threat.count.flatMap { $0 > 1 ? " ×\($0)" : nil } ?? ""
-        title = threat.displayName + countText
+        title = threat.countedName
         iconName = ThreatIcon(threat).name
         distanceText = "\(DisplayTime.distance(proximity)) \(place.fromText)"
         arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)

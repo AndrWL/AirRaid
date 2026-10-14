@@ -77,8 +77,7 @@ extension HomeDetailsContent {
             proximity: ThreatProximity
         ) {
             id = threat.id
-            let countText = threat.count.flatMap { $0 > 1 ? " ×\($0)" : nil } ?? ""
-            title = threat.displayName + countText
+            title = threat.countedName
             iconName = ThreatIcon(threat).name
             let distance = "\(DisplayTime.distance(proximity)) \(WatchedPlaceKind.home.fromText)"
             detail = proximity.timeToArrival.map { "\(distance) · \(DisplayTime.estimate($0))" } ?? distance

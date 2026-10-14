@@ -37,7 +37,8 @@ struct TabBarCoordinatorView<Factory: TabBarFactoryProtocol>: View {
         let router = appContainer.routers.tabBarRouter
         let viewModel = TabBarViewModel(
             router: router,
-            realtimeService: appContainer.services.realtimeService
+            realtimeService: appContainer.services.realtimeService,
+            homeStatusBroadcaster: appContainer.services.homeStatusBroadcaster
         )
         
         self._router = State(wrappedValue: router)
