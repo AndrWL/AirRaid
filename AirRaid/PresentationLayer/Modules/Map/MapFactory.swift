@@ -35,6 +35,8 @@ extension MapFactory: MapFactoryProtocol {
             HomeDetailsCoordinatorView(appContainer: appContainer, actions: actions)
         case .places:
             PlacesCoordinatorView(appContainer: appContainer, onPickHomeOnMap: actions.pickHomeOnMap)
+        case .legend:
+            MapLegendCoordinatorView()
         }
     }
 }
