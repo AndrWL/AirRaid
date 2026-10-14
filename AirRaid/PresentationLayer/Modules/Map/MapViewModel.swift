@@ -28,7 +28,10 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private(set) var nearThreatIDs: Set<String> = []
     private(set) var nearThreatAlertCount = 0
     private(set) var placeSettings: PlaceSettings = .initial
-    private(set) var isPickingHome = false
+    private(set) var places: [WatchedPlace] = []
+    private(set) var placePick: PlacePick?
+    private(set) var placePickConfirmCount = 0
+    var namingPlaceID: SavedPlace.ID?
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
     private(set) var flyRequest: MapFlyRequest?
     private(set) var isLocationDeniedAlertPresented = false
@@ -61,6 +64,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
 
     @ObservationIgnored
+    private let watchedPlacesProvider: WatchedPlacesProviding
+
+    @ObservationIgnored
     private let alertSoundService: AlertSoundServiceProtocol
 
     /// Threats already announced by a sound, so one that stays near is announced once, not on every update.
@@ -71,7 +77,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private var isLocatePending = false
 
-    /// The point under the centre of the map, followed while picking the home; ignored for observation because it
+    /// The point under the centre of the map, followed while picking a place; ignored for observation because it
     /// changes on every pan and nothing renders from it.
     @ObservationIgnored
     private var mapCenter: GeoCoordinate?
@@ -93,6 +99,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         focusedRegionRepository: FocusedRegionRepositoryProtocol,
         userLocationService: UserLocationServiceProtocol,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
+        watchedPlacesProvider: WatchedPlacesProviding,
         alertSoundService: AlertSoundServiceProtocol,
         styleURL: URL
     ) {
@@ -105,6 +112,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.focusedRegionRepository = focusedRegionRepository
         self.userLocationService = userLocationService
         self.placeSettingsRepository = placeSettingsRepository
+        self.watchedPlacesProvider = watchedPlacesProvider
         self.alertSoundService = alertSoundService
         self.styleURL = styleURL
     }
@@ -169,7 +177,7 @@ extension MapViewModel: MapViewModelProtocol {
         switch router.activeSheet {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
-        case .homeDetails: .home
+        case .placeDetails(let id): .place(id: id)
         case .places, nil: nil
         }
     }
@@ -182,10 +190,6 @@ extension MapViewModel: MapViewModelProtocol {
         recenterRequest += 1
     }
 
-    var places: [WatchedPlace] {
-        WatchedPlace.places(currentLocation: userLocation, settings: placeSettings)
-    }
-
     func placeThreats(at date: Date) -> [NearestThreatSummary] {
         NearestThreatSummary.nearest(among: threats, places: places, at: date)
     }
@@ -194,11 +198,16 @@ extension MapViewModel: MapViewModelProtocol {
         router.presentSheet(.places)
     }
 
-    func didStartPickingHome() {
+    func didStartPicking(_ pick: PlacePick) {
         router.dismissSheet()
-        isPickingHome = true
-        // Start where the user is most likely to put it: the current home, else where they are now.
-        if let start = placeSettings.home?.coordinate ?? userLocation {
+        placePick = pick
+        // Start where the user is most likely to put it: where the place is now, else where they are.
+        let current: GeoCoordinate? = switch pick {
+        case .home: placeSettings.home?.coordinate
+        case .newPlace: nil
+        case .move(let id): placeSettings.place(id: id)?.coordinate
+        }
+        if let start = current ?? userLocation {
             fly(to: start)
         }
     }
@@ -207,15 +216,29 @@ extension MapViewModel: MapViewModelProtocol {
         mapCenter = center
     }
 
-    func didConfirmHomePick() {
-        if let mapCenter {
+    func didConfirmPlacePick() {
+        defer { placePick = nil }
+        guard let mapCenter, let placePick else { return }
+        switch placePick {
+        case .home:
             placeSettingsRepository.setHome(at: mapCenter)
+        case .newPlace:
+            // Saved at once under its locality; the name the user gives next replaces it.
+            namingPlaceID = placeSettingsRepository.addPlace(at: mapCenter, name: nil)
+        case .move(let id):
+            placeSettingsRepository.movePlace(id, to: mapCenter)
         }
-        isPickingHome = false
+        placePickConfirmCount += 1
     }
 
-    func didCancelHomePick() {
-        isPickingHome = false
+    func didCancelPlacePick() {
+        placePick = nil
+    }
+
+    func didNamePlace(_ name: String) {
+        guard let namingPlaceID else { return }
+        placeSettingsRepository.renamePlace(namingPlaceID, to: name)
+        self.namingPlaceID = nil
     }
 
     func didTapLocate() {
@@ -267,8 +290,8 @@ extension MapViewModel: MapViewModelProtocol {
     }
 
     func didSelect(_ selection: MapSelection?) {
-        // While picking the home, taps belong to placing it.
-        guard !isPickingHome else { return }
+        // While picking a place, taps belong to placing it.
+        guard placePick == nil else { return }
         guard let selection else {
             if self.selection != nil {
                 router.dismissSheet()
@@ -279,7 +302,7 @@ extension MapViewModel: MapViewModelProtocol {
         switch selection {
         case .threat(let id): router.presentSheet(.threatDetails(id: id))
         case .region(let id): router.presentSheet(.regionDetails(id: id))
-        case .home: router.presentSheet(.homeDetails)
+        case .place(let id): router.presentSheet(.placeDetails(id: id))
         }
     }
 }
@@ -305,6 +328,13 @@ private extension MapViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
                 self?.placeSettings = settings
+            }
+            .store(in: &cancellables)
+
+        watchedPlacesProvider.placesPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] places in
+                self?.places = places
                 self?.updateNearThreats()
             }
             .store(in: &cancellables)
@@ -355,8 +385,8 @@ private extension MapViewModel {
 
     func handle(_ intent: MapIntent) {
         switch intent {
-        case .pickHome:
-            didStartPickingHome()
+        case .pickPlace(let pick):
+            didStartPicking(pick)
         case .showThreat(let id):
             if let coordinate = threats.first(where: { $0.id == id })?.markerCoordinate {
                 fly(to: coordinate)

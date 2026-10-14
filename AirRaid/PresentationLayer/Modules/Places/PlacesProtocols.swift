@@ -5,6 +5,8 @@
 //  Created by ANDRII LEBEDIEV on 12.10.2026.
 //
 
+import Foundation
+
 /// Defines the state of the places sheet: the user's location and home, and the radius watched around each.
 protocol PlacesViewModelProtocol: BaseViewModelProtocol {
 
@@ -19,8 +21,14 @@ protocol PlacesViewModelProtocol: BaseViewModelProtocol {
     /// The home's radius, or `nil` while no home is set.
     var homeRadiusKm: Double? { get }
 
+    /// The home's id, or `nil` while no home is set.
+    var homeID: SavedPlace.ID? { get }
+
     /// «Полтавська область» — where the home pin is; `nil` without a home or outside Ukraine.
     var homeRegionName: String? { get }
+
+    /// The custom places, each with its radius; empty without Плюс (they are paused, not lost).
+    var customPlaces: [SavedPlace] { get }
 
     /// Whether the user's location is known, so the home can be put there.
     var canUseCurrentLocation: Bool { get }
@@ -28,7 +36,9 @@ protocol PlacesViewModelProtocol: BaseViewModelProtocol {
     /// Loads the region outlines to name the home's region. Safe to call on every appearance.
     func onAppear() async
 
-    func didSelectRadius(_ radiusKm: Double, for kind: WatchedPlaceKind)
+    func didSelectCurrentLocationRadius(_ radiusKm: Double)
+
+    func didSelectRadius(_ radiusKm: Double, forPlace id: SavedPlace.ID)
 
     func didTapRemoveHome()
 

@@ -20,8 +20,7 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
     struct Dependencies {
         let feedRepository: FeedRepositoryProtocol
         let airSituationRepository: AirSituationRepositoryProtocol
-        let placeSettingsRepository: PlaceSettingsRepositoryProtocol
-        let userLocationService: UserLocationServiceProtocol
+        let watchedPlacesProvider: WatchedPlacesProviding
         let watchedRegionsProvider: WatchedRegionsProviding
         let entitlementService: EntitlementServiceProtocol
         let voiceAnnouncer: FeedVoiceAnnouncing
@@ -55,10 +54,9 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
     private var situation: AirSituation = .empty
 
     @ObservationIgnored
-    private var placeSettings: PlaceSettings = .initial
+    private var places: [WatchedPlace] = []
 
     @ObservationIgnored
-    private var location: GeoCoordinate?
 
     @ObservationIgnored
     private var regionIDs: Set<String> = []
@@ -186,19 +184,10 @@ private extension FeedViewModel {
     }
 
     func bindPlaces() {
-        dependencies.placeSettingsRepository.settingsPublisher
+        dependencies.watchedPlacesProvider.placesPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] settings in
-                self?.placeSettings = settings
-                self?.rebuild()
-            }
-            .store(in: &cancellables)
-
-        dependencies.userLocationService.locationPublisher
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] location in
-                self?.location = location
+            .sink { [weak self] places in
+                self?.places = places
                 self?.rebuild()
             }
             .store(in: &cancellables)
@@ -249,8 +238,7 @@ private extension FeedViewModel {
 
     func rebuild() {
         let now = Date()
-        let places = WatchedPlace.places(currentLocation: location, settings: placeSettings)
-        let place = places.first { $0.kind == .home } ?? places.first
+        let places = places
         let threats = Dictionary(situation.threats.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
         let history = isPlusActive ? PremiumLimits.plusHistory : PremiumLimits.freeHistory
         let historyStart = now.addingTimeInterval(-history)
@@ -268,7 +256,7 @@ private extension FeedViewModel {
             if unreadID == nil, let readAnchor, item.createdAt > readAnchor {
                 unreadID = item.id
             }
-            visible.append(FeedRow(item: item, threat: threat, place: place, now: now))
+            visible.append(FeedRow(item: item, threat: threat, places: places, now: now))
         }
         rows = visible
         pinnedRows = visible.filter { $0.isActive && $0.tone == .critical }

@@ -111,7 +111,7 @@ private extension NearThreat {
             title: threat.countedName,
             shortTitle: threat.shortName,
             iconName: ThreatIcon(threat).name,
-            distanceText: "\(DisplayTime.distance(proximity)) \(place.kind.fromText)",
+            distanceText: "\(DisplayTime.distance(proximity)) \(place.fromText)",
             shortDistanceText: proximity.isWithinUncertainty
                 ? "±\(Int(proximity.uncertaintyKm.rounded())) км"
                 : DisplayTime.distance(proximity.distanceKm),
@@ -127,7 +127,8 @@ private extension StatusPlaceKind {
 
     init(_ kind: WatchedPlaceKind) {
         switch kind {
-        case .home: self = .home
+        // Custom places never reach the widgets; one that did would read as a home.
+        case .home, .custom: self = .home
         case .currentLocation: self = .currentLocation
         }
     }

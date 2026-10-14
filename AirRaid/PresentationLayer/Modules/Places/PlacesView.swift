@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// The user's watched places — their location and their home — with the radius around each: threats inside it show
-/// up in the card over the map.
+/// The user's watched places — their location, their home and, with Плюс, their other places — with the radius around
+/// each: threats inside it show up in the card over the map.
 struct PlacesView<ViewModel: PlacesViewModelProtocol>: View {
 
     // MARK: - Variables
@@ -32,6 +32,7 @@ struct PlacesView<ViewModel: PlacesViewModelProtocol>: View {
             header
             currentLocationSection
             homeSection
+            customPlacesSections
             footer
         }
         .listSectionSpacing(.compact)
@@ -60,7 +61,9 @@ private extension PlacesView {
         Section {
             placeTitle(.currentLocation)
             if viewModel.locationAuthorization == .authorized {
-                radiusPicker(selection: viewModel.currentLocationRadiusKm, for: .currentLocation)
+                radiusPicker(selection: viewModel.currentLocationRadiusKm, title: WatchedPlaceKind.currentLocation.title) {
+                    viewModel.didSelectCurrentLocationRadius($0)
+                }
             } else {
                 hint("Дозвольте геолокацію кнопкою «до мене» на карті.")
             }
@@ -71,8 +74,10 @@ private extension PlacesView {
     var homeSection: some View {
         Section {
             placeTitle(.home, detail: viewModel.homeRegionName)
-            if let homeRadiusKm = viewModel.homeRadiusKm {
-                radiusPicker(selection: homeRadiusKm, for: .home)
+            if let homeRadiusKm = viewModel.homeRadiusKm, let homeID = viewModel.homeID {
+                radiusPicker(selection: homeRadiusKm, title: WatchedPlaceKind.home.title) {
+                    viewModel.didSelectRadius($0, forPlace: homeID)
+                }
             }
             homeActions
             if viewModel.homeRadiusKm != nil {
@@ -83,10 +88,25 @@ private extension PlacesView {
         .listRowBackground(Color.surface)
     }
 
+    var customPlacesSections: some View {
+        ForEach(viewModel.customPlaces) { place in
+            Section {
+                placeTitle(.custom, title: place.title)
+                radiusPicker(selection: place.radiusKm, title: place.title) {
+                    viewModel.didSelectRadius($0, forPlace: place.id)
+                }
+            }
+            .listRowBackground(Color.surface)
+        }
+    }
+
     var footer: some View {
         Section {
         } footer: {
-            Text("Загрози в межах радіуса з'являються в картці на карті. Місця зберігаються лише на цьому пристрої.")
+            Text(
+                "Загрози в межах радіуса з'являються в картці на карті. Додати, перейменувати чи прибрати місця "
+                    + "можна в Налаштуваннях. Місця зберігаються лише на цьому пристрої."
+            )
                 .font(.app(.footnote))
                 .foregroundStyle(.inkMuted)
         }
@@ -114,11 +134,12 @@ private extension PlacesView {
 
     func placeTitle(
         _ kind: WatchedPlaceKind,
+        title: String? = nil,
         detail: String? = nil
     ) -> some View {
         HStack {
             Label {
-                Text(kind.title)
+                Text(title ?? kind.title)
                     .foregroundStyle(.ink)
             } icon: {
                 Image(systemName: kind.systemImage)
@@ -136,13 +157,14 @@ private extension PlacesView {
 
     func radiusPicker(
         selection: Double,
-        for kind: WatchedPlaceKind
+        title: String,
+        onSelect: @escaping (Double) -> Void
     ) -> some View {
         Picker(
             "Радіус",
             selection: Binding(
                 get: { selection },
-                set: { viewModel.didSelectRadius($0, for: kind) }
+                set: onSelect
             )
         ) {
             ForEach(viewModel.radiusOptions, id: \.self) { radius in
@@ -150,7 +172,7 @@ private extension PlacesView {
             }
         }
         .pickerStyle(.segmented)
-        .accessibilityLabel("Радіус: \(kind.title)")
+        .accessibilityLabel("Радіус: \(title)")
     }
 
     func hint(_ text: String) -> some View {
@@ -179,7 +201,8 @@ private enum Constants {
                 viewModel: PlacesViewModel(
                     placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                     userLocationService: UserLocationService(),
-                    regionBoundaryRepository: RegionBoundaryRepository()
+                    regionBoundaryRepository: RegionBoundaryRepository(),
+                    entitlementService: StoreKitEntitlementService(productIDs: [])
                 ),
                 onPickHomeOnMap: {},
                 onClose: {}

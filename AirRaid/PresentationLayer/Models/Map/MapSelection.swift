@@ -5,7 +5,9 @@
 //  Created by ANDRII LEBEDIEV on 12.10.2026.
 //
 
-/// What the user picked on the map: a threat pin or, when the tap hit no pin, the region under it.
+import Foundation
+
+/// What the user picked on the map: a threat or place pin or, when the tap hit no pin, the region under it.
 enum MapSelection: Hashable {
 
     /// The threat with this id.
@@ -14,6 +16,6 @@ enum MapSelection: Hashable {
     /// The region with this ISO 3166-2 code.
     case region(id: String)
 
-    /// The home pin.
-    case home
+    /// The pin of the saved place with this id: the home or a custom place.
+    case place(id: SavedPlace.ID)
 }

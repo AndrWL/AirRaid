@@ -7,18 +7,25 @@
 
 import SwiftUI
 
-/// Defines the state of the Settings tab: the notification permission, the home, the Live Activity, the alert sound and
-/// the app's version.
+/// Defines the state of the Settings tab: the notification permission, the places, the Live Activity, the alert sound
+/// and the app's version.
 protocol SettingsViewModelProtocol: BaseViewModelProtocol {
 
     /// The notification permission, or `nil` until it has been read.
     var notificationAuthorization: NotificationAuthorization? { get }
 
-    /// The home, or `nil` while none is set.
-    var home: SettingsHomeContent? { get }
+    /// The saved places: the home first, then the custom ones.
+    var places: [SettingsPlaceContent] { get }
 
-    /// The radii to pick from, in kilometres.
-    var radiusOptions: [Double] { get }
+    var hasHome: Bool { get }
+
+    var isPlusActive: Bool { get }
+
+    /// «2 з 10» — how many saved places Плюс allows; `nil` without Плюс.
+    var placeCountText: String? { get }
+
+    /// With Плюс at ``PremiumLimits/plusPlaces`` saved places, so no more can be added.
+    var isAtPlaceLimit: Bool { get }
 
     var soundModes: [AlertSoundMode] { get }
 
@@ -37,18 +44,20 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     var feedbackURL: URL? { get }
 
     /// Reads the notification and Live Activity permissions again (the user may have changed them in the Settings app)
-    /// and loads the outlines that name the home's region. Safe to call on every appearance.
+    /// and loads the outlines that name the places' regions. Safe to call on every appearance.
     func onAppear() async
 
     /// Shows the system prompt; only does something while the user was never asked.
     func didTapAllowNotifications() async
 
-    func didSelectHomeRadius(_ radiusKm: Double)
-
     /// Switches to the map with the home picker.
     func didTapPickHomeOnMap()
 
-    func didTapRemoveHome()
+    /// Switches to the map to add a place with Плюс, or opens the paywall without it.
+    func didTapAddPlace()
+
+    /// Opens the place's own screen: name, radius, moving and removing it.
+    func didTapPlace(_ id: SavedPlace.ID)
 
     func didToggleLiveActivity(_ isEnabled: Bool)
 
@@ -67,8 +76,10 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
 /// Defines the routing capabilities for the Settings flow.
 protocol SettingsRouterProtocol: BaseRouterProtocol, SheetPresenting where SheetRoute == SettingsSheetRoute {
 
-    /// Opens the Map tab with the home picker.
-    func showHomePickerOnMap()
+    /// Opens the Map tab with the place picker.
+    func showPlacePickerOnMap(_ pick: PlacePick)
+
+    func showPlace(_ id: SavedPlace.ID)
 
     func showVoiceSettings()
 }

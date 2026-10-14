@@ -51,8 +51,9 @@ extension DIServiceContainer: DIAssembling {
         registerNotificationPermissionService()
         registerLiveActivitySettingsService()
         registerHomeStatusBroadcaster(with: appContainer)
-        registerWatchedRegionsProvider(with: appContainer)
         registerEntitlementService()
+        registerWatchedPlacesProvider(with: appContainer)
+        registerWatchedRegionsProvider(with: appContainer)
         registerVoiceSettingsService()
         registerSpeechService()
         registerFeedVoiceAnnouncer(with: appContainer)
@@ -93,6 +94,10 @@ extension DIServiceContainer: DIServiceContaining {
 
     var homeStatusBroadcaster: HomeStatusBroadcasting {
         return container.resolve(HomeStatusBroadcasting.self)
+    }
+
+    var watchedPlacesProvider: WatchedPlacesProviding {
+        return container.resolve(WatchedPlacesProviding.self)
     }
 
     var watchedRegionsProvider: WatchedRegionsProviding {
@@ -265,12 +270,22 @@ private extension DIServiceContainer {
 
 private extension DIServiceContainer {
 
+    /// A singleton so the map, the feed and the voice watch the same places. Resolves repositories lazily.
+    func registerWatchedPlacesProvider(with appContainer: DIAppContaining) {
+        container.register(WatchedPlacesProviding.self, lifetime: .singleton) { resolver in
+            WatchedPlacesService(
+                placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                entitlementService: resolver.resolve(EntitlementServiceProtocol.self)
+            )
+        }
+    }
+
     /// A singleton so the feed and the voice filter by the same places. Resolves repositories lazily.
     func registerWatchedRegionsProvider(with appContainer: DIAppContaining) {
         container.register(WatchedRegionsProviding.self, lifetime: .singleton) { resolver in
             WatchedRegionsService(
-                placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
-                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                watchedPlacesProvider: resolver.resolve(WatchedPlacesProviding.self),
                 regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository
             )
         }
@@ -303,8 +318,7 @@ private extension DIServiceContainer {
             FeedVoiceAnnouncer(
                 feedRepository: appContainer.repositories.feedRepository,
                 airSituationRepository: appContainer.repositories.airSituationRepository,
-                placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
-                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                watchedPlacesProvider: resolver.resolve(WatchedPlacesProviding.self),
                 watchedRegionsProvider: resolver.resolve(WatchedRegionsProviding.self),
                 dependencies: FeedVoiceAnnouncer.Dependencies(
                     speechService: resolver.resolve(SpeechServiceProtocol.self),

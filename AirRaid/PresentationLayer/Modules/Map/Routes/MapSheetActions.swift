@@ -9,8 +9,8 @@
 /// coordinator hands these to the factory alongside the route.
 struct MapSheetActions {
 
-    /// Closes the sheet and lets the user place the home under a pin at the centre of the map.
-    let pickHomeOnMap: () -> Void
+    /// Closes the sheet and lets the user place the home, or move a place, under a pin at the centre of the map.
+    let pickPlaceOnMap: (PlacePick) -> Void
 
     /// Swaps the sheet for the details of the threat with this id.
     let showThreat: (String) -> Void

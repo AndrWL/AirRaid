@@ -252,8 +252,7 @@ private enum Constants {
                 viewModel: ThreatDetailsViewModel(
                     threatID: "shahed-1",
                     airSituationRepository: DemoAirSituationRepository(),
-                    userLocationService: UserLocationService(),
-                    placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard)
+                    watchedPlacesProvider: WatchedPlacesService.preview
                 ),
                 onClose: {}
             )

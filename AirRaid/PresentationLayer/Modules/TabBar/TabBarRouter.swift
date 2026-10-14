@@ -66,10 +66,10 @@ extension TabBarRouter: TabBarRouterProtocol {
         selectedTab = tab
     }
 
-    func showHomePickerOnMap() {
+    func showPlacePickerOnMap(_ pick: PlacePick) {
         mapStackRouter.popToRoot(animated: false)
         selectedTab = .map
-        mapIntentChannel.send(.pickHome)
+        mapIntentChannel.send(.pickPlace(pick))
     }
 
     func showThreatOnMap(id: String) {

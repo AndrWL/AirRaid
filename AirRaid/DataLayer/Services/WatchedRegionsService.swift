@@ -9,29 +9,25 @@ import Combine
 import Foundation
 import OSLog
 
-/// Finds the oblasts of the home and the current location by the bundled outlines.
+/// Finds the oblasts of the watched places by the bundled outlines.
 final class WatchedRegionsService {
 
     // MARK: - Variables
 
-    private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
-    private let userLocationService: UserLocationServiceProtocol
+    private let watchedPlacesProvider: WatchedPlacesProviding
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
     private let subject = CurrentValueSubject<Set<String>, Never>([])
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     private var boundaries: [RegionBoundary] = []
-    private var settings: PlaceSettings = .initial
-    private var location: GeoCoordinate?
+    private var places: [WatchedPlace] = []
     private var cancellables: Set<AnyCancellable> = []
 
     init(
-        placeSettingsRepository: PlaceSettingsRepositoryProtocol,
-        userLocationService: UserLocationServiceProtocol,
+        watchedPlacesProvider: WatchedPlacesProviding,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol
     ) {
-        self.placeSettingsRepository = placeSettingsRepository
-        self.userLocationService = userLocationService
+        self.watchedPlacesProvider = watchedPlacesProvider
         self.regionBoundaryRepository = regionBoundaryRepository
         observe()
     }
@@ -51,17 +47,9 @@ extension WatchedRegionsService: WatchedRegionsProviding {
 private extension WatchedRegionsService {
 
     func observe() {
-        placeSettingsRepository.settingsPublisher
-            .sink { [weak self] settings in
-                self?.settings = settings
-                self?.refresh()
-            }
-            .store(in: &cancellables)
-
-        userLocationService.locationPublisher
-            .removeDuplicates()
-            .sink { [weak self] location in
-                self?.location = location
+        watchedPlacesProvider.placesPublisher
+            .sink { [weak self] places in
+                self?.places = places
                 self?.refresh()
             }
             .store(in: &cancellables)
@@ -81,7 +69,6 @@ private extension WatchedRegionsService {
     }
 
     func refresh() {
-        let places = WatchedPlace.places(currentLocation: location, settings: settings)
         let regionIDs = places.compactMap { place in
             boundaries.first { $0.contains(place.coordinate) }?.id
         }

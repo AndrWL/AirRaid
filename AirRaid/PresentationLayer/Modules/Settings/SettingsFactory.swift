@@ -27,6 +27,8 @@ extension SettingsFactory: SettingsFactoryProtocol {
         switch route {
         case .voice:
             VoiceSettingsCoordinatorView(appContainer: appContainer)
+        case .place(let id):
+            PlaceEditorCoordinatorView(appContainer: appContainer, placeID: id)
         }
     }
 

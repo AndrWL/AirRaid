@@ -7,7 +7,7 @@
 
 import Combine
 
-/// The oblasts of the user's places — the home and the current location — for the «Мої місця» filter.
+/// The oblasts of the user's watched places for the «Мої місця» filter.
 protocol WatchedRegionsProviding {
 
     /// ISO 3166-2 codes; empty while no place is known. Emits on subscription and after every change.

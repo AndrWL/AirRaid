@@ -25,8 +25,7 @@ struct ThreatDetailsCoordinatorView: View {
         let viewModel = ThreatDetailsViewModel(
             threatID: threatID,
             airSituationRepository: appContainer.repositories.airSituationRepository,
-            userLocationService: appContainer.services.userLocationService,
-            placeSettingsRepository: appContainer.repositories.placeSettingsRepository
+            watchedPlacesProvider: appContainer.services.watchedPlacesProvider
         )
         self._viewModel = State(wrappedValue: viewModel)
     }

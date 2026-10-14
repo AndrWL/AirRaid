@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// The Settings tab: the notification permission, the home, the Live Activity, the alert sound and the app's version.
+/// The Settings tab: the notification permission, the places, the Live Activity, the alert sound and the app's version.
 struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
 
     // MARK: - Variables
@@ -23,7 +23,7 @@ struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
     var body: some View {
         List {
             notificationsSection
-            homeSection
+            placesSection
             feedSection
             liveActivitySection
             soundSection
@@ -74,40 +74,33 @@ private extension SettingsView {
         .listRowBackground(Color.surface)
     }
 
-    var homeSection: some View {
+    var placesSection: some View {
         Section {
-            if let home = viewModel.home {
-                homeAddress(home)
-                Picker(
-                    "Радіус",
-                    selection: Binding(
-                        get: { home.radiusKm },
-                        set: { viewModel.didSelectHomeRadius($0) }
-                    )
-                ) {
-                    ForEach(viewModel.radiusOptions, id: \.self) { radius in
-                        Text(DisplayTime.distance(radius)).tag(radius)
-                    }
+            ForEach(viewModel.places) { place in
+                Button {
+                    viewModel.didTapPlace(place.id)
+                } label: {
+                    placeRow(place)
                 }
-                .pickerStyle(.segmented)
-                .accessibilityLabel("Радіус навколо дому")
+            }
+            if !viewModel.hasHome {
                 Button(action: viewModel.didTapPickHomeOnMap) {
-                    Label("Перемістити на мапі", systemImage: "mappin.and.ellipse")
-                }
-                .font(.app(.body, weight: .semibold))
-                Button("Видалити дім", role: .destructive, action: viewModel.didTapRemoveHome)
-                    .font(.app(.body, weight: .semibold))
-            } else {
-                InlineNote("Дім не позначено", systemImage: "house", tone: .allClear)
-                Button(action: viewModel.didTapPickHomeOnMap) {
-                    Label("Обрати на мапі", systemImage: "mappin.and.ellipse")
+                    Label("Обрати дім на мапі", systemImage: "house")
                 }
                 .font(.app(.body, weight: .semibold))
             }
+            addPlaceButton
         } header: {
-            Text("Дім")
+            HStack {
+                Text("Мої місця")
+                Spacer()
+                if let placeCountText = viewModel.placeCountText {
+                    Text(placeCountText)
+                        .monospacedDigit()
+                }
+            }
         } footer: {
-            footerText("Загрози в радіусі дому з'являються в картці на мапі. Дім зберігається лише на цьому пристрої.")
+            footerText(placesFooter)
         }
         .listRowBackground(Color.surface)
     }
@@ -233,22 +226,73 @@ private extension SettingsView {
         }
     }
 
-    func homeAddress(_ home: SettingsHomeContent) -> some View {
-        Label {
-            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
-                Text(home.street ?? "Адресу визначаємо…")
-                    .foregroundStyle(.ink)
-                if let placeLine = home.placeLine {
-                    Text(placeLine)
-                        .font(.app(.footnote))
-                        .foregroundStyle(.inkMuted)
+    func placeRow(_ place: SettingsPlaceContent) -> some View {
+        HStack {
+            Label {
+                VStack(alignment: .leading, spacing: Spacing.xxSmall) {
+                    Text(place.title)
+                        .foregroundStyle(.ink)
+                    if let detail = placeDetail(place) {
+                        Text(detail)
+                            .font(.app(.footnote))
+                            .foregroundStyle(.inkMuted)
+                    }
+                    if place.isPaused {
+                        Text("Призупинено — потрібен Плюс")
+                            .font(.app(.footnote, weight: .semibold))
+                            .foregroundStyle(.warningInk)
+                    }
+                }
+            } icon: {
+                Image(systemName: place.kind.systemImage)
+                    .foregroundStyle(place.isPaused ? Color.inkMuted : place.kind.tint)
+            }
+            Spacer()
+            Text(DisplayTime.distance(place.radiusKm))
+                .font(.app(.footnote))
+                .foregroundStyle(.inkMuted)
+            Image(systemName: "chevron.right")
+                .font(.app(.footnote, weight: .semibold))
+                .foregroundStyle(.inkMuted)
+        }
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Назва, радіус, перемістити чи прибрати")
+    }
+
+    /// The street, else the locality and region; «Адресу визначаємо…» while neither is known.
+    func placeDetail(_ place: SettingsPlaceContent) -> String? {
+        if let street = place.street {
+            return [street, place.placeLine].compactMap { $0 }.joined(separator: " · ")
+        }
+        return place.placeLine ?? "Адресу визначаємо…"
+    }
+
+    /// «Додати місце» with a Плюс badge: without Плюс it opens the subscription.
+    var addPlaceButton: some View {
+        Button(action: viewModel.didTapAddPlace) {
+            HStack {
+                Label("Додати місце", systemImage: "plus.circle")
+                Spacer()
+                if !viewModel.isPlusActive {
+                    Badge("Плюс", tone: .accent)
                 }
             }
-        } icon: {
-            Image(systemName: WatchedPlaceKind.home.systemImage)
-                .foregroundStyle(WatchedPlaceKind.home.tint)
         }
-        .accessibilityElement(children: .combine)
+        .font(.app(.body, weight: .semibold))
+        .disabled(viewModel.isAtPlaceLimit)
+    }
+
+    var placesFooter: String {
+        if viewModel.isAtPlaceLimit {
+            return "Це найбільше місць, які стежить AirRaid. Приберіть одне, щоб додати інше."
+        }
+        if viewModel.isPlusActive {
+            return "Загрози в радіусі кожного місця з'являються в картці на мапі й в ефірі «Мої місця». "
+                + "Місця зберігаються лише на цьому пристрої."
+        }
+        return "Дім і ваша геолокація — безкоштовно. З Плюсом — до \(PremiumLimits.plusPlaces) місць: батьки, робота, школа. "
+            + "Місця зберігаються лише на цьому пристрої."
     }
 
     func footerText(_ text: String) -> some View {
@@ -284,6 +328,7 @@ private extension SettingsView {
                     )
                 ),
                 placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard),
+                entitlementService: StoreKitEntitlementService(productIDs: []),
                 regionBoundaryRepository: RegionBoundaryRepository(),
                 alertSoundService: AlertSoundService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                 liveActivitySettingsService: LiveActivitySettingsService(defaults: UserDefaults(suiteName: "preview") ?? .standard),

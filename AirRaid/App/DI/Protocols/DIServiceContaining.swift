@@ -57,6 +57,9 @@ protocol DIServiceContaining {
     /// Keeps the home screen widgets and the Live Activity in step with the home's status.
     var homeStatusBroadcaster: HomeStatusBroadcasting { get }
 
+    /// The places threats are watched around, with Плюс deciding the custom ones.
+    var watchedPlacesProvider: WatchedPlacesProviding { get }
+
     /// The oblasts of the user's places, for «Мої місця».
     var watchedRegionsProvider: WatchedRegionsProviding { get }
 

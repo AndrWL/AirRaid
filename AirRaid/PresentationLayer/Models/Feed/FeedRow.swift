@@ -69,15 +69,15 @@ extension FeedRow {
     /// - Parameters:
     ///   - item: The bubble.
     ///   - threat: The live threat behind it, when still on the map.
-    ///   - place: The place to measure from: the home, else the current location.
+    ///   - places: The watched places; the distance line names the nearest one.
     ///   - now: The moment for times and the forecast.
     init(
         item: FeedItem,
         threat: Threat?,
-        place: WatchedPlace?,
+        places: [WatchedPlace],
         now: Date
     ) {
-        let isNear = place.map { threat?.isNear([$0]) == true } ?? false
+        let isNear = threat?.isNear(places) == true
         id = item.id
         title = FeedText.title(of: item)
         subtitle = FeedText.subtitle(of: item)
@@ -100,7 +100,7 @@ extension FeedRow {
             systemImage = item.isActive ? alert.kind.systemImage : "checkmark.shield"
         }
         tone = Self.tone(of: item, isNear: isNear)
-        proximityText = Self.proximityText(threat: threat, place: place, isNear: isNear, now: now)
+        proximityText = Self.proximityText(threat: threat, places: places, now: now)
     }
 }
 
@@ -126,18 +126,22 @@ private extension FeedRow {
         }
     }
 
+    /// «12 км від «Робота» · у радіусі» — from the nearest of the places.
     static func proximityText(
         threat: Threat?,
-        place: WatchedPlace?,
-        isNear: Bool,
+        places: [WatchedPlace],
         now: Date
     ) -> String? {
-        guard let threat, let place, let proximity = threat.proximity(to: place.coordinate, at: now) else { return nil }
-        var parts = ["\(DisplayTime.distance(proximity)) \(place.kind.fromText)"]
-        if isNear {
+        guard let threat else { return nil }
+        let nearest = places
+            .compactMap { place in threat.proximity(to: place.coordinate, at: now).map { (place, $0) } }
+            .min { $0.1.distanceKm < $1.1.distanceKm }
+        guard let (place, proximity) = nearest else { return nil }
+        var parts = ["\(DisplayTime.distance(proximity)) \(place.fromText)"]
+        if threat.isNear(place) {
             parts.append("у радіусі")
         } else if let time = proximity.timeToArrival {
-            parts.append("\(place.kind.arrivalLabel.lowercased()) \(DisplayTime.estimate(time))")
+            parts.append("\(place.arrivalLabel.lowercased()) \(DisplayTime.estimate(time))")
         }
         return parts.joined(separator: " · ")
     }

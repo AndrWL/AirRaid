@@ -13,6 +13,9 @@ import Foundation
 /// so moving a feature across the line is a change in one place.
 nonisolated enum PremiumFeature: CaseIterable, Sendable {
 
+    /// Places past the home, up to ``PremiumLimits/plusPlaces``, each with its own name and radius.
+    case extraPlaces
+
     /// The feed's history past ``PremiumLimits/freeHistory``, up to ``PremiumLimits/plusHistory``.
     case extendedHistory
 
@@ -34,4 +37,10 @@ nonisolated enum PremiumLimits {
 
     /// How far back the feed is kept at all.
     static let plusHistory: TimeInterval = 90 * 24 * 3_600
+
+    /// How many saved places the free plan watches: the home. The current location is always watched on top.
+    static let freePlaces = 1
+
+    /// How many saved places Плюс watches, the home included.
+    static let plusPlaces = 10
 }

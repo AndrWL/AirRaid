@@ -164,8 +164,8 @@ private extension HomeStatusBroadcaster {
         if isConnected {
             lastLiveAt = now
         }
-        // The home wins; the location stands in only while there is no home, as the map's second place.
-        let places = WatchedPlace.places(currentLocation: userLocation, settings: settings)
+        // The home wins; the location stands in only while there is no home. Custom places stay out of the widgets.
+        let places = WatchedPlace.places(currentLocation: userLocation, settings: settings, includesCustomPlaces: false)
         guard let place = places.first(where: { $0.kind == .home }) ?? places.first else {
             // Losing every place needs no server data.
             publish(nil, updatedAt: lastLiveAt ?? now)

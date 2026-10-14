@@ -1,5 +1,5 @@
 //
-//  HomeDetailsView.swift
+//  PlaceDetailsView.swift
 //  AirRaid
 //
 //  Created by ANDRII LEBEDIEV on 13.10.2026.
@@ -7,25 +7,25 @@
 
 import SwiftUI
 
-/// The home: where it is, whether there is an air raid alert right there, the threats inside its radius, and the
-/// radius itself. Opened by a tap on the home pin.
-struct HomeDetailsView<ViewModel: HomeDetailsViewModelProtocol>: View {
+/// A saved place: where it is, whether there is an air raid alert right there, the threats inside its radius, and the
+/// radius itself. Opened by a tap on the place's pin.
+struct PlaceDetailsView<ViewModel: PlaceDetailsViewModelProtocol>: View {
 
     // MARK: - Variables
 
     private let viewModel: ViewModel
-    private let onMoveHome: () -> Void
+    private let onMove: () -> Void
     private let onSelectThreat: (String) -> Void
     private let onClose: () -> Void
 
     init(
         viewModel: ViewModel,
-        onMoveHome: @escaping () -> Void,
+        onMove: @escaping () -> Void,
         onSelectThreat: @escaping (String) -> Void,
         onClose: @escaping () -> Void
     ) {
         self.viewModel = viewModel
-        self.onMoveHome = onMoveHome
+        self.onMove = onMove
         self.onSelectThreat = onSelectThreat
         self.onClose = onClose
     }
@@ -36,7 +36,7 @@ struct HomeDetailsView<ViewModel: HomeDetailsViewModelProtocol>: View {
             if let content = viewModel.content(at: timeline.date) {
                 details(content)
             } else {
-                ContentUnavailableView("Дім не позначено", systemImage: "house")
+                ContentUnavailableView("Місце прибрано", systemImage: "mappin.slash")
             }
         }
         .background(Color.appBackground)
@@ -47,30 +47,30 @@ struct HomeDetailsView<ViewModel: HomeDetailsViewModelProtocol>: View {
 
 // MARK: - Sections
 
-private extension HomeDetailsView {
+private extension PlaceDetailsView {
 
-    func details(_ content: HomeDetailsContent) -> some View {
+    func details(_ content: PlaceDetailsContent) -> some View {
         List {
             header(content)
             threatsSection(content)
             radiusSection(content)
-            actionsSection
+            actionsSection(content)
             footer
         }
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
     }
 
-    func header(_ content: HomeDetailsContent) -> some View {
+    func header(_ content: PlaceDetailsContent) -> some View {
         Section {
             VStack(alignment: .leading, spacing: Spacing.small) {
                 Label {
-                    Text("Дім")
+                    Text(content.title)
                         .font(.app(.title2, weight: .bold))
                         .foregroundStyle(.ink)
                 } icon: {
-                    Image(systemName: WatchedPlaceKind.home.systemImage)
-                        .foregroundStyle(WatchedPlaceKind.home.tint)
+                    Image(systemName: content.kind.systemImage)
+                        .foregroundStyle(content.kind.tint)
                 }
                 .padding(.trailing, Constants.closeButtonClearance)
                 if let street = content.street {
@@ -90,7 +90,7 @@ private extension HomeDetailsView {
         .listRowBackground(Color.surface)
     }
 
-    func threatsSection(_ content: HomeDetailsContent) -> some View {
+    func threatsSection(_ content: PlaceDetailsContent) -> some View {
         Section {
             if content.threats.isEmpty {
                 InlineNote("Поруч загроз немає", systemImage: "checkmark.shield", tone: .allClear)
@@ -114,7 +114,7 @@ private extension HomeDetailsView {
     }
 
     /// Reads the radius from the view model, not from the timed content, so a tap is not undone by a stale snapshot.
-    func radiusSection(_ content: HomeDetailsContent) -> some View {
+    func radiusSection(_ content: PlaceDetailsContent) -> some View {
         Section("Радіус") {
             Picker(
                 "Радіус",
@@ -132,13 +132,13 @@ private extension HomeDetailsView {
         .listRowBackground(Color.surface)
     }
 
-    var actionsSection: some View {
+    func actionsSection(_ content: PlaceDetailsContent) -> some View {
         Section {
-            Button(action: onMoveHome) {
+            Button(action: onMove) {
                 Label("Змінити на карті", systemImage: "mappin.and.ellipse")
             }
-            Button("Прибрати дім", role: .destructive) {
-                viewModel.didTapRemoveHome()
+            Button(content.kind == .home ? "Прибрати дім" : "Прибрати місце", role: .destructive) {
+                viewModel.didTapRemove()
                 onClose()
             }
         }
@@ -149,7 +149,7 @@ private extension HomeDetailsView {
     var footer: some View {
         Section {
         } footer: {
-            Text("Адресу визначає Apple за координатами дому. Сам дім зберігається лише на цьому пристрої.")
+            Text("Адресу визначає Apple за координатами місця. Самі місця зберігаються лише на цьому пристрої.")
                 .font(.app(.footnote))
                 .foregroundStyle(.inkMuted)
         }
@@ -158,9 +158,9 @@ private extension HomeDetailsView {
 
 // MARK: - Components
 
-private extension HomeDetailsView {
+private extension PlaceDetailsView {
 
-    func threatRow(_ threat: HomeDetailsContent.ThreatRow) -> some View {
+    func threatRow(_ threat: PlaceDetailsContent.ThreatRow) -> some View {
         HStack(spacing: Constants.threatRowSpacing) {
             Image(threat.iconName)
                 .renderingMode(.template)
@@ -213,14 +213,15 @@ private enum Constants {
 #Preview {
     Color.black
         .sheet(isPresented: .constant(true)) {
-            HomeDetailsView(
-                viewModel: HomeDetailsViewModel(
+            PlaceDetailsView(
+                viewModel: PlaceDetailsViewModel(
+                    placeID: UUID(),
                     placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                     airSituationRepository: DemoAirSituationRepository(),
                     regionBoundaryRepository: RegionBoundaryRepository(),
                     districtBoundaryRepository: DistrictBoundaryRepository()
                 ),
-                onMoveHome: {},
+                onMove: {},
                 onSelectThreat: { _ in },
                 onClose: {}
             )

@@ -47,13 +47,13 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Whether the app may read the user's location.
     var locationAuthorization: LocationAuthorization { get }
 
-    /// Where the camera should fly next: to the user, or to the home when picking it.
+    /// Where the camera should fly next: to the user, or to a place when picking it.
     var flyRequest: MapFlyRequest? { get }
 
     /// Set when "to me" is tapped with location denied: only the Settings app can allow it.
     var isLocationDeniedAlertPresented: Bool { get }
 
-    /// Threats whose reported position is inside the radius of the user's location or home; drawn red.
+    /// Threats whose reported position is inside the radius of one of the watched places; drawn red.
     var nearThreatIDs: Set<String> { get }
 
     /// Grows each time a threat comes within a radius, for a haptic alongside the sound.
@@ -65,13 +65,19 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Loads the region outlines and city labels. Safe to call on every appearance.
     func onAppear() async
 
-    /// The user's location and home with their radii, drawn on the map.
+    /// The watched places with their radii, drawn on the map.
     var places: [WatchedPlace] { get }
 
-    /// Whether the map is in home-picking mode: a fixed pin in the centre, the map moves under it.
-    var isPickingHome: Bool { get }
+    /// What the map is placing under a fixed pin in the centre, or `nil` outside picking mode.
+    var placePick: PlacePick? { get }
 
-    /// Whether a home is set, so the confirmation can say "move" instead of "set".
+    /// Grows with every confirmed pick, for a haptic.
+    var placePickConfirmCount: Int { get }
+
+    /// The custom place just added, waiting for the user to name it; `nil` once named or skipped.
+    var namingPlaceID: SavedPlace.ID? { get set }
+
+    /// The saved places, so the confirmation can say "move" instead of "set".
     var placeSettings: PlaceSettings { get }
 
     /// For each of the user's places, the nearest threat inside its radius at the given moment; empty when the radii
@@ -81,16 +87,19 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Opens the places sheet: the radii and the home.
     func didTapPlaces()
 
-    /// Closes the places sheet and lets the user move the map under a centre pin to place the home.
-    func didStartPickingHome()
+    /// Closes any sheet and lets the user move the map under a centre pin to place the home or a place.
+    func didStartPicking(_ pick: PlacePick)
 
     /// Follows the point under the centre of the map.
     func didChangeMapCenter(_ center: GeoCoordinate)
 
-    /// Puts the home under the centre pin and leaves picking mode.
-    func didConfirmHomePick()
+    /// Puts the place under the centre pin and leaves picking mode; a new place then waits for its name.
+    func didConfirmPlacePick()
 
-    func didCancelHomePick()
+    func didCancelPlacePick()
+
+    /// Names the place just added; a blank name keeps its locality.
+    func didNamePlace(_ name: String)
 
     /// Flies to the user, asking for permission first if it was never asked.
     func didTapLocate()

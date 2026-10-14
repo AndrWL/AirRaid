@@ -36,6 +36,7 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             focusedRegionRepository: appContainer.repositories.focusedRegionRepository,
             userLocationService: appContainer.services.userLocationService,
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+            watchedPlacesProvider: appContainer.services.watchedPlacesProvider,
             alertSoundService: appContainer.services.alertSoundService,
             styleURL: Self.makeStyleURL()
         )
@@ -100,7 +101,7 @@ private extension MapCoordinatorView {
         factory.sheet(
             for: route,
             actions: MapSheetActions(
-                pickHomeOnMap: viewModel.didStartPickingHome,
+                pickPlaceOnMap: viewModel.didStartPicking,
                 showThreat: { viewModel.didSelect(.threat(id: $0)) }
             )
         )

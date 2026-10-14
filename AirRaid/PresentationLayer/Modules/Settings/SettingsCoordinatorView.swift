@@ -28,6 +28,7 @@ struct SettingsCoordinatorView<Factory: SettingsFactoryProtocol>: View {
         let viewModel = SettingsViewModel(
             router: router,
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+            entitlementService: appContainer.services.entitlementService,
             regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
             alertSoundService: appContainer.services.alertSoundService,
             liveActivitySettingsService: appContainer.services.liveActivitySettingsService,

@@ -178,7 +178,7 @@ private enum Constants {
         ))
     )
     ScrollView {
-        FeedBubbleView(row: FeedRow(item: item, threat: nil, place: nil, now: now)) { }
+        FeedBubbleView(row: FeedRow(item: item, threat: nil, places: [], now: now)) { }
             .padding()
     }
     .background(Color.appBackground)

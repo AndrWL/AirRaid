@@ -115,7 +115,7 @@ struct ThreatDetailsContent {
         timeToTargetText = isGone ? nil : threat.timeToTarget(at: now).map(DisplayTime.estimate)
 
         proximityRows = isGone ? [] : places.compactMap { place in
-            threat.proximity(to: place.coordinate, at: now).map { ProximityRow(place: place.kind, proximity: $0) }
+            threat.proximity(to: place.coordinate, at: now).map { ProximityRow(place: place, proximity: $0) }
         }
 
         firstSeenText = threat.firstSeenAt.formatted(DisplayTime.clockStyle)
@@ -159,9 +159,9 @@ extension ThreatDetailsContent {
     /// How far the threat is from one of the user's places, and how soon it could get there.
     struct ProximityRow: Identifiable {
 
-        let place: WatchedPlaceKind
+        let place: WatchedPlace
 
-        /// «Від вас», «Від дому».
+        /// «Від вас», «Від дому», «Від «Робота»».
         let distanceLabel: String
 
         /// «42 км».
@@ -173,10 +173,10 @@ extension ThreatDetailsContent {
         /// «≈ 14 хв»; `nil` unless the threat flies toward the place.
         let arrivalText: String?
 
-        var id: WatchedPlaceKind { place }
+        var id: String { place.id }
 
         init(
-            place: WatchedPlaceKind,
+            place: WatchedPlace,
             proximity: ThreatProximity
         ) {
             self.place = place

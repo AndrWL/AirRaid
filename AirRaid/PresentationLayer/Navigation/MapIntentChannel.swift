@@ -11,8 +11,8 @@ import Combine
 /// travel through ``MapIntentChannel`` instead of a navigation path.
 enum MapIntent {
 
-    /// Let the user place or move the home under a pin at the centre of the map.
-    case pickHome
+    /// Let the user place or move a place under a pin at the centre of the map.
+    case pickPlace(PlacePick)
 
     /// Open the threat's details and fly to it — from the feed.
     case showThreat(id: String)

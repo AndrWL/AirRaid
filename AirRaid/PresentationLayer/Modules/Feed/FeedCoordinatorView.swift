@@ -32,8 +32,7 @@ struct FeedCoordinatorView<Factory: FeedFactoryProtocol>: View {
             dependencies: FeedViewModel.Dependencies(
                 feedRepository: repositories.feedRepository,
                 airSituationRepository: repositories.airSituationRepository,
-                placeSettingsRepository: repositories.placeSettingsRepository,
-                userLocationService: services.userLocationService,
+                watchedPlacesProvider: services.watchedPlacesProvider,
                 watchedRegionsProvider: services.watchedRegionsProvider,
                 entitlementService: services.entitlementService,
                 voiceAnnouncer: services.feedVoiceAnnouncer,

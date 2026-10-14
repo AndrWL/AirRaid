@@ -34,8 +34,8 @@ protocol TabBarRouterProtocol: AnyObject, Observable {
     /// - Parameter tab: The target `AppTab` to switch to.
     func switchTo(_ tab: AppTab)
 
-    /// Opens the Map tab with the home picker: a fixed pin in the centre, the map moves under it.
-    func showHomePickerOnMap()
+    /// Opens the Map tab with the place picker: a fixed pin in the centre, the map moves under it.
+    func showPlacePickerOnMap(_ pick: PlacePick)
 
     /// Opens the Map tab with the threat's details, from another tab.
     func showThreatOnMap(id: String)

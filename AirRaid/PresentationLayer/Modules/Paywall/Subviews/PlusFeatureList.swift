@@ -49,6 +49,7 @@ extension PremiumFeature {
 
     var title: String {
         switch self {
+        case .extraPlaces: "Більше місць"
         case .extendedHistory: "Історія за 90 днів"
         case .feedFilters: "Фільтри ефіру"
         case .nightReport: "Нічний звіт"
@@ -58,6 +59,7 @@ extension PremiumFeature {
 
     var details: String {
         switch self {
+        case .extraPlaces: "До \(PremiumLimits.plusPlaces) місць зі своїми назвами й радіусами: батьки, робота, школа."
         case .extendedHistory: "Безкоштовно ефір пам'ятає добу."
         case .feedFilters: "Лише ракети, лише КАБи, лише тривоги — без шуму."
         case .nightReport: "Зранку: скільки тривало і що летіло біля ваших місць."
@@ -67,6 +69,7 @@ extension PremiumFeature {
 
     var systemImage: String {
         switch self {
+        case .extraPlaces: "mappin.and.ellipse"
         case .extendedHistory: "clock.arrow.circlepath"
         case .feedFilters: "line.3.horizontal.decrease.circle"
         case .nightReport: "moon.stars"

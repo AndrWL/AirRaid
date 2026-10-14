@@ -43,16 +43,14 @@ final class FeedVoiceAnnouncer {
     private var isPlusActive = false
     private var soundMode: AlertSoundMode = .sound
     private var situation: AirSituation = .empty
-    private var placeSettings: PlaceSettings = .initial
-    private var location: GeoCoordinate?
+    private var places: [WatchedPlace] = []
     private var watchedRegionIDs: Set<String> = []
     private var cancellables: Set<AnyCancellable> = []
 
     init(
         feedRepository: FeedRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
-        placeSettingsRepository: PlaceSettingsRepositoryProtocol,
-        userLocationService: UserLocationServiceProtocol,
+        watchedPlacesProvider: WatchedPlacesProviding,
         watchedRegionsProvider: WatchedRegionsProviding,
         dependencies: Dependencies
     ) {
@@ -60,8 +58,7 @@ final class FeedVoiceAnnouncer {
         self.dependencies = dependencies
         bind(
             airSituationRepository: airSituationRepository,
-            placeSettingsRepository: placeSettingsRepository,
-            userLocationService: userLocationService,
+            watchedPlacesProvider: watchedPlacesProvider,
             watchedRegionsProvider: watchedRegionsProvider
         )
     }
@@ -113,14 +110,9 @@ private extension FeedVoiceAnnouncer {
         return effective
     }
 
-    var places: [WatchedPlace] {
-        WatchedPlace.places(currentLocation: location, settings: placeSettings)
-    }
-
     func bind(
         airSituationRepository: AirSituationRepositoryProtocol,
-        placeSettingsRepository: PlaceSettingsRepositoryProtocol,
-        userLocationService: UserLocationServiceProtocol,
+        watchedPlacesProvider: WatchedPlacesProviding,
         watchedRegionsProvider: WatchedRegionsProviding
     ) {
         feedRepository.entriesPublisher
@@ -155,15 +147,9 @@ private extension FeedVoiceAnnouncer {
             }
             .store(in: &cancellables)
 
-        placeSettingsRepository.settingsPublisher
-            .sink { [weak self] settings in
-                self?.placeSettings = settings
-            }
-            .store(in: &cancellables)
-
-        userLocationService.locationPublisher
-            .sink { [weak self] location in
-                self?.location = location
+        watchedPlacesProvider.placesPublisher
+            .sink { [weak self] places in
+                self?.places = places
             }
             .store(in: &cancellables)
 
