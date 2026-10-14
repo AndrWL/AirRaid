@@ -111,12 +111,12 @@ private extension NightReportContent {
         now: Date,
         calendar: Calendar
     ) -> (start: Date, end: Date) {
-        let today = calendar.startOfDay(for: now)
-        let morning = calendar.date(byAdding: .hour, value: Constants.morningHour, to: today) ?? now
+        // Wall-clock hours, not hours after midnight: on the day the clocks change those are an hour off.
+        let morning = calendar.date(bySettingHour: Constants.morningHour, minute: 0, second: 0, of: now) ?? now
         // Before the evening starts, "last night" is the one that ended this morning.
         let nightEnd = now < morning ? now : morning
-        let eveningDay = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-        let start = calendar.date(byAdding: .hour, value: Constants.eveningHour, to: eveningDay) ?? now
+        let eveningDay = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now)) ?? now
+        let start = calendar.date(bySettingHour: Constants.eveningHour, minute: 0, second: 0, of: eveningDay) ?? now
         return (start, nightEnd)
     }
 
