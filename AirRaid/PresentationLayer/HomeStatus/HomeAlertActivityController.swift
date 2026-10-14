@@ -66,12 +66,12 @@ extension HomeAlertActivityController: HomeAlertActivityControlling {
     ) {
         forgetFinishedActivity()
         guard isEnabled, let status else {
-            end(finalState: nil, dismissal: .immediate)
+            end(finalState: nil)
             return
         }
         if let activity, activity.attributes.placeName != status.placeName || activity.attributes.placeKind != status.placeKind {
             // The home moved or replaced the location: the place is fixed for an activity's lifetime.
-            end(finalState: nil, dismissal: .immediate)
+            end(finalState: nil)
         }
         let state = HomeAlertActivityState(
             alert: status.alert,
@@ -100,11 +100,11 @@ extension HomeAlertActivityController: HomeAlertActivityControlling {
     func setEnabled(_ isEnabled: Bool) {
         self.isEnabled = isEnabled
         guard !isEnabled else { return }
-        end(finalState: nil, dismissal: .immediate)
+        end(finalState: nil)
         // A lifted alert's «Відбій» is no longer followed but lingers on the lock screen; ending it again takes it off.
-        for leftover in Activity<HomeAlertActivityAttributes>.activities {
+        for id in Activity<HomeAlertActivityAttributes>.activities.map(\.id) {
             Task {
-                await leftover.end(nil, dismissalPolicy: .immediate)
+                await Self.end(activityID: id, finalState: nil, dismissAt: nil)
             }
         }
     }
@@ -143,13 +143,13 @@ private extension HomeAlertActivityController {
                 radiusKm: state.radiusKm,
                 isAllClear: true
             )
-            end(finalState: allClear, dismissal: .after(updatedAt.addingTimeInterval(Constants.allClearLinger)))
+            end(finalState: allClear, dismissAt: updatedAt.addingTimeInterval(Constants.allClearLinger))
             return
         }
         let since = clearSince ?? updatedAt
         clearSince = since
         if updatedAt.timeIntervalSince(since) >= Constants.clearLinger {
-            end(finalState: nil, dismissal: .immediate)
+            end(finalState: nil)
         } else {
             refresh(with: state, updatedAt: updatedAt)
         }
@@ -201,16 +201,19 @@ private extension HomeAlertActivityController {
         guard state != lastState || isDue else { return }
         lastState = state
         lastUpdatedAt = updatedAt
-        let content = content(state, updatedAt: updatedAt)
+        let id = activity.id
+        let staleDate = updatedAt.addingTimeInterval(Constants.staleAfter)
+        let relevanceScore = Self.relevanceScore(of: state)
         Task {
-            await activity.update(content)
+            await Self.update(activityID: id, state: state, staleDate: staleDate, relevanceScore: relevanceScore)
         }
     }
 
-    /// Ends the running activity, showing `finalState` until `dismissal` — «Відбій» for a lifted alert.
+    /// Ends the running activity, showing `finalState` until `dismissAt` — «Відбій» for a lifted alert; without a
+    /// moment it goes at once.
     func end(
         finalState: HomeAlertActivityState?,
-        dismissal: ActivityUIDismissalPolicy
+        dismissAt: Date? = nil
     ) {
         guard let activity else { return }
         self.activity = nil
@@ -218,9 +221,9 @@ private extension HomeAlertActivityController {
         lastUpdatedAt = nil
         trigger = nil
         clearSince = nil
-        let content = finalState.map { ActivityContent(state: $0, staleDate: nil) }
+        let id = activity.id
         Task {
-            await activity.end(content, dismissalPolicy: dismissal)
+            await Self.end(activityID: id, finalState: finalState, dismissAt: dismissAt)
         }
     }
 
@@ -231,9 +234,46 @@ private extension HomeAlertActivityController {
         ActivityContent(
             state: state,
             staleDate: updatedAt.addingTimeInterval(Constants.staleAfter),
-            // Above other activities while a threat is inside the radius.
-            relevanceScore: state.nearestThreat == nil ? Constants.alertRelevance : Constants.threatRelevance
+            relevanceScore: Self.relevanceScore(of: state)
         )
+    }
+
+    /// Above other activities while a threat is inside the radius.
+    static func relevanceScore(of state: HomeAlertActivityState) -> Double {
+        state.nearestThreat == nil ? Constants.alertRelevance : Constants.threatRelevance
+    }
+}
+
+// MARK: - ActivityKit
+
+/// `Activity` is not `Sendable`, so it never leaves the main actor: updates run off it on the activity looked up by its
+/// id, and only `Sendable` values cross over.
+nonisolated private extension HomeAlertActivityController {
+
+    @concurrent
+    static func update(
+        activityID: String,
+        state: HomeAlertActivityState,
+        staleDate: Date,
+        relevanceScore: Double
+    ) async {
+        let content = ActivityContent(state: state, staleDate: staleDate, relevanceScore: relevanceScore)
+        await activity(id: activityID)?.update(content)
+    }
+
+    @concurrent
+    static func end(
+        activityID: String,
+        finalState: HomeAlertActivityState?,
+        dismissAt: Date?
+    ) async {
+        let content = finalState.map { ActivityContent(state: $0, staleDate: nil) }
+        let dismissal: ActivityUIDismissalPolicy = dismissAt.map { .after($0) } ?? .immediate
+        await activity(id: activityID)?.end(content, dismissalPolicy: dismissal)
+    }
+
+    static func activity(id: String) -> Activity<HomeAlertActivityAttributes>? {
+        Activity<HomeAlertActivityAttributes>.activities.first { $0.id == id }
     }
 }
 
