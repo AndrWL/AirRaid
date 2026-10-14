@@ -41,4 +41,7 @@ nonisolated enum AppEnvironment {
     /// - Note: `AirRaidMapView` restyles labels by OpenMapTiles layer IDs (`place_*`), so another
     ///   OpenMapTiles-based style keeps working; a style with a different schema loses those tweaks.
     static let mapStyleURLString = "https://tiles.openfreemap.org/styles/dark"
+
+    /// Where «Написати розробнику» in the settings sends its email.
+    static let feedbackEmail = "andrewlebedev13@gmail.com"
 }

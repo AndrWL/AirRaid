@@ -25,6 +25,9 @@ protocol DIRouterContaining {
     /// The global router managing the active state of the main application tab bar.
     var tabBarRouter: TabBarRouter { get }
 
+    /// Carries requests from other tabs to the Map tab, such as picking the home.
+    var mapIntentChannel: MapIntentChannel { get }
+
     /// The stack router managing navigation within the Map tab.
     var mapStackRouter: StackRouter { get }
 

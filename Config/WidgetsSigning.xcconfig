@@ -1,0 +1,12 @@
+//
+//  WidgetsSigning.xcconfig
+//  AirRaid
+//
+//  Code signing for the AirRaidWidgets extension: the app's team and style (with `Signing.local.xcconfig`), its own
+//  entitlements. Those are the App Group only, which a free Personal Team can sign too, so no override touches them.
+//
+
+#include "Signing.xcconfig"
+
+CODE_SIGN_ENTITLEMENTS = AirRaidWidgets/AirRaidWidgets.entitlements
+

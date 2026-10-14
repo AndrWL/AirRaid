@@ -5,6 +5,7 @@
 //  Created by ANDRII LEBEDIEV on 07.10.2026.
 //
 
+import Combine
 import SwiftUI
 
 /// Defines the state the Map screen renders: region outlines, which of them have an alert, and threat pins.
@@ -109,6 +110,8 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
 /// Defines the routing capabilities for the Map flow.
 protocol MapRouterProtocol: BaseRouterProtocol, SheetPresenting where SheetRoute == MapSheetRoute {
 
+    /// Requests from other tabs, such as picking the home from the settings.
+    var intentPublisher: AnyPublisher<MapIntent, Never> { get }
 }
 
 /// A protocol that defines the requirements for a Map flow factory.

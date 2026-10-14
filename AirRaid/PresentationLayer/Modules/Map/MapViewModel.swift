@@ -133,6 +133,13 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         bindPreferences()
         bindUserLocation()
 
+        router.intentPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] intent in
+                self?.handle(intent)
+            }
+            .store(in: &cancellables)
+
         // A reconnect usually takes a second or two; the banner appears only when it takes longer,
         // and disappears as soon as the map is live again.
         realtimeService.connectionStatePublisher
@@ -346,6 +353,13 @@ private extension MapViewModel {
         updateNearThreats()
     }
 
+    func handle(_ intent: MapIntent) {
+        switch intent {
+        case .pickHome:
+            didStartPickingHome()
+        }
+    }
+
     /// Marks the threats inside a place's radius and sounds once for each that has just come in.
     func updateNearThreats() {
         let places = places
@@ -354,8 +368,8 @@ private extension MapViewModel {
             nearThreatIDs = near
         }
         let new = near.subtracting(announcedThreatIDs)
-        if !new.isEmpty {
-            alertSoundService.playThreatNearby()
+        // The haptic follows the sound, so "off" in the settings silences both.
+        if !new.isEmpty, alertSoundService.playThreatNearby() {
             nearThreatAlertCount += 1
         }
         // Forget threats that left, so one that comes back is announced again.

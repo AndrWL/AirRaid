@@ -66,8 +66,7 @@ extension RegionDetailsContent {
 
         init(threat: Threat) {
             id = threat.id
-            let countText = threat.count.flatMap { $0 > 1 ? " ×\($0)" : nil } ?? ""
-            title = threat.displayName + countText
+            title = threat.countedName
             // The region is the sheet's title already, so a caption that only names it adds nothing.
             detail = threat.target != nil || threat.position != nil
                 ? threat.mapCaption.map { "\($0.label) \($0.name)" }

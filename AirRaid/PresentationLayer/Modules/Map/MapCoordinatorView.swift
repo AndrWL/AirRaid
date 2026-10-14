@@ -22,7 +22,10 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
         appContainer: DIAppContaining,
         factory: Factory
     ) {
-        let router = MapRouter(stackRouter: appContainer.routers.mapStackRouter)
+        let router = MapRouter(
+            stackRouter: appContainer.routers.mapStackRouter,
+            intentChannel: appContainer.routers.mapIntentChannel
+        )
         let viewModel = MapViewModel(
             router: router,
             regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,

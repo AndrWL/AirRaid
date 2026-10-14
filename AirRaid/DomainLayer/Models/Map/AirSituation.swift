@@ -71,8 +71,8 @@ nonisolated extension AirSituation {
     }
 
     /// Cities that are regions of their own, so a city alert covers the whole region: Kyiv, Sevastopol.
-    private static let cityRegionIDs: Set<String> = ["UA-30", "UA-40"]
+    static let cityRegionIDs: Set<String> = ["UA-30", "UA-40"]
 
     /// Regions an oblast-wide alert also covers: alerts.in.ua treats Sevastopol (UA-40) as part of Crimea (UA-43).
-    private static let includedRegionIDs: [String: [String]] = ["UA-43": ["UA-40"]]
+    static let includedRegionIDs: [String: [String]] = ["UA-43": ["UA-40"]]
 }

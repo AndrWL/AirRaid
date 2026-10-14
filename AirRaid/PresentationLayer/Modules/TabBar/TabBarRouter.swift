@@ -31,20 +31,27 @@ final class TabBarRouter {
     @ObservationIgnored
     private let settingsStackRouter: StackRouting
 
+    /// Requests for the Map tab that are not a route on its stack.
+    @ObservationIgnored
+    private let mapIntentChannel: MapIntentChannel
+
     /// Initializes the tab bar router with the stack routers for each individual tab.
     ///
     /// - Parameters:
     ///   - mapStackRouter: The routing stack for the Map feature.
     ///   - alertsStackRouter: The routing stack for the Alerts feature.
     ///   - settingsStackRouter: The routing stack for the Settings feature.
+    ///   - mapIntentChannel: Carries requests to the Map tab.
     init(
         mapStackRouter: StackRouting,
         alertsStackRouter: StackRouting,
-        settingsStackRouter: StackRouting
+        settingsStackRouter: StackRouting,
+        mapIntentChannel: MapIntentChannel
     ) {
         self.mapStackRouter = mapStackRouter
         self.alertsStackRouter = alertsStackRouter
         self.settingsStackRouter = settingsStackRouter
+        self.mapIntentChannel = mapIntentChannel
     }
 }
 
@@ -57,5 +64,11 @@ extension TabBarRouter: TabBarRouterProtocol {
     /// - Parameter tab: The target `AppTab`.
     func switchTo(_ tab: AppTab) {
         selectedTab = tab
+    }
+
+    func showHomePickerOnMap() {
+        mapStackRouter.popToRoot(animated: false)
+        selectedTab = .map
+        mapIntentChannel.send(.pickHome)
     }
 }

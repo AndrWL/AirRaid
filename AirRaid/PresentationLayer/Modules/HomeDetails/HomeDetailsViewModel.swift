@@ -114,16 +114,13 @@ extension HomeDetailsViewModel: HomeDetailsViewModelProtocol {
 
 private extension HomeDetailsViewModel {
 
-    /// The oblast's alert when the whole oblast is alerted, else the alert of the raion the home is in; a hromada
-    /// alert counts for its raion, the way the map fills it.
+    /// The highest air raid alert at the point: its oblast's, or its raion's (a hromada alert counts for its raion,
+    /// the way the map fills it).
     func alertLevel(at point: GeoCoordinate, regionID: String?) -> RegionAlertLevel? {
-        let coverage = situation.airRaidCoverage
-        if let regionID, let level = coverage.regions[regionID] {
-            return level
-        }
         let district = districts.first { district in
             district.key.regionID == regionID && district.polygons.contains { $0.contains(point) }
         }
-        return district.flatMap { coverage.districts[$0.key]?.level }
+        // The same rule as the widgets and the Live Activity, so the sheet never disagrees with the lock screen.
+        return situation.airRaidAlertSummary(regionID: regionID, district: district?.key)?.level
     }
 }

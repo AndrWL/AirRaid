@@ -8,5 +8,6 @@
 // Your team ID: Xcode → Settings → Accounts, or developer.apple.com → Membership.
 DEVELOPMENT_TEAM =
 
-// Uncomment for a free Personal Team, which cannot sign the App Attest capability.
-// CODE_SIGN_ENTITLEMENTS =
+// Uncomment for a free Personal Team, which cannot sign the App Attest capability: the App Group alone, so the widgets
+// still get their data. The device then falls back to an unattested token.
+// CODE_SIGN_ENTITLEMENTS = AirRaid/AirRaidPersonalTeam.entitlements

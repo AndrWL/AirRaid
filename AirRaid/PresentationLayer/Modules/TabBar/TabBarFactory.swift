@@ -34,7 +34,7 @@ struct TabBarFactory {
 
 extension TabBarFactory: TabBarFactoryProtocol {
 
-    // TODO: Replace the Alerts and Settings placeholders with their feature modules (CoordinatorViews).
+    // TODO: Replace the Alerts placeholder with its feature module (CoordinatorView).
 
     @ViewBuilder
     func makeMap() -> some View {
@@ -51,6 +51,6 @@ extension TabBarFactory: TabBarFactoryProtocol {
 
     @ViewBuilder
     func makeSettings() -> some View {
-        Color.gray.ignoresSafeArea()
+        SettingsCoordinatorView(appContainer: appContainer)
     }
 }

@@ -45,6 +45,15 @@ protocol DIServiceContaining {
     /// The user's location while the app is in use.
     var userLocationService: UserLocationServiceProtocol { get }
 
-    /// The app's alert sounds while it is open.
+    /// The app's alert sounds while it is open, and the mode they play in.
     var alertSoundService: AlertSoundServiceProtocol { get }
+
+    /// The permission to show notifications.
+    var notificationPermissionService: NotificationPermissionServiceProtocol { get }
+
+    /// Whether the Live Activity may run, as chosen in the settings.
+    var liveActivitySettingsService: LiveActivitySettingsServiceProtocol { get }
+
+    /// Keeps the home screen widgets and the Live Activity in step with the home's status.
+    var homeStatusBroadcaster: HomeStatusBroadcasting { get }
 }

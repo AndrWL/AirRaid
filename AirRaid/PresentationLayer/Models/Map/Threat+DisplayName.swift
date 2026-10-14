@@ -13,6 +13,17 @@ extension Threat {
         type?.displayName ?? kind.displayName
     }
 
+    /// «Шахед», «FPV», «Реакт.» — at most about six letters, for the Dynamic Island's compact corner.
+    var shortName: String {
+        type?.shortName ?? kind.shortName
+    }
+
+    /// «Шахед ×3» when the channels name more than one target, otherwise just ``displayName``.
+    var countedName: String {
+        guard let count, count > 1 else { return displayName }
+        return "\(displayName) ×\(count)"
+    }
+
     /// The caption under the map pin, from the most useful thing known: where it flies, else where it was spotted,
     /// else its region. Labelled the way the details sheet labels the same rows. `nil` for a country-wide report.
     var mapCaption: ThreatMapCaption? {
@@ -54,6 +65,44 @@ extension ThreatType {
         case .missile: return "Ракета"
         case .ballisticMissile: return "Балістика"
         case .aviation: return "Авіація"
+        }
+    }
+}
+
+// MARK: - ThreatType short names
+
+private extension ThreatType {
+
+    var shortName: String {
+        switch self {
+        case .shahed: return "Шахед"
+        case .jetDrone: return "Реакт."
+        case .reconDrone: return "Розвід."
+        case .drone: return "БпЛА"
+        case .fpv: return "FPV"
+        case .guidedAerialBomb: return "КАБ"
+        case .cruiseMissile: return "Крилата"
+        case .highSpeedTarget: return "Швидк."
+        case .missile: return "Ракета"
+        case .ballisticMissile: return "Бал."
+        case .aviation: return "Авіація"
+        }
+    }
+}
+
+// MARK: - ThreatKind short names
+
+private extension ThreatKind {
+
+    var shortName: String {
+        switch self {
+        case .drone: return "БпЛА"
+        case .fpv: return "FPV"
+        case .guidedAerialBomb: return "КАБ"
+        case .missile: return "Ракета"
+        case .ballisticMissile: return "Бал."
+        case .aviation: return "Авіація"
+        case .unknown: return "Ціль"
         }
     }
 }
