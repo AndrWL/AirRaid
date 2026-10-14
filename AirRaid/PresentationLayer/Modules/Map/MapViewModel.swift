@@ -178,7 +178,7 @@ extension MapViewModel: MapViewModelProtocol {
         case .threatDetails(let id): .threat(id: id)
         case .regionDetails(let id): .region(id: id)
         case .placeDetails(let id): .place(id: id)
-        case .places, nil: nil
+        case .places, .legend, nil: nil
         }
     }
 
@@ -196,6 +196,10 @@ extension MapViewModel: MapViewModelProtocol {
 
     func didTapPlaces() {
         router.presentSheet(.places)
+    }
+
+    func didTapLegend() {
+        router.presentSheet(.legend)
     }
 
     func didStartPicking(_ pick: PlacePick) {

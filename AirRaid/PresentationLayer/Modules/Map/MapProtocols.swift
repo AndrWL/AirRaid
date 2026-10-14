@@ -87,6 +87,9 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Opens the places sheet: the radii and the home.
     func didTapPlaces()
 
+    /// Opens the legend: what the map shows and that it is for information only.
+    func didTapLegend()
+
     /// Closes any sheet and lets the user move the map under a centre pin to place the home or a place.
     func didStartPicking(_ pick: PlacePick)
 

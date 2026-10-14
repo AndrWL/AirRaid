@@ -129,7 +129,7 @@ private extension MapView {
         }
     }
 
-    /// The places and "to me" buttons on the right; above the map's attribution and the tab bar.
+    /// The legend, places and "to me" buttons on the right; above the map's attribution and the tab bar.
     var bottomControls: some View {
         VStack {
             Spacer()
@@ -141,12 +141,26 @@ private extension MapView {
         HStack(alignment: .bottom, spacing: Spacing.small) {
             Spacer(minLength: 0)
             VStack(spacing: Spacing.small) {
+                legendButton
                 placesButton
                 locateButton
             }
         }
         .padding(.horizontal, Spacing.large)
         .padding(.bottom, Constants.bottomControlsInset)
+    }
+
+    var legendButton: some View {
+        Button(action: viewModel.didTapLegend) {
+            Image(systemName: "info")
+                .font(.app(.body, weight: .semibold))
+                .foregroundStyle(.ink)
+                .frame(width: Constants.locateButtonSize, height: Constants.locateButtonSize)
+                .glassBackground(in: .circle)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Як читати карту")
     }
 
     var placesButton: some View {
