@@ -6,7 +6,7 @@
 //
 
 /// What an official alert is about.
-nonisolated enum RegionAlertKind: Sendable {
+nonisolated enum RegionAlertKind: CaseIterable, Sendable {
 
     /// Air raid — the alert the map fills regions for.
     case airRaid

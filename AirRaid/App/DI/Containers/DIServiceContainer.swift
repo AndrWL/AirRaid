@@ -51,6 +51,11 @@ extension DIServiceContainer: DIAssembling {
         registerNotificationPermissionService()
         registerLiveActivitySettingsService()
         registerHomeStatusBroadcaster(with: appContainer)
+        registerWatchedRegionsProvider(with: appContainer)
+        registerEntitlementService()
+        registerVoiceSettingsService()
+        registerSpeechService()
+        registerFeedVoiceAnnouncer(with: appContainer)
     }
 }
 
@@ -88,6 +93,26 @@ extension DIServiceContainer: DIServiceContaining {
 
     var homeStatusBroadcaster: HomeStatusBroadcasting {
         return container.resolve(HomeStatusBroadcasting.self)
+    }
+
+    var watchedRegionsProvider: WatchedRegionsProviding {
+        return container.resolve(WatchedRegionsProviding.self)
+    }
+
+    var entitlementService: EntitlementServiceProtocol {
+        return container.resolve(EntitlementServiceProtocol.self)
+    }
+
+    var voiceSettingsService: VoiceSettingsServiceProtocol {
+        return container.resolve(VoiceSettingsServiceProtocol.self)
+    }
+
+    var speechService: SpeechServiceProtocol {
+        return container.resolve(SpeechServiceProtocol.self)
+    }
+
+    var feedVoiceAnnouncer: FeedVoiceAnnouncing {
+        return container.resolve(FeedVoiceAnnouncing.self)
     }
 }
 
@@ -231,6 +256,62 @@ private extension DIServiceContainer {
                 widgetPublisher: HomeWidgetPublisher(),
                 activityController: HomeAlertActivityController(),
                 liveActivitySettingsService: resolver.resolve(LiveActivitySettingsServiceProtocol.self)
+            )
+        }
+    }
+}
+
+// MARK: - Feed
+
+private extension DIServiceContainer {
+
+    /// A singleton so the feed and the voice filter by the same places. Resolves repositories lazily.
+    func registerWatchedRegionsProvider(with appContainer: DIAppContaining) {
+        container.register(WatchedRegionsProviding.self, lifetime: .singleton) { resolver in
+            WatchedRegionsService(
+                placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository
+            )
+        }
+    }
+
+    /// One instance: it owns the single listener for App Store transactions.
+    func registerEntitlementService() {
+        container.register(EntitlementServiceProtocol.self, lifetime: .singleton) { _ in
+            StoreKitEntitlementService(productIDs: Set(AppEnvironment.plusProductIDs))
+        }
+    }
+
+    /// A singleton so the voice reads by the rules the settings just changed.
+    func registerVoiceSettingsService() {
+        container.register(VoiceSettingsServiceProtocol.self, lifetime: .singleton) { _ in
+            VoiceSettingsService()
+        }
+    }
+
+    /// One instance: one synthesizer, one queue, so two screens never talk over each other.
+    func registerSpeechService() {
+        container.register(SpeechServiceProtocol.self, lifetime: .singleton) { _ in
+            SpeechService()
+        }
+    }
+
+    /// One instance: the voice feed keeps playing while the user switches tabs.
+    func registerFeedVoiceAnnouncer(with appContainer: DIAppContaining) {
+        container.register(FeedVoiceAnnouncing.self, lifetime: .singleton) { resolver in
+            FeedVoiceAnnouncer(
+                feedRepository: appContainer.repositories.feedRepository,
+                airSituationRepository: appContainer.repositories.airSituationRepository,
+                placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
+                userLocationService: resolver.resolve(UserLocationServiceProtocol.self),
+                watchedRegionsProvider: resolver.resolve(WatchedRegionsProviding.self),
+                dependencies: FeedVoiceAnnouncer.Dependencies(
+                    speechService: resolver.resolve(SpeechServiceProtocol.self),
+                    voiceSettingsService: resolver.resolve(VoiceSettingsServiceProtocol.self),
+                    entitlementService: resolver.resolve(EntitlementServiceProtocol.self),
+                    alertSoundService: resolver.resolve(AlertSoundServiceProtocol.self)
+                )
             )
         }
     }

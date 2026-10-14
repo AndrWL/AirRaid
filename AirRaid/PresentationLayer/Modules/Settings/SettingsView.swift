@@ -24,6 +24,7 @@ struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
         List {
             notificationsSection
             homeSection
+            feedSection
             liveActivitySection
             soundSection
             aboutSection
@@ -107,6 +108,30 @@ private extension SettingsView {
             Text("Дім")
         } footer: {
             footerText("Загрози в радіусі дому з'являються в картці на мапі. Дім зберігається лише на цьому пристрої.")
+        }
+        .listRowBackground(Color.surface)
+    }
+
+    var feedSection: some View {
+        Section {
+            Button(action: viewModel.didTapVoiceSettings) {
+                HStack {
+                    Label("Голосовий ефір", systemImage: "waveform")
+                        .foregroundStyle(.ink)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.app(.footnote, weight: .semibold))
+                        .foregroundStyle(.inkMuted)
+                }
+            }
+            Button(action: viewModel.didTapPlus) {
+                Label("AirRaid Плюс", systemImage: "sparkles")
+                    .font(.app(.body, weight: .semibold))
+            }
+        } header: {
+            Text("Ефір")
+        } footer: {
+            footerText("Ефір пам'ятає добу безкоштовно. Плюс додає історію за 90 днів, фільтри, нічний звіт і правила голосу.")
         }
         .listRowBackground(Color.surface)
     }
@@ -253,7 +278,7 @@ private extension SettingsView {
                     stackRouter: StackRouter(),
                     tabBarRouter: TabBarRouter(
                         mapStackRouter: StackRouter(),
-                        alertsStackRouter: StackRouter(),
+                        feedStackRouter: StackRouter(),
                         settingsStackRouter: StackRouter(),
                         mapIntentChannel: MapIntentChannel()
                     )

@@ -357,6 +357,11 @@ private extension MapViewModel {
         switch intent {
         case .pickHome:
             didStartPickingHome()
+        case .showThreat(let id):
+            if let coordinate = threats.first(where: { $0.id == id })?.markerCoordinate {
+                fly(to: coordinate)
+            }
+            router.presentSheet(.threatDetails(id: id))
         }
     }
 

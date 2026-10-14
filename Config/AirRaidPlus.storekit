@@ -1,0 +1,90 @@
+{
+  "identifier" : "4F3A2B1C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_locale" : "uk",
+    "_storefront" : "UKR"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21500001",
+      "localizations" : [
+        {
+          "description" : "AirRaid Плюс",
+          "displayName" : "AirRaid Плюс",
+          "locale" : "uk"
+        }
+      ],
+      "name" : "AirRaid Plus",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "6700000001",
+          "introductoryOffer" : {
+            "internalID" : "6700000011",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Історія, фільтри, нічний звіт, правила голосу",
+              "displayName" : "Плюс на місяць",
+              "locale" : "uk"
+            }
+          ],
+          "productID" : "com.andriilebediev.airraid.plus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Plus Monthly",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "12.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "6700000002",
+          "introductoryOffer" : {
+            "internalID" : "6700000012",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Історія, фільтри, нічний звіт, правила голосу",
+              "displayName" : "Плюс на рік",
+              "locale" : "uk"
+            }
+          ],
+          "productID" : "com.andriilebediev.airraid.plus.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Plus Yearly",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

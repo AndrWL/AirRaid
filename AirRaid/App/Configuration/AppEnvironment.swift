@@ -44,4 +44,11 @@ nonisolated enum AppEnvironment {
 
     /// Where «Написати розробнику» in the settings sends its email.
     static let feedbackEmail = "andrewlebedev13@gmail.com"
+
+    /// The AirRaid Плюс subscriptions, monthly first. One subscription group in App Store Connect; locally they come
+    /// from `Config/AirRaidPlus.storekit`, selected in the scheme's Run options.
+    static let plusProductIDs = [
+        "com.andriilebediev.airraid.plus.monthly",
+        "com.andriilebediev.airraid.plus.yearly"
+    ]
 }

@@ -5,7 +5,7 @@
 //  Created by ANDRII LEBEDIEV on 13.10.2026.
 //
 
-import Foundation
+import SwiftUI
 
 /// Defines the state of the Settings tab: the notification permission, the home, the Live Activity, the alert sound and
 /// the app's version.
@@ -56,11 +56,29 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
 
     /// Plays the selected mode's signal once.
     func didTapPlaySample()
+
+    /// Opens the voice feed's settings.
+    func didTapVoiceSettings()
+
+    /// Opens AirRaid Плюс: the subscription, or its status for a subscriber.
+    func didTapPlus()
 }
 
 /// Defines the routing capabilities for the Settings flow.
-protocol SettingsRouterProtocol: BaseRouterProtocol {
+protocol SettingsRouterProtocol: BaseRouterProtocol, SheetPresenting where SheetRoute == SettingsSheetRoute {
 
     /// Opens the Map tab with the home picker.
     func showHomePickerOnMap()
+
+    func showVoiceSettings()
+}
+
+/// A protocol that defines the requirements for a Settings flow factory.
+protocol SettingsFactoryProtocol {
+
+    associatedtype NavigationDestination: View
+    associatedtype Sheet: View
+
+    @ViewBuilder func navigationDestination(for route: SettingsRoute) -> NavigationDestination
+    @ViewBuilder func sheet(for route: SettingsSheetRoute) -> Sheet
 }

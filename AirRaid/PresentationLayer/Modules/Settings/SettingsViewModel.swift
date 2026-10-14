@@ -10,7 +10,7 @@ import Foundation
 
 /// The view model of the Settings tab.
 @Observable
-final class SettingsViewModel: BaseViewModel {
+final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
 
     // MARK: - Variables
 
@@ -24,7 +24,7 @@ final class SettingsViewModel: BaseViewModel {
     private(set) var boundaries: [RegionBoundary] = []
 
     @ObservationIgnored
-    private let router: SettingsRouterProtocol
+    private let router: Router
 
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
@@ -48,7 +48,7 @@ final class SettingsViewModel: BaseViewModel {
     private let feedbackEmail: String
 
     init(
-        router: SettingsRouterProtocol,
+        router: Router,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
         alertSoundService: AlertSoundServiceProtocol,
@@ -165,6 +165,14 @@ extension SettingsViewModel: SettingsViewModelProtocol {
 
     func didTapPlaySample() {
         alertSoundService.playSample(of: soundMode)
+    }
+
+    func didTapVoiceSettings() {
+        router.showVoiceSettings()
+    }
+
+    func didTapPlus() {
+        router.presentSheet(.paywall)
     }
 }
 

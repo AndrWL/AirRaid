@@ -13,6 +13,9 @@ enum MapIntent {
 
     /// Let the user place or move the home under a pin at the centre of the map.
     case pickHome
+
+    /// Open the threat's details and fly to it — from the feed.
+    case showThreat(id: String)
 }
 
 /// Carries ``MapIntent``s from ``TabBarRouter`` to the Map tab's router.

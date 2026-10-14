@@ -6,7 +6,7 @@
 //
 
 /// The kind of place an alert is declared for.
-nonisolated enum RegionAlertScope: Sendable {
+nonisolated enum RegionAlertScope: CaseIterable, Sendable {
 
     /// The whole oblast.
     case oblast

@@ -64,6 +64,7 @@ extension DIRepositoryContainer: DIAssembling {
         registerAirSituationRepository(with: appContainer)
         registerFocusedRegionRepository()
         registerPlaceSettingsRepository()
+        registerFeedRepository()
     }
 }
 
@@ -93,6 +94,10 @@ extension DIRepositoryContainer: DIRepositoryContaining {
 
     var placeSettingsRepository: PlaceSettingsRepositoryProtocol {
         return container.resolve(PlaceSettingsRepositoryProtocol.self)
+    }
+
+    var feedRepository: FeedRepositoryProtocol {
+        return container.resolve(FeedRepositoryProtocol.self)
     }
 }
 
@@ -140,6 +145,13 @@ private extension DIRepositoryContainer {
     func registerPlaceSettingsRepository() {
         container.register(PlaceSettingsRepositoryProtocol.self, lifetime: .singleton) { _ in
             PlaceSettingsRepository(addressResolver: PlaceAddressService())
+        }
+    }
+
+    /// A singleton: it owns the feed's state and its file, and must hear every change from launch on.
+    func registerFeedRepository() {
+        container.register(FeedRepositoryProtocol.self, lifetime: .singleton) { resolver in
+            FeedRepository(airSituationRepository: resolver.resolve(AirSituationRepositoryProtocol.self))
         }
     }
 

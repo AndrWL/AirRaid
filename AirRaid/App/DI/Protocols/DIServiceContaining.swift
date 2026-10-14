@@ -56,4 +56,19 @@ protocol DIServiceContaining {
 
     /// Keeps the home screen widgets and the Live Activity in step with the home's status.
     var homeStatusBroadcaster: HomeStatusBroadcasting { get }
+
+    /// The oblasts of the user's places, for «Мої місця».
+    var watchedRegionsProvider: WatchedRegionsProviding { get }
+
+    /// Whether the user has AirRaid Плюс.
+    var entitlementService: EntitlementServiceProtocol { get }
+
+    /// What the voice feed reads and how.
+    var voiceSettingsService: VoiceSettingsServiceProtocol { get }
+
+    /// The device's Ukrainian voice.
+    var speechService: SpeechServiceProtocol { get }
+
+    /// Reads the feed aloud while the user listens.
+    var feedVoiceAnnouncer: FeedVoiceAnnouncing { get }
 }

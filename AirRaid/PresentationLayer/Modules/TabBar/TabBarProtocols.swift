@@ -15,6 +15,9 @@ import SwiftUI
 /// or handling deep link business rules before delegating to the router.
 protocol TabBarViewModelProtocol: BaseViewModelProtocol {
 
+    /// The feed's bubbles changed since the user last looked, for the tab's badge; `0` hides it.
+    var unreadFeedCount: Int { get }
+
     /// Called when the tab bar appears: starts the live connection.
     func onAppear()
 }
@@ -33,25 +36,28 @@ protocol TabBarRouterProtocol: AnyObject, Observable {
 
     /// Opens the Map tab with the home picker: a fixed pin in the centre, the map moves under it.
     func showHomePickerOnMap()
+
+    /// Opens the Map tab with the threat's details, from another tab.
+    func showThreatOnMap(id: String)
 }
 
 /// A factory protocol responsible for constructing the root-level views for each tab.
 ///
 /// Conforming types encapsulate the creation of the distinct feature flows
-/// (Map, Alerts, Settings) that are embedded within the tab bar.
+/// (Map, Feed, Settings) that are embedded within the tab bar.
 protocol TabBarFactoryProtocol {
 
     associatedtype Map: View
 
-    associatedtype Alerts: View
+    associatedtype Feed: View
 
     associatedtype Settings: View
 
     /// Builds and returns the root flow view for the Map tab.
     @ViewBuilder func makeMap() -> Map
 
-    /// Builds and returns the root flow view for the Alerts tab.
-    @ViewBuilder func makeAlerts() -> Alerts
+    /// Builds and returns the root flow view for the Feed tab.
+    @ViewBuilder func makeFeed() -> Feed
 
     /// Builds and returns the root flow view for the Settings tab.
     @ViewBuilder func makeSettings() -> Settings

@@ -31,6 +31,7 @@ final class HomeStatusBroadcaster {
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
     private let districtBoundaryRepository: DistrictBoundaryRepositoryProtocol
     private let widgetPublisher: HomeWidgetPublishing
+    private let statusSubject = CurrentValueSubject<HomeStatus?, Never>(nil)
     private let activityController: HomeAlertActivityControlling
     private let liveActivitySettingsService: LiveActivitySettingsServiceProtocol
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
@@ -71,6 +72,10 @@ final class HomeStatusBroadcaster {
 // MARK: - HomeStatusBroadcasting
 
 extension HomeStatusBroadcaster: HomeStatusBroadcasting {
+
+    var statusPublisher: AnyPublisher<HomeStatus?, Never> {
+        statusSubject.eraseToAnyPublisher()
+    }
 
     func start() {
         guard !isStarted else { return }
@@ -181,6 +186,7 @@ private extension HomeStatusBroadcaster {
         _ status: HomeStatus?,
         updatedAt: Date
     ) {
+        statusSubject.send(status)
         widgetPublisher.publish(HomeStatusSnapshot(updatedAt: updatedAt, home: status))
         activityController.update(with: status, updatedAt: updatedAt)
     }
