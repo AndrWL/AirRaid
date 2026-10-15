@@ -14,6 +14,9 @@ nonisolated struct ThreatEventDTO: Decodable, Sendable {
     let id: String
     let kind: String
     let type: String?
+    /// A refinement of `type` that older apps do not know; `type` then holds the closest known one
+    /// (`molniya` comes as `type: "uav"`).
+    let subtype: String?
     let count: Int?
     let level: String
     let confidence: Double
@@ -36,7 +39,7 @@ nonisolated struct ThreatEventDTO: Decodable, Sendable {
     let summary: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, type, count, level, confidence, sources, position, target, trail, area, summary, updated, expires
+        case id, kind, type, subtype, count, level, confidence, sources, position, target, trail, area, summary, updated, expires
         case positionQuality = "position_quality"
         case accuracyKm = "accuracy_km"
         case headingDeg = "heading_deg"

@@ -10,7 +10,7 @@
 /// Mirrors the backend's `kind`. ``ThreatType`` refines it when the source says more.
 nonisolated enum ThreatKind: CaseIterable, Sendable {
 
-    /// Drones of any kind except FPV: Shahed, jet, reconnaissance, or unspecified.
+    /// Drones of any kind except FPV: Shahed, jet, reconnaissance, Molniya, or unspecified.
     case drone
 
     /// FPV drones and loitering munitions such as Lancet.

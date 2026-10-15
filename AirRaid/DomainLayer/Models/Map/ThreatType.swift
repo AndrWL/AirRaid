@@ -22,6 +22,9 @@ nonisolated enum ThreatType: CaseIterable, Sendable {
     /// Reconnaissance drone: Orlan, Zala, Supercam.
     case reconDrone
 
+    /// Molniya-2: a slow (about 150 km/h) plywood fixed-wing FPV drone, not a jet.
+    case molniya
+
     /// A drone without further detail.
     case drone
 

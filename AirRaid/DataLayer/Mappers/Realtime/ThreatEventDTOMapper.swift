@@ -10,7 +10,8 @@ import Foundation
 /// Maps API events to ``Threat``.
 ///
 /// The API adds values without a version bump, so every string enum falls back instead of failing:
-/// an unknown `kind` becomes ``ThreatKind/unknown``, an unknown `type` becomes `nil`.
+/// an unknown `kind` becomes ``ThreatKind/unknown``, an unknown `type` becomes `nil`, an unknown `subtype` leaves
+/// the `type`.
 nonisolated enum ThreatEventDTOMapper {
 
     static func map(_ dto: ThreatEventDTO) -> Threat {
@@ -18,7 +19,7 @@ nonisolated enum ThreatEventDTOMapper {
         return Threat(
             id: dto.id,
             kind: mapKind(dto.kind),
-            type: dto.type.flatMap(mapType),
+            type: dto.subtype.flatMap(mapType) ?? dto.type.flatMap(mapType),
             count: dto.count,
             level: mapLevel(dto.level),
             confidence: dto.confidence,
@@ -111,6 +112,7 @@ nonisolated private enum Constants {
         "shahed": .shahed,
         "jet_uav": .jetDrone,
         "recon_uav": .reconDrone,
+        "molniya": .molniya,
         "uav": .drone,
         "fpv": .fpv,
         "kab": .guidedAerialBomb,

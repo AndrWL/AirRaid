@@ -9,9 +9,9 @@ import Testing
 
 /// Tests for ``ThreatEventDTOMapper``.
 ///
-/// Covers a full event decoded from the API's JSON, every known `kind` and `type`, and the fallbacks the API's
-/// unversioned additions rely on: an unknown kind, type, level or position quality, missing optional fields, a
-/// negative speed and malformed track points.
+/// Covers a full event decoded from the API's JSON, every known `kind` and `type`, a `subtype` refining the type, and
+/// the fallbacks the API's unversioned additions rely on: an unknown kind, type, subtype, level or position quality,
+/// missing optional fields, a negative speed and malformed track points.
 @Suite
 struct ThreatEventDTOMapperTests {
 
@@ -81,6 +81,7 @@ struct ThreatEventDTOMapperTests {
         ("shahed", ThreatType?.some(.shahed)),
         ("jet_uav", .jetDrone),
         ("recon_uav", .reconDrone),
+        ("molniya", .molniya),
         ("uav", .drone),
         ("fpv", .fpv),
         ("kab", .guidedAerialBomb),
@@ -95,6 +96,20 @@ struct ThreatEventDTOMapperTests {
         let threat = ThreatEventDTOMapper.map(.stub(type: type))
 
         #expect(threat.type == expected)
+    }
+
+    @Test
+    func map_whenKnownSubtype_prefersItOverType() {
+        let threat = ThreatEventDTOMapper.map(.stub(type: "uav", subtype: "molniya"))
+
+        #expect(threat.type == .molniya)
+    }
+
+    @Test
+    func map_whenUnknownSubtype_keepsType() {
+        let threat = ThreatEventDTOMapper.map(.stub(type: "uav", subtype: "kometa"))
+
+        #expect(threat.type == .drone)
     }
 
     @Test
@@ -216,6 +231,7 @@ private extension ThreatEventDTO {
     static func stub(
         kind: String = "drone",
         type: String? = "shahed",
+        subtype: String? = nil,
         level: String = "medium",
         position: ThreatPlaceDTO? = Constants.place,
         trail: [[Double]]? = [],
@@ -231,6 +247,7 @@ private extension ThreatEventDTO {
             id: "evt-1",
             kind: kind,
             type: type,
+            subtype: subtype,
             count: nil,
             level: level,
             confidence: 0.5,

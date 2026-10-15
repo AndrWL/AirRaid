@@ -101,6 +101,7 @@ private extension DemoAirSituationRepository {
                 threats: [
                     threat("ballistic-1", .ballisticMissile, .ballisticMissile, at: (49.99, 36.23), heading: 230, speedKmh: nil),
                     threat("recon-1", .drone, .reconDrone, at: (48.46, 35.04), heading: 300, speedKmh: 120),
+                    threat("molniya-1", .drone, .molniya, at: (48.25, 36.40), heading: 280, speedKmh: 150),
                     threat("kab-1", .guidedAerialBomb, .guidedAerialBomb, at: (47.84, 35.14), heading: 250, speedKmh: nil),
                     threat("fpv-1", .fpv, .fpv, at: (47.60, 37.30), heading: nil, speedKmh: nil),
                     threat("fast-1", .missile, .highSpeedTarget, at: (48.90, 33.00), heading: 280, speedKmh: 1200)
