@@ -188,7 +188,12 @@ private extension DIServiceContainer {
                     },
                     // Also per attempt, so a refreshed token is picked up on reconnect.
                     headersProvider: {
-                        let token = try await authTokenProvider.fetchAccessToken()
+                        let token: String
+                        do {
+                            token = try await authTokenProvider.fetchAccessToken()
+                        } catch {
+                            throw RealtimeTokenErrorMapper.map(error)
+                        }
                         return AppInfoHeaders.make().merging([Constants.authorization: "Bearer \(token)"]) { _, new in new }
                     },
                     // Not WebSocket ping frames: `URLSessionWebSocketTask` holds the pong behind the unread snapshot

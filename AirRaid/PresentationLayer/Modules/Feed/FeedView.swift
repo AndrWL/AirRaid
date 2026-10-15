@@ -25,7 +25,8 @@ struct FeedView<ViewModel: FeedViewModelProtocol>: View {
                     if viewModel.hiddenHistoryCount > 0 {
                         historyUpsell
                     }
-                    if viewModel.rows.isEmpty {
+                    // «Поки тихо» would be wrong while no data arrives; the update banner says why it is empty.
+                    if viewModel.rows.isEmpty, viewModel.upgradeNotice == nil {
                         emptyState
                     }
                     ForEach(viewModel.rows) { row in
@@ -81,6 +82,9 @@ private extension FeedView {
 
     var header: some View {
         VStack(spacing: Spacing.small) {
+            if let upgradeNotice = viewModel.upgradeNotice {
+                UpgradeNoticeBanner(notice: upgradeNotice)
+            }
             Picker(
                 "Що показувати",
                 selection: Binding(

@@ -33,8 +33,10 @@ struct SettingsCoordinatorView<Factory: SettingsFactoryProtocol>: View {
             alertSoundService: appContainer.services.alertSoundService,
             liveActivitySettingsService: appContainer.services.liveActivitySettingsService,
             notificationPermissionService: appContainer.services.notificationPermissionService,
+            realtimeService: appContainer.services.realtimeService,
             versionInfo: .current(),
-            feedbackEmail: AppEnvironment.feedbackEmail
+            feedbackEmail: AppEnvironment.feedbackEmail,
+            appStoreURL: AppEnvironment.appStoreURL
         )
 
         self._router = State(wrappedValue: router)

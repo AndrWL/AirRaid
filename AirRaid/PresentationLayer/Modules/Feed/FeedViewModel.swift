@@ -25,6 +25,7 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
         let entitlementService: EntitlementServiceProtocol
         let voiceAnnouncer: FeedVoiceAnnouncing
         let homeStatusBroadcaster: HomeStatusBroadcasting
+        let realtimeService: RealtimeServiceProtocol
     }
 
     // MARK: - Variables
@@ -40,12 +41,16 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
     private(set) var isVoiceLive = false
     private(set) var isSpeaking = false
     private(set) var hasNoPlaces = true
+    private(set) var upgradeNotice: UpgradeNotice?
 
     @ObservationIgnored
     private let router: Router
 
     @ObservationIgnored
     private let dependencies: Dependencies
+
+    @ObservationIgnored
+    private let appStoreURL: URL?
 
     @ObservationIgnored
     private var items: [FeedItem] = []
@@ -73,10 +78,12 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
 
     init(
         router: Router,
-        dependencies: Dependencies
+        dependencies: Dependencies,
+        appStoreURL: URL?
     ) {
         self.router = router
         self.dependencies = dependencies
+        self.appStoreURL = appStoreURL
         super.init()
     }
 }
@@ -174,6 +181,16 @@ private extension FeedViewModel {
 
         bindPlaces()
         bindPlusAndVoice()
+
+        // The feed stops growing once the server refuses this version; say why instead of looking quiet.
+        dependencies.realtimeService.connectionStatePublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                upgradeNotice = UpgradeNotice.next(after: upgradeNotice, state: state, appStoreURL: appStoreURL)
+            }
+            .store(in: &cancellables)
 
         Timer.publish(every: Constants.refreshInterval, on: .main, in: .common)
             .autoconnect()

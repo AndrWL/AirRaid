@@ -41,7 +41,7 @@ enum MapConnectionNotice: Equatable {
         switch self {
         case .connecting: return "Підключаємося…"
         case .offline: return "Немає з'єднання"
-        case .upgradeRequired: return "Оновіть застосунок"
+        case .upgradeRequired: return UpgradeNotice.title
         }
     }
 
@@ -51,7 +51,7 @@ enum MapConnectionNotice: Equatable {
         case .connecting(let since), .offline(let since):
             return since.map { "Дані станом на \($0.formatted(date: .omitted, time: .shortened))" }
         case .upgradeRequired:
-            return "Ця версія більше не отримує нових даних"
+            return UpgradeNotice.subtitle
         }
     }
 
@@ -67,7 +67,7 @@ enum MapConnectionNotice: Equatable {
         switch self {
         case .connecting: return "arrow.triangle.2.circlepath"
         case .offline: return "wifi.slash"
-        case .upgradeRequired: return "arrow.down.app"
+        case .upgradeRequired: return UpgradeNotice.systemImage
         }
     }
 }

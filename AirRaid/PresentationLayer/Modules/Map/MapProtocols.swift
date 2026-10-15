@@ -32,6 +32,9 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
     /// Why the map is not live right now; `nil` while it is.
     var connectionNotice: MapConnectionNotice? { get }
 
+    /// The App Store page for the update button of ``MapConnectionNotice/upgradeRequired``; `nil` hides the button.
+    var appStoreURL: URL? { get }
+
     /// The region the map is narrowed to, or `nil` for the whole country.
     var focusedRegionID: String? { get }
 
