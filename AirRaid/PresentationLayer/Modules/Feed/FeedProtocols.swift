@@ -39,6 +39,9 @@ protocol FeedViewModelProtocol: BaseViewModelProtocol {
     /// Whether the user has no place yet, so «Мої місця» can show only country-wide reports.
     var hasNoPlaces: Bool { get }
 
+    /// Set while the server refuses this app version, so no new bubbles can arrive; `nil` otherwise.
+    var upgradeNotice: UpgradeNotice? { get }
+
     func onAppear()
 
     func onDisappear()

@@ -51,7 +51,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         .overlay(alignment: .top) {
             VStack(spacing: Spacing.small) {
                 if let notice = viewModel.connectionNotice {
-                    MapConnectionBanner(notice: notice)
+                    MapConnectionBanner(notice: notice, appStoreURL: viewModel.appStoreURL)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
                 if let focusedRegionName = viewModel.focusedRegionName {
@@ -240,7 +240,8 @@ private enum Constants {
                     placeSettingsRepository: container.repositories.placeSettingsRepository,
                     watchedPlacesProvider: container.services.watchedPlacesProvider,
                     alertSoundService: container.services.alertSoundService,
-                    styleURL: styleURL
+                    styleURL: styleURL,
+                    appStoreURL: AppEnvironment.appStoreURL
                 )
             )
         }

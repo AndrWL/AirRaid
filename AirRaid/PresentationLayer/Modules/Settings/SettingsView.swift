@@ -196,6 +196,17 @@ private extension SettingsView {
         Section {
             LabeledContent("Версія", value: viewModel.appVersion)
                 .foregroundStyle(.ink)
+            if let upgradeNotice = viewModel.upgradeNotice {
+                InlineNote(UpgradeNotice.versionNote, systemImage: UpgradeNotice.systemImage, tone: .warning)
+                if let appStoreURL = upgradeNotice.appStoreURL {
+                    Button {
+                        openURL(appStoreURL)
+                    } label: {
+                        Label("Оновити в App Store", systemImage: "arrow.up.forward.app")
+                    }
+                    .font(.app(.body, weight: .semibold))
+                }
+            }
             if let feedbackURL = viewModel.feedbackURL {
                 Button {
                     openURL(feedbackURL)
@@ -315,7 +326,10 @@ private extension SettingsView {
 }
 
 #Preview {
-    NavigationStack {
+    let container = DIAppContainer()
+    container.setup()
+
+    return NavigationStack {
         SettingsView(
             viewModel: SettingsViewModel(
                 router: SettingsRouter(
@@ -333,8 +347,10 @@ private extension SettingsView {
                 alertSoundService: AlertSoundService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                 liveActivitySettingsService: LiveActivitySettingsService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                 notificationPermissionService: NotificationPermissionService(),
+                realtimeService: container.services.realtimeService,
                 versionInfo: AppVersionInfo(version: "1.0", build: "1", osVersion: "26.0"),
-                feedbackEmail: AppEnvironment.feedbackEmail
+                feedbackEmail: AppEnvironment.feedbackEmail,
+                appStoreURL: AppEnvironment.appStoreURL
             )
         )
     }

@@ -38,7 +38,8 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             watchedPlacesProvider: appContainer.services.watchedPlacesProvider,
             alertSoundService: appContainer.services.alertSoundService,
-            styleURL: Self.makeStyleURL()
+            styleURL: Self.makeStyleURL(),
+            appStoreURL: AppEnvironment.appStoreURL
         )
 
         self._router = State(wrappedValue: router)

@@ -22,6 +22,7 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
     private(set) var isLiveActivityEnabled = true
     private(set) var isLiveActivityAllowedBySystem: Bool?
     private(set) var boundaries: [RegionBoundary] = []
+    private(set) var upgradeNotice: UpgradeNotice?
 
     @ObservationIgnored
     private let router: Router
@@ -45,10 +46,16 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
     private let notificationPermissionService: NotificationPermissionServiceProtocol
 
     @ObservationIgnored
+    private let realtimeService: RealtimeServiceProtocol
+
+    @ObservationIgnored
     private let versionInfo: AppVersionInfo
 
     @ObservationIgnored
     private let feedbackEmail: String
+
+    @ObservationIgnored
+    private let appStoreURL: URL?
 
     init(
         router: Router,
@@ -58,8 +65,10 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
         alertSoundService: AlertSoundServiceProtocol,
         liveActivitySettingsService: LiveActivitySettingsServiceProtocol,
         notificationPermissionService: NotificationPermissionServiceProtocol,
+        realtimeService: RealtimeServiceProtocol,
         versionInfo: AppVersionInfo,
-        feedbackEmail: String
+        feedbackEmail: String,
+        appStoreURL: URL?
     ) {
         self.router = router
         self.placeSettingsRepository = placeSettingsRepository
@@ -68,8 +77,10 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
         self.alertSoundService = alertSoundService
         self.liveActivitySettingsService = liveActivitySettingsService
         self.notificationPermissionService = notificationPermissionService
+        self.realtimeService = realtimeService
         self.versionInfo = versionInfo
         self.feedbackEmail = feedbackEmail
+        self.appStoreURL = appStoreURL
     }
 
     // MARK: - Override methods
@@ -104,6 +115,15 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isEnabled in
                 self?.isLiveActivityEnabled = isEnabled
+            }
+            .store(in: &cancellables)
+
+        realtimeService.connectionStatePublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                upgradeNotice = UpgradeNotice.next(after: upgradeNotice, state: state, appStoreURL: appStoreURL)
             }
             .store(in: &cancellables)
     }

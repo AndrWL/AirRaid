@@ -40,6 +40,9 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     /// «1.2 (34)».
     var appVersion: String { get }
 
+    /// Set while the server refuses this version, for the note under it; `nil` otherwise.
+    var upgradeNotice: UpgradeNotice? { get }
+
     /// A `mailto:` link with the version and iOS in the body; `nil` if it could not be built.
     var feedbackURL: URL? { get }
 

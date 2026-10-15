@@ -36,8 +36,10 @@ struct FeedCoordinatorView<Factory: FeedFactoryProtocol>: View {
                 watchedRegionsProvider: services.watchedRegionsProvider,
                 entitlementService: services.entitlementService,
                 voiceAnnouncer: services.feedVoiceAnnouncer,
-                homeStatusBroadcaster: services.homeStatusBroadcaster
-            )
+                homeStatusBroadcaster: services.homeStatusBroadcaster,
+                realtimeService: services.realtimeService
+            ),
+            appStoreURL: AppEnvironment.appStoreURL
         )
 
         self._router = State(wrappedValue: router)

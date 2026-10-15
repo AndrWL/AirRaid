@@ -16,6 +16,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     // MARK: - Variables
 
     let styleURL: URL
+    let appStoreURL: URL?
     private(set) var boundaries: [RegionBoundary] = []
     private(set) var districts: [DistrictBoundary] = []
     private(set) var cities: [City] = []
@@ -101,7 +102,8 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         watchedPlacesProvider: WatchedPlacesProviding,
         alertSoundService: AlertSoundServiceProtocol,
-        styleURL: URL
+        styleURL: URL,
+        appStoreURL: URL?
     ) {
         self.router = router
         self.regionBoundaryRepository = regionBoundaryRepository
@@ -115,6 +117,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.watchedPlacesProvider = watchedPlacesProvider
         self.alertSoundService = alertSoundService
         self.styleURL = styleURL
+        self.appStoreURL = appStoreURL
     }
 
     // MARK: - Override methods
@@ -149,12 +152,12 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .store(in: &cancellables)
 
         // A reconnect usually takes a second or two; the banner appears only when it takes longer,
-        // and disappears as soon as the map is live again.
+        // and disappears as soon as the map is live again. A refused version is final, so it shows at once.
         realtimeService.connectionStatePublisher
             .removeDuplicates()
             .map { state -> AnyPublisher<RealtimeConnectionState, Never> in
                 let current = Just(state)
-                guard state != .connected else { return current.eraseToAnyPublisher() }
+                guard state != .connected, state != .upgradeRequired else { return current.eraseToAnyPublisher() }
                 return current
                     .delay(for: .seconds(Constants.noticeDelay), scheduler: DispatchQueue.main)
                     .eraseToAnyPublisher()
