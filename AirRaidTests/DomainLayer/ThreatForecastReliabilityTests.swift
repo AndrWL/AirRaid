@@ -113,12 +113,7 @@ struct ThreatForecastReliabilityTests {
 
         let forecast = sut.reliableForecastCoordinate(at: FeedFixtures.date(offset))
 
-        // Known bug: moving 0 km goes through asin(sin(latitude)), which lands one ulp off the position
-        // (49.800000000000004 for 49.8), so the exact `predicted != position` check never sees "not moved" and the map
-        // draws a zero-length forecast. Remove the wrapper once the check compares with a tolerance.
-        withKnownIssue("A zero-distance forecast is not bit-equal to the position") {
-            #expect(forecast == nil)
-        }
+        #expect(forecast == nil)
     }
 
     @Test

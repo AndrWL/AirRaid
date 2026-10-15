@@ -36,7 +36,10 @@ nonisolated extension Threat {
     /// threat yet.
     func reliableForecastCoordinate(at date: Date) -> GeoCoordinate? {
         guard hasReliableForecast, date < expiresAt, let position else { return nil }
-        guard let predicted = predictedCoordinate(at: date), predicted != position.coordinate else { return nil }
+        guard
+            let predicted = predictedCoordinate(at: date),
+            predicted.distance(to: position.coordinate) >= Constants.minForecastShiftKm
+        else { return nil }
         return predicted
     }
 }
@@ -46,4 +49,8 @@ nonisolated extension Threat {
 nonisolated private enum Constants {
     /// Degrees between the track's last leg and the forecast course that still count as the same direction.
     static let maxCourseDeviation: Double = 45
+
+    /// Closer to the position than this, the forecast has not moved the threat: moving 0 km lands a rounding error
+    /// away (49.8 comes back as 49.800000000000004), never exactly on it.
+    static let minForecastShiftKm: Double = 0.001
 }
