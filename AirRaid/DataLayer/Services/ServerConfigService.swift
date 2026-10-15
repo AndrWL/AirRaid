@@ -26,7 +26,7 @@ actor ServerConfigService {
     private let publicKey: Curve25519.Signing.PublicKey
     private let allowedHostSuffixes: [String]
     private let userDefaults: UserDefaults
-    private let clock = ContinuousClock()
+    private let now: @Sendable () -> ContinuousClock.Instant
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     private var config: ServerConfig?
@@ -38,16 +38,19 @@ actor ServerConfigService {
     ///   - publicKey: The backend's config-signing key.
     ///   - allowedHostSuffixes: Hosts the address may use; also re-checked for the cached address.
     ///   - userDefaults: Where the last good address survives a relaunch. Not a secret, so not Keychain.
+    ///   - now: The monotonic clock the refresh interval is measured on; injected for tests.
     init(
         remoteDataSource: ServerConfigRemoteDataSourceProtocol,
         publicKey: Curve25519.Signing.PublicKey,
         allowedHostSuffixes: [String],
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now }
     ) {
         self.remoteDataSource = remoteDataSource
         self.publicKey = publicKey
         self.allowedHostSuffixes = allowedHostSuffixes
         self.userDefaults = userDefaults
+        self.now = now
         config = Self.loadCachedConfig(from: userDefaults, allowedHostSuffixes: allowedHostSuffixes)
     }
 }
@@ -71,7 +74,7 @@ private extension ServerConfigService {
 
     var isRefreshDue: Bool {
         guard let lastRefresh else { return true }
-        return clock.now - lastRefresh >= Constants.refreshInterval
+        return now() - lastRefresh >= Constants.refreshInterval
     }
 
     /// Fetches and applies the config; concurrent callers await the same fetch.
@@ -96,7 +99,7 @@ private extension ServerConfigService {
             )
             apply(newConfig)
             // Only a valid answer counts: after a failure the next attempt tries again instead of waiting it out.
-            lastRefresh = clock.now
+            lastRefresh = now()
         } catch {
             logger.error("Server config refresh failed: \(String(describing: error), privacy: .public)")
         }
