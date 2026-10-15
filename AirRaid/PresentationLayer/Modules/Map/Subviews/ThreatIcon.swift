@@ -98,9 +98,10 @@ enum ThreatIcon: String, CaseIterable {
     }
 }
 
-// MARK: - Private methods
+// MARK: - Type and kind
 
-private extension ThreatIcon {
+/// Also used by the feed, which keeps a threat's type and kind but not the whole ``Threat``.
+extension ThreatIcon {
 
     // One case per type: an exhaustive switch keeps a new backend type from silently getting no icon.
     // swiftlint:disable:next cyclomatic_complexity

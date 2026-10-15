@@ -31,8 +31,8 @@ protocol DIRouterContaining {
     /// The stack router managing navigation within the Map tab.
     var mapStackRouter: StackRouter { get }
 
-    /// The stack router managing navigation within the Alerts tab.
-    var alertsStackRouter: StackRouter { get }
+    /// The stack router managing navigation within the Feed tab.
+    var feedStackRouter: StackRouter { get }
 
     /// The stack router managing navigation within the Settings tab.
     var settingsStackRouter: StackRouter { get }

@@ -47,7 +47,7 @@ extension DIRouterContainer: DIAssembling {
     func assemble(with appContainer: DIAppContaining) {
         registerMapIntentChannel()
         registerMapStackRouter()
-        registerAlertsStackRouter()
+        registerFeedStackRouter()
         registerSettingsStackRouter()
         registerTabBarRouter()
     }
@@ -69,8 +69,8 @@ extension DIRouterContainer: DIRouterContaining {
         return container.resolve(StackRouter.self, name: Constants.map)
     }
 
-    var alertsStackRouter: StackRouter {
-        return container.resolve(StackRouter.self, name: Constants.alerts)
+    var feedStackRouter: StackRouter {
+        return container.resolve(StackRouter.self, name: Constants.feed)
     }
 
     var settingsStackRouter: StackRouter {
@@ -95,8 +95,8 @@ private extension DIRouterContainer {
         }
     }
 
-    func registerAlertsStackRouter() {
-        container.register(StackRouter.self, name: Constants.alerts, lifetime: .weak) { _ in
+    func registerFeedStackRouter() {
+        container.register(StackRouter.self, name: Constants.feed, lifetime: .weak) { _ in
             StackRouter()
         }
     }
@@ -114,7 +114,7 @@ private extension DIRouterContainer {
         container.register(TabBarRouter.self, lifetime: .weak) { resolver in
             TabBarRouter(
                 mapStackRouter: resolver.resolve(StackRouter.self, name: Constants.map),
-                alertsStackRouter: resolver.resolve(StackRouter.self, name: Constants.alerts),
+                feedStackRouter: resolver.resolve(StackRouter.self, name: Constants.feed),
                 settingsStackRouter: resolver.resolve(StackRouter.self, name: Constants.settings),
                 mapIntentChannel: resolver.resolve(MapIntentChannel.self)
             )
@@ -127,6 +127,6 @@ private extension DIRouterContainer {
 /// Unique names for named `StackRouter` registrations.
 private enum Constants {
     static let map = "map"
-    static let alerts = "alerts"
+    static let feed = "feed"
     static let settings = "settings"
 }

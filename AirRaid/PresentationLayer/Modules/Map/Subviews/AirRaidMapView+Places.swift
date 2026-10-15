@@ -7,8 +7,8 @@
 
 import MapLibre
 
-/// The user's watched places: a faint circle for each radius and a house pin on the home. The user's own position is
-/// MapLibre's blue dot, so only its circle is drawn here.
+/// The user's watched places: a faint circle for each radius and a captioned pin on each saved place — a house for the
+/// home, a pin for the others. The user's own position is MapLibre's blue dot, so only its circle is drawn here.
 extension AirRaidMapView.Coordinator {
 
     func installPlacesLayers(in style: MLNStyle) {
@@ -16,17 +16,14 @@ extension AirRaidMapView.Coordinator {
         style.addSource(source)
         placesSource = source
         style.setImage(MapLayerStyle.homeIcon, forName: MapLayerStyle.homeIconName)
+        style.setImage(MapLayerStyle.savedPlaceIcon, forName: MapLayerStyle.savedPlaceIconName)
 
         let radiusFill = MLNFillStyleLayer(identifier: MapLayerStyle.placeRadiusFillLayerID, source: source)
         radiusFill.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.radiusPart)
-        radiusFill.fillColor = NSExpression(
-            forMLNMatchingKey: NSExpression(forKeyPath: MapLayerStyle.placeKindKey),
-            in: [NSExpression(forConstantValue: MapLayerStyle.homeKind): NSExpression(forConstantValue: MapLayerStyle.homeColor)],
-            default: NSExpression(forConstantValue: MapLayerStyle.currentLocationColor)
-        )
+        radiusFill.fillColor = Self.placeColorExpression
         radiusFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.placeRadiusFillOpacity)
 
-        // One line per place, each in its own colour, so the two read apart where they overlap.
+        // One line per kind of place, each in its own colour, so they read apart where they overlap.
         let locationOutline = makeRadiusOutline(
             identifier: MapLayerStyle.placeRadiusOutlineLayerID,
             source: source,
@@ -39,24 +36,46 @@ extension AirRaidMapView.Coordinator {
             kind: MapLayerStyle.homeKind,
             color: MapLayerStyle.homeColor
         )
+        let customOutline = makeRadiusOutline(
+            identifier: MapLayerStyle.customRadiusOutlineLayerID,
+            source: source,
+            kind: MapLayerStyle.customKind,
+            color: MapLayerStyle.savedPlaceColor
+        )
 
-        let homePin = MLNSymbolStyleLayer(identifier: MapLayerStyle.homePinLayerID, source: source)
-        homePin.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.homePart)
-        homePin.iconImageName = NSExpression(forConstantValue: MapLayerStyle.homeIconName)
-        homePin.iconAllowsOverlap = NSExpression(forConstantValue: true)
-        homePin.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        // «Дім · Ірпінь» under the pin, like a threat's caption; hidden rather than overlapping other labels.
-        homePin.text = NSExpression(forKeyPath: MapLayerStyle.homeCaptionKey)
-        homePin.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
-        homePin.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
-        homePin.textColor = NSExpression(forConstantValue: MapLayerStyle.homeColor)
-        homePin.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
-        homePin.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
-        homePin.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
-        homePin.textOffset = NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.homeCaptionOffset))
-        homePin.textOptional = NSExpression(forConstantValue: true)
+        let pins = MLNSymbolStyleLayer(identifier: MapLayerStyle.placePinLayerID, source: source)
+        pins.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.placePartKey, MapLayerStyle.pinPart)
+        pins.iconImageName = NSExpression(
+            forMLNMatchingKey: NSExpression(forKeyPath: MapLayerStyle.placeKindKey),
+            in: [NSExpression(forConstantValue: MapLayerStyle.homeKind): NSExpression(forConstantValue: MapLayerStyle.homeIconName)],
+            default: NSExpression(forConstantValue: MapLayerStyle.savedPlaceIconName)
+        )
+        pins.iconAllowsOverlap = NSExpression(forConstantValue: true)
+        pins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
+        // «Дім · Ірпінь», «Робота» under the pin, like a threat's caption; hidden rather than overlapping other labels.
+        pins.text = NSExpression(forKeyPath: MapLayerStyle.pinCaptionKey)
+        pins.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
+        pins.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
+        pins.textColor = Self.placeColorExpression
+        pins.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        pins.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
+        pins.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
+        pins.textOffset = NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.pinCaptionOffset))
+        pins.textOptional = NSExpression(forConstantValue: true)
 
-        [radiusFill, locationOutline, homeOutline, homePin].forEach(style.addLayer)
+        [radiusFill, locationOutline, homeOutline, customOutline, pins].forEach(style.addLayer)
+    }
+
+    /// Each kind of place in its own colour.
+    static var placeColorExpression: NSExpression {
+        NSExpression(
+            forMLNMatchingKey: NSExpression(forKeyPath: MapLayerStyle.placeKindKey),
+            in: [
+                NSExpression(forConstantValue: MapLayerStyle.homeKind): NSExpression(forConstantValue: MapLayerStyle.homeColor),
+                NSExpression(forConstantValue: MapLayerStyle.customKind): NSExpression(forConstantValue: MapLayerStyle.savedPlaceColor)
+            ],
+            default: NSExpression(forConstantValue: MapLayerStyle.currentLocationColor)
+        )
     }
 
     func makeRadiusOutline(
@@ -86,20 +105,35 @@ extension AirRaidMapView.Coordinator {
             let circle = MLNPolygonFeature(coordinates: &ring, count: UInt(ring.count))
             circle.attributes = [
                 MapLayerStyle.placePartKey: MapLayerStyle.radiusPart,
-                MapLayerStyle.placeKindKey: place.kind == .home ? MapLayerStyle.homeKind : MapLayerStyle.currentLocationKind
+                MapLayerStyle.placeKindKey: Self.layerKind(of: place)
             ]
             return circle
         }
-        if let home = places.first(where: { $0.kind == .home }) {
+        for place in places where place.kind != .currentLocation {
             let pin = MLNPointFeature()
-            pin.coordinate = CLLocationCoordinate2D(home.coordinate)
+            pin.coordinate = CLLocationCoordinate2D(place.coordinate)
             pin.attributes = [
-                MapLayerStyle.placePartKey: MapLayerStyle.homePart,
-                MapLayerStyle.homeCaptionKey: home.address?.locality.map { "Дім · \($0)" } ?? "Дім"
+                MapLayerStyle.placePartKey: MapLayerStyle.pinPart,
+                MapLayerStyle.placeKindKey: Self.layerKind(of: place),
+                MapLayerStyle.pinCaptionKey: Self.caption(of: place)
             ]
             shapes.append(pin)
         }
         placesSource.shape = MLNShapeCollectionFeature(shapes: shapes)
+    }
+
+    static func layerKind(of place: WatchedPlace) -> String {
+        switch place.kind {
+        case .currentLocation: MapLayerStyle.currentLocationKind
+        case .home: MapLayerStyle.homeKind
+        case .custom: MapLayerStyle.customKind
+        }
+    }
+
+    /// «Дім · Ірпінь» for the home; a custom place by its name.
+    static func caption(of place: WatchedPlace) -> String {
+        guard place.kind == .home else { return place.title }
+        return place.address?.locality.map { "\(place.title) · \($0)" } ?? place.title
     }
 
     /// The blue dot, the flight to the user and the places' circles, from the view's latest values.

@@ -44,17 +44,20 @@ enum MapLayerStyle {
     static let placeRadiusFillLayerID = "places-radius-fill"
     static let placeRadiusOutlineLayerID = "places-radius-outline"
     static let homeRadiusOutlineLayerID = "places-home-radius-outline"
-    static let homePinLayerID = "places-home-pin"
+    static let customRadiusOutlineLayerID = "places-custom-radius-outline"
+    static let placePinLayerID = "places-pins"
     static let placePartKey = "placePart"
     static let placeKindKey = "placeKind"
     static let currentLocationKind = "currentLocation"
     static let homeKind = "home"
+    static let customKind = "custom"
     static let radiusPart = "radius"
-    static let homePart = "home"
+    static let pinPart = "pin"
     static let homeIconName = "home-pin"
-    static let homeCaptionKey = "homeCaption"
+    static let savedPlaceIconName = "saved-place-pin"
+    static let pinCaptionKey = "pinCaption"
     /// Below the pin, in ems: the pin is a 32 pt disc.
-    static let homeCaptionOffset = CGVector(dx: 0, dy: 1.6)
+    static let pinCaptionOffset = CGVector(dx: 0, dy: 1.6)
     static let cityLayerID = "cities-labels"
     static let threatLayerID = "threats-pins"
     static let selectedTrailLayerID = "selected-track-trail"
@@ -109,21 +112,29 @@ enum MapLayerStyle {
     static let outsideFocusOpacity: Double = 0.25
     static let focusDimColor = UIColor.mapDim
     static let focusDimOpacity: Double = 0.7
-    /// The user's location is blue like the system's blue dot; the home is orange (#FF8000), so the two never read as one.
+    /// The user's location is blue like the system's blue dot; the home is orange (#FF8000), so the two never read as one;
+    /// the other places are violet, apart from both and from the alert colours.
     static let currentLocationColor = UIColor.mapPlace
     static let homeColor = UIColor.mapHome
+    static let savedPlaceColor = UIColor.mapSavedPlace
     static let placeRadiusFillOpacity: Double = 0.1
     static let placeRadiusOutlineOpacity: Double = 1
     static let placeRadiusOutlineWidth: Double = 1.5
 
     /// A white house on an orange disc with a white rim, the way the blue dot marks the user.
+    static let homeIcon = makePinIcon(systemName: "house.fill", color: .mapHome)
+
+    /// A white pin on a violet disc: a custom place.
+    static let savedPlaceIcon = makePinIcon(systemName: "mappin", color: .mapSavedPlace)
+
+    /// A white symbol on a coloured disc with a white rim.
     ///
     /// Drawn into a bitmap rather than handed over as a palette symbol: MapLibre keeps only the symbol's shape and
     /// draws it black.
-    static let homeIcon: UIImage = {
+    static func makePinIcon(systemName: String, color: UIColor) -> UIImage {
         let size = CGSize(width: homeIconSize, height: homeIconSize)
         let traits = UITraitCollection(userInterfaceStyle: .dark)
-        let disc = UIColor.mapHome.resolvedColor(with: traits)
+        let disc = color.resolvedColor(with: traits)
         let rim = UIColor.mapTrack.resolvedColor(with: traits)
         return UIGraphicsImageRenderer(size: size).image { _ in
             let bounds = CGRect(origin: .zero, size: size)
@@ -132,12 +143,12 @@ enum MapLayerStyle {
             disc.setFill()
             UIBezierPath(ovalIn: bounds.insetBy(dx: homeIconRim, dy: homeIconRim)).fill()
             let configuration = UIImage.SymbolConfiguration(pointSize: homeIconSize * 0.45, weight: .bold)
-            if let house = UIImage(systemName: "house.fill", withConfiguration: configuration)?
+            if let symbol = UIImage(systemName: systemName, withConfiguration: configuration)?
                 .withTintColor(rim, renderingMode: .alwaysOriginal) {
-                house.draw(at: CGPoint(x: bounds.midX - house.size.width / 2, y: bounds.midY - house.size.height / 2))
+                symbol.draw(at: CGPoint(x: bounds.midX - symbol.size.width / 2, y: bounds.midY - symbol.size.height / 2))
             }
         }
-    }()
+    }
     static let homeIconSize: CGFloat = 32
     static let homeIconRim: CGFloat = 2.5
     static let captionLabelFontNames = ["Noto Sans Regular"]

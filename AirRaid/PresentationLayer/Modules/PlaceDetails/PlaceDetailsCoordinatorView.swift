@@ -1,5 +1,5 @@
 //
-//  HomeDetailsCoordinatorView.swift
+//  PlaceDetailsCoordinatorView.swift
 //  AirRaid
 //
 //  Created by ANDRII LEBEDIEV on 13.10.2026.
@@ -7,23 +7,25 @@
 
 import SwiftUI
 
-/// The coordinator view for the home sheet.
+/// The coordinator view for a saved place's sheet.
 ///
-/// A leaf with no router: moving the home and opening a threat are the map's, handed over as ``MapSheetActions``.
-struct HomeDetailsCoordinatorView: View {
+/// A leaf with no router: moving the place and opening a threat are the map's, handed over as ``MapSheetActions``.
+struct PlaceDetailsCoordinatorView: View {
 
     // MARK: - Variables
 
-    @State private var viewModel: HomeDetailsViewModel
+    @State private var viewModel: PlaceDetailsViewModel
     @Environment(\.dismiss) private var dismiss
 
     private let actions: MapSheetActions
 
     init(
         appContainer: DIAppContaining,
+        placeID: SavedPlace.ID,
         actions: MapSheetActions
     ) {
-        let viewModel = HomeDetailsViewModel(
+        let viewModel = PlaceDetailsViewModel(
+            placeID: placeID,
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             airSituationRepository: appContainer.repositories.airSituationRepository,
             regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
@@ -34,9 +36,9 @@ struct HomeDetailsCoordinatorView: View {
     }
 
     var body: some View {
-        HomeDetailsView(
+        PlaceDetailsView(
             viewModel: viewModel,
-            onMoveHome: actions.pickHomeOnMap,
+            onMove: { actions.pickPlaceOnMap(viewModel.pick) },
             onSelectThreat: actions.showThreat
         ) {
             dismiss()
@@ -48,8 +50,9 @@ struct HomeDetailsCoordinatorView: View {
     let container = DIAppContainer()
     container.setup()
 
-    return HomeDetailsCoordinatorView(
+    return PlaceDetailsCoordinatorView(
         appContainer: container,
-        actions: MapSheetActions(pickHomeOnMap: {}, showThreat: { _ in })
+        placeID: UUID(),
+        actions: MapSheetActions(pickPlaceOnMap: { _ in }, showThreat: { _ in })
     )
 }

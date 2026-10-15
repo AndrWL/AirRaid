@@ -14,6 +14,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
+    @State private var placeName = ""
     private let viewModel: ViewModel
 
     init(
@@ -38,7 +39,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                 recenterRequest: viewModel.recenterRequest,
                 showsUserLocation: viewModel.locationAuthorization == .authorized,
                 flyRequest: viewModel.flyRequest,
-                isPickingLocation: viewModel.isPickingHome,
+                isPickingLocation: viewModel.placePick != nil,
                 places: viewModel.places,
                 forecastDate: timeline.date,
                 onSelect: viewModel.didSelect,
@@ -61,7 +62,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                     )
                     .transition(.opacity)
                 }
-                if !viewModel.isPickingHome {
+                if viewModel.placePick == nil {
                     placeThreatBanners
                 }
             }
@@ -70,18 +71,29 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         .animation(Motion.resolved(Motion.bouncy, reduceMotion: reduceMotion), value: viewModel.connectionNotice)
         .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.focusedRegionName)
         .overlay {
-            if viewModel.isPickingHome {
-                HomePickerOverlay(
-                    isMovingHome: viewModel.placeSettings.home != nil,
-                    onConfirm: viewModel.didConfirmHomePick,
-                    onCancel: viewModel.didCancelHomePick
+            if let pick = viewModel.placePick {
+                PlacePickerOverlay(
+                    pick: pick,
+                    hasHome: viewModel.placeSettings.home != nil,
+                    onConfirm: viewModel.didConfirmPlacePick,
+                    onCancel: viewModel.didCancelPlacePick
                 )
             } else {
                 bottomControls
             }
         }
-        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.isPickingHome)
-        .sensoryFeedback(.success, trigger: viewModel.placeSettings.home)
+        .animation(Motion.resolved(Motion.quick, reduceMotion: reduceMotion), value: viewModel.placePick)
+        .sensoryFeedback(.success, trigger: viewModel.placePickConfirmCount)
+        .alert("Назва місця", isPresented: namingPlaceAlert) {
+            TextField("Наприклад, Робота", text: $placeName)
+            Button("Зберегти") {
+                viewModel.didNamePlace(placeName)
+            }
+            Button("Пізніше", role: .cancel) {}
+        } message: {
+            Text("Без назви місце підпишемо назвою населеного пункту.")
+        }
+        .onChange(of: viewModel.namingPlaceID) { placeName = "" }
         .sensoryFeedback(.warning, trigger: viewModel.nearThreatAlertCount)
         .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
             Button("Відкрити Налаштування") {
@@ -179,6 +191,16 @@ private extension MapView {
     }
 
     /// The view model owns the flag; the alert only reports its dismissal.
+    /// Open while a just-added place waits for its name; closing it any way keeps the locality.
+    var namingPlaceAlert: Binding<Bool> {
+        Binding(
+            get: { viewModel.namingPlaceID != nil },
+            set: { isPresented in
+                if !isPresented { viewModel.namingPlaceID = nil }
+            }
+        )
+    }
+
     var locationDeniedAlert: Binding<Bool> {
         Binding(
             get: { viewModel.isLocationDeniedAlertPresented },
@@ -216,6 +238,7 @@ private enum Constants {
                     focusedRegionRepository: container.repositories.focusedRegionRepository,
                     userLocationService: container.services.userLocationService,
                     placeSettingsRepository: container.repositories.placeSettingsRepository,
+                    watchedPlacesProvider: container.services.watchedPlacesProvider,
                     alertSoundService: container.services.alertSoundService,
                     styleURL: styleURL
                 )

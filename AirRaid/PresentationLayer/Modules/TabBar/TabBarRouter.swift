@@ -23,9 +23,9 @@ final class TabBarRouter {
     @ObservationIgnored
     private let mapStackRouter: StackRouting
 
-    /// The technical stack router managing the Alerts flow.
+    /// The technical stack router managing the Feed flow.
     @ObservationIgnored
-    private let alertsStackRouter: StackRouting
+    private let feedStackRouter: StackRouting
 
     /// The technical stack router managing the Settings flow.
     @ObservationIgnored
@@ -39,17 +39,17 @@ final class TabBarRouter {
     ///
     /// - Parameters:
     ///   - mapStackRouter: The routing stack for the Map feature.
-    ///   - alertsStackRouter: The routing stack for the Alerts feature.
+    ///   - feedStackRouter: The routing stack for the Feed feature.
     ///   - settingsStackRouter: The routing stack for the Settings feature.
     ///   - mapIntentChannel: Carries requests to the Map tab.
     init(
         mapStackRouter: StackRouting,
-        alertsStackRouter: StackRouting,
+        feedStackRouter: StackRouting,
         settingsStackRouter: StackRouting,
         mapIntentChannel: MapIntentChannel
     ) {
         self.mapStackRouter = mapStackRouter
-        self.alertsStackRouter = alertsStackRouter
+        self.feedStackRouter = feedStackRouter
         self.settingsStackRouter = settingsStackRouter
         self.mapIntentChannel = mapIntentChannel
     }
@@ -66,9 +66,15 @@ extension TabBarRouter: TabBarRouterProtocol {
         selectedTab = tab
     }
 
-    func showHomePickerOnMap() {
+    func showPlacePickerOnMap(_ pick: PlacePick) {
         mapStackRouter.popToRoot(animated: false)
         selectedTab = .map
-        mapIntentChannel.send(.pickHome)
+        mapIntentChannel.send(.pickPlace(pick))
+    }
+
+    func showThreatOnMap(id: String) {
+        mapStackRouter.popToRoot(animated: false)
+        selectedTab = .map
+        mapIntentChannel.send(.showThreat(id: id))
     }
 }

@@ -28,7 +28,8 @@ struct PlacesCoordinatorView: View {
         let viewModel = PlacesViewModel(
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             userLocationService: appContainer.services.userLocationService,
-            regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository
+            regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
+            entitlementService: appContainer.services.entitlementService
         )
         self._viewModel = State(wrappedValue: viewModel)
     }

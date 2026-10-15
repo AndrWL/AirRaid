@@ -23,6 +23,13 @@
 			remoteGlobalIDString = 7F201E063074FAB600A5F804;
 			remoteInfo = AirRaidWidgets;
 		};
+		7F201F033074FAB600A5F804 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7F201B3C3074FAB600A5F804 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7F201B433074FAB600A5F804;
+			remoteInfo = AirRaid;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -44,6 +51,7 @@
 		7F201D013074FAB600A5F804 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		7F201E013074FAB600A5F804 /* AirRaidWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AirRaidWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F201E023074FAB600A5F804 /* WidgetsSigning.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WidgetsSigning.xcconfig; sourceTree = "<group>"; };
+		7F201F013074FAB600A5F804 /* AirRaidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirRaidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -84,6 +92,11 @@
 			path = AirRaidWidgets;
 			sourceTree = "<group>";
 		};
+		7F201F023074FAB600A5F804 /* AirRaidTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AirRaidTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +119,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7F201F073074FAB600A5F804 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -114,6 +134,7 @@
 			children = (
 				7F201B463074FAB600A5F804 /* AirRaid */,
 				7F201E033074FAB600A5F804 /* AirRaidWidgets */,
+				7F201F023074FAB600A5F804 /* AirRaidTests */,
 				7F201D023074FAB600A5F804 /* Config */,
 				7F201B453074FAB600A5F804 /* Products */,
 			);
@@ -124,6 +145,7 @@
 			children = (
 				7F201B443074FAB600A5F804 /* AirRaid.app */,
 				7F201E013074FAB600A5F804 /* AirRaidWidgets.appex */,
+				7F201F013074FAB600A5F804 /* AirRaidTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -191,6 +213,29 @@
 			productReference = 7F201E013074FAB600A5F804 /* AirRaidWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		7F201F053074FAB600A5F804 /* AirRaidTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7F201F0B3074FAB600A5F804 /* Build configuration list for PBXNativeTarget "AirRaidTests" */;
+			buildPhases = (
+				7F201F063074FAB600A5F804 /* Sources */,
+				7F201F073074FAB600A5F804 /* Frameworks */,
+				7F201F083074FAB600A5F804 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7F201F043074FAB600A5F804 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7F201F023074FAB600A5F804 /* AirRaidTests */,
+			);
+			name = AirRaidTests;
+			packageProductDependencies = (
+			);
+			productName = AirRaidTests;
+			productReference = 7F201F013074FAB600A5F804 /* AirRaidTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -206,6 +251,10 @@
 					};
 					7F201E063074FAB600A5F804 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					7F201F053074FAB600A5F804 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 7F201B433074FAB600A5F804;
 					};
 				};
 			};
@@ -231,6 +280,7 @@
 			targets = (
 				7F201B433074FAB600A5F804 /* AirRaid */,
 				7F201E063074FAB600A5F804 /* AirRaidWidgets */,
+				7F201F053074FAB600A5F804 /* AirRaidTests */,
 			);
 		};
 /* End PBXProject section */
@@ -244,6 +294,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7F201E093074FAB600A5F804 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7F201F083074FAB600A5F804 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -267,6 +324,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7F201F063074FAB600A5F804 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -274,6 +338,11 @@
 			isa = PBXTargetDependency;
 			target = 7F201E063074FAB600A5F804 /* AirRaidWidgets */;
 			targetProxy = 7F201E0F3074FAB600A5F804 /* PBXContainerItemProxy */;
+		};
+		7F201F043074FAB600A5F804 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7F201B433074FAB600A5F804 /* AirRaid */;
+			targetProxy = 7F201F033074FAB600A5F804 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -528,6 +597,46 @@
 			};
 			name = Release;
 		};
+		7F201F093074FAB600A5F804 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andriilebediev.airraid.dev.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AirRaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AirRaid";
+			};
+			name = Debug;
+		};
+		7F201F0A3074FAB600A5F804 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andriilebediev.airraid.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AirRaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AirRaid";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -554,6 +663,15 @@
 			buildConfigurations = (
 				7F201E0B3074FAB600A5F804 /* Debug */,
 				7F201E0C3074FAB600A5F804 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7F201F0B3074FAB600A5F804 /* Build configuration list for PBXNativeTarget "AirRaidTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7F201F093074FAB600A5F804 /* Debug */,
+				7F201F0A3074FAB600A5F804 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

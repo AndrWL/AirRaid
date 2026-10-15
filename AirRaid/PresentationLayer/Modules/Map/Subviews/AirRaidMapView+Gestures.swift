@@ -11,7 +11,7 @@ import MapLibre
 
 extension AirRaidMapView.Coordinator {
 
-    /// Selects the threat pin nearest to the tap, else the home pin, else the region under it, or clears the selection
+    /// Selects the threat pin nearest to the tap, else the nearest place pin, else the region under it, or clears the selection
     /// when the tap hits none — outside Ukraine.
     @objc
     func handleTap(_ recognizer: UITapGestureRecognizer) {
@@ -33,12 +33,18 @@ extension AirRaidMapView.Coordinator {
         }
         // By screen distance rather than a feature query: the pin is one known point, and a symbol query misses it
         // while its layer is being redrawn.
-        if let home = places.first(where: { $0.kind == .home }) {
-            let pin = mapView.convert(CLLocationCoordinate2D(home.coordinate), toPointTo: mapView)
-            if hypot(pin.x - point.x, pin.y - point.y) <= MapLayerStyle.tapRadius {
-                onSelect(.home)
-                return
+        let pinned = places
+            .filter { $0.kind != .currentLocation }
+            .compactMap { place -> (id: UUID, distance: CGFloat)? in
+                guard let id = UUID(uuidString: place.id) else { return nil }
+                let pin = mapView.convert(CLLocationCoordinate2D(place.coordinate), toPointTo: mapView)
+                return (id, hypot(pin.x - point.x, pin.y - point.y))
             }
+            .filter { $0.distance <= MapLayerStyle.tapRadius }
+            .min { $0.distance < $1.distance }
+        if let pinned {
+            onSelect(.place(id: pinned.id))
+            return
         }
         let region = mapView.visibleFeatures(at: point, styleLayerIdentifiers: [MapLayerStyle.territoryFillLayerID]).first
         onSelect((region?.attributes[MapLayerStyle.regionIDKey] as? String).map { .region(id: $0) })

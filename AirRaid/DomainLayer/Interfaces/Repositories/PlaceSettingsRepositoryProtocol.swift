@@ -6,8 +6,11 @@
 //
 
 import Combine
+import Foundation
 
-/// Keeps the home pin and the radius around each watched place.
+/// Keeps the saved places and the radius around each watched place.
+///
+/// It stores what it is given: how many places the user may have is the caller's check against ``PremiumLimits``.
 protocol PlaceSettingsRepositoryProtocol {
 
     /// Emits the current settings on subscription and every change after it.
@@ -16,8 +19,21 @@ protocol PlaceSettingsRepositoryProtocol {
     /// Drops the home pin here, keeping its radius if it was set before.
     func setHome(at coordinate: GeoCoordinate)
 
-    func removeHome()
+    /// Adds a custom place with the default radius.
+    ///
+    /// - Parameter name: The user's name for it; `nil` names it by its locality.
+    @discardableResult
+    func addPlace(at coordinate: GeoCoordinate, name: String?) -> SavedPlace.ID
 
-    /// Sets the radius around the place; does nothing for a home that is not set.
-    func setRadius(_ radiusKm: Double, for kind: WatchedPlaceKind)
+    /// Moves a saved place, keeping its name and radius; its address is looked up again.
+    func movePlace(_ id: SavedPlace.ID, to coordinate: GeoCoordinate)
+
+    /// Renames a custom place; `nil` or a blank name falls back to its locality. Does nothing for the home.
+    func renamePlace(_ id: SavedPlace.ID, to name: String?)
+
+    func setRadius(_ radiusKm: Double, forPlace id: SavedPlace.ID)
+
+    func setCurrentLocationRadius(_ radiusKm: Double)
+
+    func removePlace(_ id: SavedPlace.ID)
 }

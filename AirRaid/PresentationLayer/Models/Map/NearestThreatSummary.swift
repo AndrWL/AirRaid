@@ -12,7 +12,7 @@ struct NearestThreatSummary: Hashable, Identifiable {
 
     // MARK: - Variables
 
-    let place: WatchedPlaceKind
+    let place: WatchedPlace
 
     let threatID: String
 
@@ -32,11 +32,14 @@ struct NearestThreatSummary: Hashable, Identifiable {
     let otherCount: Int
 
     /// One banner per place.
-    var id: WatchedPlaceKind { place }
+    var id: String { place.id }
+
+    /// The distance, for ordering the banners.
+    let distanceKm: Double
 
     init(
         threat: Threat,
-        place: WatchedPlaceKind,
+        place: WatchedPlace,
         proximity: ThreatProximity,
         otherCount: Int
     ) {
@@ -46,6 +49,7 @@ struct NearestThreatSummary: Hashable, Identifiable {
         iconName = ThreatIcon(threat).name
         distanceText = "\(DisplayTime.distance(proximity)) \(place.fromText)"
         arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)
+        distanceKm = proximity.distanceKm
         self.otherCount = otherCount
     }
 }
@@ -57,23 +61,36 @@ extension NearestThreatSummary {
     /// For each place, the nearest threat inside its radius; places with a clear radius get none.
     ///
     /// Whether a threat is inside is decided by its reported position, the same rule that turns its pin red
-    /// (``Threat/isNear(_:)``); the distance and the time shown are the estimate at `date`.
+    /// (``Threat/isNear(_:)``); the distance and the time shown are the estimate at `date`. With many places, a threat
+    /// is shown once, for its closest place, and the closest ``Constants/maxBanners`` banners are kept so the map stays
+    /// visible.
     static func nearest(
         among threats: [Threat],
         places: [WatchedPlace],
         at date: Date
     ) -> [NearestThreatSummary] {
-        places.compactMap { place in
+        let all = places.compactMap { place -> NearestThreatSummary? in
             let inside = threats
-                .filter { $0.isNear([place]) }
+                .filter { $0.isNear(place) }
                 .compactMap { threat in threat.proximity(to: place.coordinate, at: date).map { (threat, $0) } }
             guard let nearest = inside.min(by: { $0.1.distanceKm < $1.1.distanceKm }) else { return nil }
             return NearestThreatSummary(
                 threat: nearest.0,
-                place: place.kind,
+                place: place,
                 proximity: nearest.1,
                 otherCount: inside.count - 1
             )
         }
+        var shownThreatIDs: Set<String> = []
+        let distinct = all
+            .sorted { $0.distanceKm < $1.distanceKm }
+            .filter { shownThreatIDs.insert($0.threatID).inserted }
+        return Array(distinct.prefix(Constants.maxBanners))
     }
+}
+
+// MARK: - Constants
+
+private enum Constants {
+    static let maxBanners = 3
 }

@@ -31,10 +31,10 @@ extension MapFactory: MapFactoryProtocol {
             ThreatDetailsCoordinatorView(appContainer: appContainer, threatID: id)
         case .regionDetails(let id):
             RegionDetailsCoordinatorView(appContainer: appContainer, regionID: id)
-        case .homeDetails:
-            HomeDetailsCoordinatorView(appContainer: appContainer, actions: actions)
+        case .placeDetails(let id):
+            PlaceDetailsCoordinatorView(appContainer: appContainer, placeID: id, actions: actions)
         case .places:
-            PlacesCoordinatorView(appContainer: appContainer, onPickHomeOnMap: actions.pickHomeOnMap)
+            PlacesCoordinatorView(appContainer: appContainer, onPickHomeOnMap: { actions.pickPlaceOnMap(.home) })
         case .legend:
             MapLegendCoordinatorView()
         }

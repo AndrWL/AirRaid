@@ -32,10 +32,13 @@ final class RealtimeAirSituationRepository {
     private let jsonDecoder: JSONDecoder
     private let jsonEncoder: JSONEncoder
     private let situationSubject = CurrentValueSubject<AirSituation, Never>(.empty)
+    private let eventsSubject = PassthroughSubject<[AirSituationEvent], Never>()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? Constants.subsystem, category: Constants.category)
 
     private var threats: [String: Threat] = [:]
     private var alerts: [String: RegionAlert] = [:]
+    /// The changes applied since the last publish, sent together with the situation they led to.
+    private var pendingEvents: [AirSituationEvent] = []
     private var cancellables: Set<AnyCancellable> = []
 
     init(
@@ -58,6 +61,10 @@ extension RealtimeAirSituationRepository: AirSituationRepositoryProtocol {
 
     var situationPublisher: AnyPublisher<AirSituation, Never> {
         situationSubject.eraseToAnyPublisher()
+    }
+
+    var eventsPublisher: AnyPublisher<[AirSituationEvent], Never> {
+        eventsSubject.eraseToAnyPublisher()
     }
 }
 
@@ -98,14 +105,19 @@ private extension RealtimeAirSituationRepository {
     }
 
     func applySnapshot(_ message: RealtimeMessageDTO) {
-        threats = Dictionary(
+        let newThreats = Dictionary(
             (message.events ?? []).map { ($0.id, ThreatEventDTOMapper.map($0)) },
             uniquingKeysWith: { _, latest in latest }
         )
-        alerts = Dictionary(
+        let newAlerts = Dictionary(
             (message.alerts ?? []).map { ($0.uid, RegionAlertDTOMapper.map($0)) },
             uniquingKeysWith: { _, latest in latest }
         )
+        let previous = AirSituation(alerts: Array(alerts.values), threats: Array(threats.values))
+        let next = AirSituation(alerts: Array(newAlerts.values), threats: Array(newThreats.values))
+        pendingEvents.append(contentsOf: next.events(since: previous, at: .now))
+        threats = newThreats
+        alerts = newAlerts
         logger.info("snapshot v\(message.version ?? -1): \(self.threats.count) events, \(self.alerts.count) alerts")
         for threat in threats.values {
             logger.debug("  • \(Self.describe(threat), privacy: .public)")
@@ -130,26 +142,41 @@ private extension RealtimeAirSituationRepository {
         publish()
     }
 
+    // One case per change type, each recording its feed event next to the state it changes.
+    // swiftlint:disable:next cyclomatic_complexity
     func apply(_ change: ThreatChangeDTO) {
         switch change.type {
         case ChangeType.upsert:
             guard let event = change.event else { return }
             let threat = ThreatEventDTOMapper.map(event)
             logger.debug("  + \(Self.describe(threat), privacy: .public)")
+            if threats[event.id] != threat {
+                pendingEvents.append(.threatUpdated(threat, previous: threats[event.id]))
+            }
             threats[event.id] = threat
         case ChangeType.close:
             guard let id = change.id else { return }
             let merged = change.mergedInto.map { " → \($0)" } ?? ""
             logger.debug("  − \(id, privacy: .public) (\(change.reason ?? "no reason", privacy: .public)\(merged, privacy: .public))")
+            if let threat = threats[id] {
+                pendingEvents.append(.threatClosed(threat, reason: Self.closeReason(change), at: .now))
+            }
             threats[id] = nil
         case ChangeType.alertOn:
             guard let dto = change.alert else { return }
             let description = "\(dto.uid) \(dto.kind) \(dto.name) (\(dto.code))"
             logger.debug("  ⚠︎ on \(description, privacy: .public)")
-            alerts[dto.uid] = RegionAlertDTOMapper.map(dto)
+            let alert = RegionAlertDTOMapper.map(dto)
+            if alerts[dto.uid] != alert {
+                pendingEvents.append(.alertStarted(alert, previous: alerts[dto.uid]))
+            }
+            alerts[dto.uid] = alert
         case ChangeType.alertOff:
             guard let uid = change.uid else { return }
             logger.debug("  ⚠︎ off \(uid, privacy: .public) (\(change.code ?? "?", privacy: .public))")
+            if let alert = alerts[uid] {
+                pendingEvents.append(.alertEnded(alert, at: .now))
+            }
             alerts[uid] = nil
         default:
             logger.debug("  ? ignored change '\(change.type, privacy: .public)'")
@@ -182,6 +209,15 @@ private extension RealtimeAirSituationRepository {
         }
     }
 
+    static func closeReason(_ change: ThreatChangeDTO) -> ThreatCloseReason {
+        switch change.reason {
+        case CloseReason.ended: .ended
+        case CloseReason.cancelled: .cancelled
+        case CloseReason.merged: .merged(survivorID: change.mergedInto)
+        default: .unknown
+        }
+    }
+
     /// One line per event for the console: id, type, place, trust, and the backend's caption.
     static func describe(_ threat: Threat) -> String {
         let kind = threat.type.map { "\($0)" } ?? "\(threat.kind)"
@@ -198,6 +234,10 @@ private extension RealtimeAirSituationRepository {
             (lhs.regionID, lhs.id) < (rhs.regionID, rhs.id)
         }
         situationSubject.send(AirSituation(alerts: sortedAlerts, threats: sortedThreats))
+        guard !pendingEvents.isEmpty else { return }
+        let events = pendingEvents
+        pendingEvents = []
+        eventsSubject.send(events)
     }
 }
 
@@ -214,6 +254,12 @@ private enum ChangeType {
     static let close = "close"
     static let alertOn = "alert_on"
     static let alertOff = "alert_off"
+}
+
+private enum CloseReason {
+    static let ended = "ended"
+    static let cancelled = "cancelled"
+    static let merged = "merged"
 }
 
 private enum Constants {

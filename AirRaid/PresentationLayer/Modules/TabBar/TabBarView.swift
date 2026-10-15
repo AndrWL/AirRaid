@@ -50,9 +50,10 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
                 .tag(AppTab.map)
                 .tabItem { Label("Мапа", systemImage: "map") }
 
-            factory.makeAlerts()
-                .tag(AppTab.alerts)
-                .tabItem { Label("Тривоги", systemImage: "exclamationmark.triangle") }
+            factory.makeFeed()
+                .tag(AppTab.feed)
+                .tabItem { Label("Ефір", systemImage: "dot.radiowaves.left.and.right") }
+                .badge(viewModel.unreadFeedCount)
 
             factory.makeSettings()
                 .tag(AppTab.settings)
@@ -73,12 +74,14 @@ struct TabBarView<Factory: TabBarFactoryProtocol>: View {
         viewModel: TabBarViewModel(
             router: TabBarRouter(
                 mapStackRouter: StackRouter(),
-                alertsStackRouter: StackRouter(),
+                feedStackRouter: StackRouter(),
                 settingsStackRouter: StackRouter(),
                 mapIntentChannel: MapIntentChannel()
             ),
             realtimeService: container.services.realtimeService,
-            homeStatusBroadcaster: container.services.homeStatusBroadcaster
+            homeStatusBroadcaster: container.services.homeStatusBroadcaster,
+            feedRepository: container.repositories.feedRepository,
+            entitlementService: container.services.entitlementService
         ),
         factory: TabBarFactory(appContainer: container),
         selectedTab: $selectedTab

@@ -1,5 +1,5 @@
 //
-//  HomeDetailsViewModel.swift
+//  PlaceDetailsViewModel.swift
 //  AirRaid
 //
 //  Created by ANDRII LEBEDIEV on 13.10.2026.
@@ -8,17 +8,21 @@
 import Combine
 import Foundation
 
-/// The view model that follows the home: its address, the air raid alert at its point and the threats in its radius.
+/// The view model that follows a saved place: its address, the air raid alert at its point and the threats in its
+/// radius.
 @Observable
-final class HomeDetailsViewModel: BaseViewModel {
+final class PlaceDetailsViewModel: BaseViewModel {
 
     // MARK: - Variables
 
     let radiusOptions = PlaceSettings.radiusOptions
-    private(set) var home: HomePlace?
+    private(set) var place: SavedPlace?
     private(set) var situation: AirSituation = .empty
     private(set) var boundaries: [RegionBoundary] = []
     private(set) var districts: [DistrictBoundary] = []
+
+    @ObservationIgnored
+    private let placeID: SavedPlace.ID
 
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
@@ -33,11 +37,13 @@ final class HomeDetailsViewModel: BaseViewModel {
     private let districtBoundaryRepository: DistrictBoundaryRepositoryProtocol
 
     init(
+        placeID: SavedPlace.ID,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         airSituationRepository: AirSituationRepositoryProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
         districtBoundaryRepository: DistrictBoundaryRepositoryProtocol
     ) {
+        self.placeID = placeID
         self.placeSettingsRepository = placeSettingsRepository
         self.airSituationRepository = airSituationRepository
         self.regionBoundaryRepository = regionBoundaryRepository
@@ -52,7 +58,8 @@ final class HomeDetailsViewModel: BaseViewModel {
         placeSettingsRepository.settingsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
-                self?.home = settings.home
+                guard let self else { return }
+                place = settings.place(id: placeID)
             }
             .store(in: &cancellables)
 
@@ -66,21 +73,25 @@ final class HomeDetailsViewModel: BaseViewModel {
     }
 }
 
-// MARK: - HomeDetailsViewModelProtocol
+// MARK: - PlaceDetailsViewModelProtocol
 
-extension HomeDetailsViewModel: HomeDetailsViewModelProtocol {
+extension PlaceDetailsViewModel: PlaceDetailsViewModelProtocol {
 
     var radiusKm: Double? {
-        home?.radiusKm
+        place?.radiusKm
     }
 
-    func content(at date: Date) -> HomeDetailsContent? {
-        guard let home else { return nil }
-        let region = boundaries.first { $0.contains(home.coordinate) }
-        return HomeDetailsContent(
-            home: home,
+    var pick: PlacePick {
+        place?.kind == .home ? .home : .move(id: placeID)
+    }
+
+    func content(at date: Date) -> PlaceDetailsContent? {
+        guard let place else { return nil }
+        let region = boundaries.first { $0.contains(place.coordinate) }
+        return PlaceDetailsContent(
+            place: place,
             regionName: region?.name,
-            alertLevel: alertLevel(at: home.coordinate, regionID: region?.id),
+            alertLevel: alertLevel(at: place.coordinate, regionID: region?.id),
             threats: situation.threats,
             now: date
         )
@@ -99,20 +110,18 @@ extension HomeDetailsViewModel: HomeDetailsViewModelProtocol {
     func didSelectRadius(_ radiusKm: Double) {
         // Shown at once: the repository's update reaches this view model a run loop later, and until then the picker
         // would read the old radius and jump back.
-        if let home {
-            self.home = HomePlace(coordinate: home.coordinate, radiusKm: radiusKm, address: home.address)
-        }
-        placeSettingsRepository.setRadius(radiusKm, for: .home)
+        place = place?.with(radiusKm: radiusKm)
+        placeSettingsRepository.setRadius(radiusKm, forPlace: placeID)
     }
 
-    func didTapRemoveHome() {
-        placeSettingsRepository.removeHome()
+    func didTapRemove() {
+        placeSettingsRepository.removePlace(placeID)
     }
 }
 
 // MARK: - Private methods
 
-private extension HomeDetailsViewModel {
+private extension PlaceDetailsViewModel {
 
     /// The highest air raid alert at the point: its oblast's, or its raion's (a hromada alert counts for its raion,
     /// the way the map fills it).

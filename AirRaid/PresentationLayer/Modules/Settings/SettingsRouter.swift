@@ -11,7 +11,9 @@ import Foundation
 @Observable
 final class SettingsRouter: BaseRouter {
 
-    /// Moves the user to another tab: the home is picked on the map.
+    var activeSheet: SettingsSheetRoute?
+
+    /// Moves the user to another tab: places are picked on the map.
     @ObservationIgnored
     private let tabBarRouter: TabBarRouterProtocol
 
@@ -26,9 +28,17 @@ final class SettingsRouter: BaseRouter {
 
 // MARK: - SettingsRouterProtocol
 
-extension SettingsRouter: SettingsRouterProtocol {
+extension SettingsRouter: @MainActor SettingsRouterProtocol {
 
-    func showHomePickerOnMap() {
-        tabBarRouter.showHomePickerOnMap()
+    func showPlacePickerOnMap(_ pick: PlacePick) {
+        tabBarRouter.showPlacePickerOnMap(pick)
+    }
+
+    func showPlace(_ id: SavedPlace.ID) {
+        stackRouter.push(SettingsRoute.place(id: id), animated: true)
+    }
+
+    func showVoiceSettings() {
+        stackRouter.push(SettingsRoute.voice, animated: true)
     }
 }

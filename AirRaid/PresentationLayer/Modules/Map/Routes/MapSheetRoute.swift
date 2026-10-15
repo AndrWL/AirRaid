@@ -19,8 +19,8 @@ nonisolated enum MapSheetRoute: Identifiable, Hashable {
     /// The user's location and home, and the radius around each.
     case places
 
-    /// The home: its address, the alert there and the threats in its radius.
-    case homeDetails
+    /// A saved place: its address, the alert there and the threats in its radius.
+    case placeDetails(id: SavedPlace.ID)
 
     /// What the map's fills, pins and lines mean, and that the map is for information only.
     case legend
@@ -34,7 +34,7 @@ nonisolated enum MapSheetRoute: Identifiable, Hashable {
     /// Starts at half height so the threat or region stays visible on the map above.
     var detents: Set<PresentationDetent> {
         switch self {
-        case .threatDetails, .regionDetails, .places, .homeDetails, .legend: [.medium, .large]
+        case .threatDetails, .regionDetails, .places, .placeDetails, .legend: [.medium, .large]
         }
     }
 }

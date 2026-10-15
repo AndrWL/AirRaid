@@ -8,7 +8,8 @@
 import Combine
 import Foundation
 
-/// The view model that edits the watched places: the radius around the user and around the home, and the home pin.
+/// The view model that edits the watched places: the radius around the user and around each saved place, and the
+/// home pin.
 @Observable
 final class PlacesViewModel: BaseViewModel {
 
@@ -19,6 +20,7 @@ final class PlacesViewModel: BaseViewModel {
     private(set) var settings: PlaceSettings = .initial
     private(set) var boundaries: [RegionBoundary] = []
     private(set) var userLocation: GeoCoordinate?
+    private(set) var isPlusActive = false
 
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
@@ -29,14 +31,19 @@ final class PlacesViewModel: BaseViewModel {
     @ObservationIgnored
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
 
+    @ObservationIgnored
+    private let entitlementService: EntitlementServiceProtocol
+
     init(
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         userLocationService: UserLocationServiceProtocol,
-        regionBoundaryRepository: RegionBoundaryRepositoryProtocol
+        regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
+        entitlementService: EntitlementServiceProtocol
     ) {
         self.placeSettingsRepository = placeSettingsRepository
         self.userLocationService = userLocationService
         self.regionBoundaryRepository = regionBoundaryRepository
+        self.entitlementService = entitlementService
     }
 
     // MARK: - Override methods
@@ -64,6 +71,13 @@ final class PlacesViewModel: BaseViewModel {
                 self?.userLocation = location
             }
             .store(in: &cancellables)
+
+        entitlementService.isPlusActivePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isActive in
+                self?.isPlusActive = isActive
+            }
+            .store(in: &cancellables)
     }
 }
 
@@ -83,9 +97,17 @@ extension PlacesViewModel: PlacesViewModelProtocol {
         settings.home?.radiusKm
     }
 
+    var homeID: SavedPlace.ID? {
+        settings.home?.id
+    }
+
     var homeRegionName: String? {
         guard let home = settings.home else { return nil }
         return boundaries.first { $0.contains(home.coordinate) }?.name
+    }
+
+    var customPlaces: [SavedPlace] {
+        isPlusActive ? settings.customPlaces : []
     }
 
     func onAppear() async {
@@ -94,25 +116,23 @@ extension PlacesViewModel: PlacesViewModelProtocol {
         boundaries = (try? await regionBoundaryRepository.fetchBoundaries()) ?? []
     }
 
-    func didSelectRadius(_ radiusKm: Double, for kind: WatchedPlaceKind) {
-        // Shown at once: the repository's update arrives a run loop later, and until then the picker would read the
-        // old radius and jump back.
-        switch kind {
-        case .currentLocation:
-            settings = PlaceSettings(home: settings.home, currentLocationRadiusKm: radiusKm)
-        case .home:
-            if let home = settings.home {
-                settings = PlaceSettings(
-                    home: HomePlace(coordinate: home.coordinate, radiusKm: radiusKm, address: home.address),
-                    currentLocationRadiusKm: settings.currentLocationRadiusKm
-                )
-            }
+    // Both shown at once: the repository's update arrives a run loop later, and until then the picker would read the
+    // old radius and jump back.
+    func didSelectCurrentLocationRadius(_ radiusKm: Double) {
+        settings = settings.withCurrentLocationRadius(radiusKm)
+        placeSettingsRepository.setCurrentLocationRadius(radiusKm)
+    }
+
+    func didSelectRadius(_ radiusKm: Double, forPlace id: SavedPlace.ID) {
+        if let place = settings.place(id: id) {
+            settings = settings.replacing(place.with(radiusKm: radiusKm))
         }
-        placeSettingsRepository.setRadius(radiusKm, for: kind)
+        placeSettingsRepository.setRadius(radiusKm, forPlace: id)
     }
 
     func didTapRemoveHome() {
-        placeSettingsRepository.removeHome()
+        guard let home = settings.home else { return }
+        placeSettingsRepository.removePlace(home.id)
     }
 
     func didTapUseCurrentLocation() {

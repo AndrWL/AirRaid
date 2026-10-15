@@ -55,4 +55,7 @@ protocol DIRepositoryContaining {
 
     /// The home pin and the radius around each watched place.
     var placeSettingsRepository: PlaceSettingsRepositoryProtocol { get }
+
+    /// The feed: the history of the air situation as bubbles.
+    var feedRepository: FeedRepositoryProtocol { get }
 }

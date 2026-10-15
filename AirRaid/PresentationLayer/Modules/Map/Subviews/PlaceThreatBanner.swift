@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// A red banner over the map while a threat is inside the radius of the user's location or home: what it is, how far,
+/// A red banner over the map while a threat is inside the radius of one of the user's places: what it is, how far,
 /// and how soon it could get there. A tap opens its details.
 struct PlaceThreatBanner: View {
 
@@ -21,9 +21,9 @@ struct PlaceThreatBanner: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: Spacing.medium) {
-                Image(systemName: summary.place.systemImage)
+                Image(systemName: summary.place.kind.systemImage)
                     .font(.app(.subheadline, weight: .semibold))
-                    .foregroundStyle(summary.place.tint)
+                    .foregroundStyle(summary.place.kind.tint)
                     .frame(width: Constants.placeBadgeSize, height: Constants.placeBadgeSize)
                     .background(.white, in: .circle)
                     .accessibilityHidden(true)
@@ -63,12 +63,9 @@ struct PlaceThreatBanner: View {
 
 private extension PlaceThreatBanner {
 
-    /// «Шахед біля дому», «Шахед поруч з вами».
+    /// «Шахед біля дому», «Шахед поруч з вами», «Шахед біля «Робота»».
     var titleText: String {
-        switch summary.place {
-        case .currentLocation: return "\(summary.title) поруч з вами"
-        case .home: return "\(summary.title) біля дому"
-        }
+        "\(summary.title) \(summary.place.nearText)"
     }
 
     /// «14 км від дому · ≈ 4 хв · ще 2».

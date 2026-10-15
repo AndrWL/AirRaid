@@ -10,24 +10,27 @@ import Foundation
 
 /// The view model of the Settings tab.
 @Observable
-final class SettingsViewModel: BaseViewModel {
+final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
 
     // MARK: - Variables
 
-    let radiusOptions = PlaceSettings.radiusOptions
     let soundModes = AlertSoundMode.allCases
     private(set) var notificationAuthorization: NotificationAuthorization?
-    private(set) var homePlace: HomePlace?
+    private(set) var placeSettings: PlaceSettings = .initial
+    private(set) var isPlusActive = false
     private(set) var soundMode: AlertSoundMode = .sound
     private(set) var isLiveActivityEnabled = true
     private(set) var isLiveActivityAllowedBySystem: Bool?
     private(set) var boundaries: [RegionBoundary] = []
 
     @ObservationIgnored
-    private let router: SettingsRouterProtocol
+    private let router: Router
 
     @ObservationIgnored
     private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
+
+    @ObservationIgnored
+    private let entitlementService: EntitlementServiceProtocol
 
     @ObservationIgnored
     private let regionBoundaryRepository: RegionBoundaryRepositoryProtocol
@@ -48,8 +51,9 @@ final class SettingsViewModel: BaseViewModel {
     private let feedbackEmail: String
 
     init(
-        router: SettingsRouterProtocol,
+        router: Router,
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
+        entitlementService: EntitlementServiceProtocol,
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
         alertSoundService: AlertSoundServiceProtocol,
         liveActivitySettingsService: LiveActivitySettingsServiceProtocol,
@@ -59,6 +63,7 @@ final class SettingsViewModel: BaseViewModel {
     ) {
         self.router = router
         self.placeSettingsRepository = placeSettingsRepository
+        self.entitlementService = entitlementService
         self.regionBoundaryRepository = regionBoundaryRepository
         self.alertSoundService = alertSoundService
         self.liveActivitySettingsService = liveActivitySettingsService
@@ -75,7 +80,14 @@ final class SettingsViewModel: BaseViewModel {
         placeSettingsRepository.settingsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
-                self?.homePlace = settings.home
+                self?.placeSettings = settings
+            }
+            .store(in: &cancellables)
+
+        entitlementService.isPlusActivePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isActive in
+                self?.isPlusActive = isActive
             }
             .store(in: &cancellables)
 
@@ -101,10 +113,27 @@ final class SettingsViewModel: BaseViewModel {
 
 extension SettingsViewModel: SettingsViewModelProtocol {
 
-    var home: SettingsHomeContent? {
-        guard let homePlace else { return nil }
-        let regionName = boundaries.first { $0.contains(homePlace.coordinate) }?.name
-        return SettingsHomeContent(home: homePlace, regionName: regionName)
+    var places: [SettingsPlaceContent] {
+        placeSettings.places.map { place in
+            SettingsPlaceContent(
+                place: place,
+                regionName: boundaries.first { $0.contains(place.coordinate) }?.name,
+                isPlusActive: isPlusActive
+            )
+        }
+    }
+
+    var hasHome: Bool {
+        placeSettings.home != nil
+    }
+
+    var placeCountText: String? {
+        guard isPlusActive else { return nil }
+        return "\(placeSettings.places.count) з \(PremiumLimits.plusPlaces)"
+    }
+
+    var isAtPlaceLimit: Bool {
+        isPlusActive && placeSettings.places.count >= PremiumLimits.plusPlaces
     }
 
     var appVersion: String {
@@ -126,7 +155,7 @@ extension SettingsViewModel: SettingsViewModelProtocol {
         notificationAuthorization = await notificationPermissionService.authorization()
         isLiveActivityAllowedBySystem = liveActivitySettingsService.isAllowedBySystem
         if boundaries.isEmpty {
-            // Only for the region under the home's address; without it the section still works.
+            // Only for the region under each place's address; without it the section still works.
             boundaries = (try? await regionBoundaryRepository.fetchBoundaries()) ?? []
         }
     }
@@ -135,21 +164,22 @@ extension SettingsViewModel: SettingsViewModelProtocol {
         notificationAuthorization = await notificationPermissionService.requestAuthorization()
     }
 
-    func didSelectHomeRadius(_ radiusKm: Double) {
-        // Shown at once: the repository's update arrives a run loop later, and until then the picker would read the
-        // old radius and jump back.
-        if let homePlace {
-            self.homePlace = HomePlace(coordinate: homePlace.coordinate, radiusKm: radiusKm, address: homePlace.address)
-        }
-        placeSettingsRepository.setRadius(radiusKm, for: .home)
-    }
-
     func didTapPickHomeOnMap() {
-        router.showHomePickerOnMap()
+        router.showPlacePickerOnMap(.home)
     }
 
-    func didTapRemoveHome() {
-        placeSettingsRepository.removeHome()
+    func didTapAddPlace() {
+        // The free plan is the home alone; the button is disabled at Плюс's own limit.
+        guard isPlusActive else {
+            router.presentSheet(.paywall)
+            return
+        }
+        guard !isAtPlaceLimit else { return }
+        router.showPlacePickerOnMap(.newPlace)
+    }
+
+    func didTapPlace(_ id: SavedPlace.ID) {
+        router.showPlace(id)
     }
 
     func didToggleLiveActivity(_ isEnabled: Bool) {
@@ -165,6 +195,14 @@ extension SettingsViewModel: SettingsViewModelProtocol {
 
     func didTapPlaySample() {
         alertSoundService.playSample(of: soundMode)
+    }
+
+    func didTapVoiceSettings() {
+        router.showVoiceSettings()
+    }
+
+    func didTapPlus() {
+        router.presentSheet(.paywall)
     }
 }
 

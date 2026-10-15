@@ -18,9 +18,8 @@ enum AppTab {
     /// Displays the current air raid alert status by region.
     case map
 
-    /// The alerts tab.
-    /// Displays the list and history of air raid alerts.
-    case alerts
+    /// The feed tab: the air situation as a chat of the monitoring channels, with the voice feed.
+    case feed
 
     /// The settings tab.
     /// Provides access to notification preferences and general application settings.

@@ -16,6 +16,7 @@ final class DemoAirSituationRepository {
     // MARK: - Variables
 
     private let situationSubject: CurrentValueSubject<AirSituation, Never>
+    private let eventsSubject = PassthroughSubject<[AirSituationEvent], Never>()
     private let scenarios: [AirSituation]
     private var scenarioIndex = 0
     private var cancellables: Set<AnyCancellable> = []
@@ -38,6 +39,10 @@ extension DemoAirSituationRepository: AirSituationRepositoryProtocol {
     var situationPublisher: AnyPublisher<AirSituation, Never> {
         situationSubject.eraseToAnyPublisher()
     }
+
+    var eventsPublisher: AnyPublisher<[AirSituationEvent], Never> {
+        eventsSubject.eraseToAnyPublisher()
+    }
 }
 
 // MARK: - Private methods
@@ -54,8 +59,10 @@ private extension DemoAirSituationRepository {
     }
 
     func showNextScenario() {
+        let previous = scenarios[scenarioIndex]
         scenarioIndex = (scenarioIndex + 1) % scenarios.count
         situationSubject.send(scenarios[scenarioIndex])
+        eventsSubject.send(scenarios[scenarioIndex].events(since: previous, at: .now))
     }
 
     /// Three scenarios that together show every ``ThreatType`` plus a target with no type.

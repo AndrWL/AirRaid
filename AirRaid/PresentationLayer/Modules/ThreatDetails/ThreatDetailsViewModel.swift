@@ -30,21 +30,16 @@ final class ThreatDetailsViewModel: BaseViewModel {
     private let airSituationRepository: AirSituationRepositoryProtocol
 
     @ObservationIgnored
-    private let userLocationService: UserLocationServiceProtocol
-
-    @ObservationIgnored
-    private let placeSettingsRepository: PlaceSettingsRepositoryProtocol
+    private let watchedPlacesProvider: WatchedPlacesProviding
 
     init(
         threatID: String,
         airSituationRepository: AirSituationRepositoryProtocol,
-        userLocationService: UserLocationServiceProtocol,
-        placeSettingsRepository: PlaceSettingsRepositoryProtocol
+        watchedPlacesProvider: WatchedPlacesProviding
     ) {
         self.threatID = threatID
         self.airSituationRepository = airSituationRepository
-        self.userLocationService = userLocationService
-        self.placeSettingsRepository = placeSettingsRepository
+        self.watchedPlacesProvider = watchedPlacesProvider
     }
 
     // MARK: - Override methods
@@ -60,9 +55,7 @@ final class ThreatDetailsViewModel: BaseViewModel {
             }
             .store(in: &cancellables)
 
-        userLocationService.locationPublisher
-            .combineLatest(placeSettingsRepository.settingsPublisher)
-            .map { WatchedPlace.places(currentLocation: $0, settings: $1) }
+        watchedPlacesProvider.placesPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] places in
                 self?.places = places

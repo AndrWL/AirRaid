@@ -10,7 +10,7 @@ import SwiftUI
 
 /// A concrete factory that constructs the root views for the application's tabs.
 ///
-/// `TabBarFactory` resolves the dependencies for each feature flow (Map, Alerts, Settings)
+/// `TabBarFactory` resolves the dependencies for each feature flow (Map, Feed, Settings)
 /// via the injected DI container and returns the fully assembled views.
 @MainActor
 struct TabBarFactory {
@@ -34,8 +34,6 @@ struct TabBarFactory {
 
 extension TabBarFactory: TabBarFactoryProtocol {
 
-    // TODO: Replace the Alerts placeholder with its feature module (CoordinatorView).
-
     @ViewBuilder
     func makeMap() -> some View {
         MapCoordinatorView(
@@ -45,12 +43,18 @@ extension TabBarFactory: TabBarFactoryProtocol {
     }
 
     @ViewBuilder
-    func makeAlerts() -> some View {
-        Color.red.ignoresSafeArea()
+    func makeFeed() -> some View {
+        FeedCoordinatorView(
+            appContainer: appContainer,
+            factory: FeedFactory(appContainer: appContainer)
+        )
     }
 
     @ViewBuilder
     func makeSettings() -> some View {
-        SettingsCoordinatorView(appContainer: appContainer)
+        SettingsCoordinatorView(
+            appContainer: appContainer,
+            factory: SettingsFactory(appContainer: appContainer)
+        )
     }
 }
