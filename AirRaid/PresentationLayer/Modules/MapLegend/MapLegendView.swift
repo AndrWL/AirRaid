@@ -250,6 +250,7 @@ private extension ThreatIcon {
         case .shahed: ThreatType.shahed.displayName
         case .jetDrone: ThreatType.jetDrone.displayName
         case .reconDrone: ThreatType.reconDrone.displayName
+        case .molniya: ThreatType.molniya.displayName
         case .drone: ThreatType.drone.displayName
         case .fpv: ThreatType.fpv.displayName
         case .guidedAerialBomb: ThreatType.guidedAerialBomb.displayName

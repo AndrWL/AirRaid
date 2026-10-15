@@ -201,6 +201,7 @@ private extension ThreatType {
         case .shahed: "Шахед"
         case .jetDrone: "Реактивний безпілотник"
         case .reconDrone: "Розвідувальний безпілотник"
+        case .molniya: "Безпілотник Молнія"
         case .drone: "Безпілотник"
         case .fpv: "FPV дрон"
         case .guidedAerialBomb: "Керовані авіабомби"

@@ -19,6 +19,7 @@ enum ThreatIcon: String, CaseIterable {
     case shahed
     case jetDrone
     case reconDrone
+    case molniya
     case drone
     case fpv
     case guidedAerialBomb
@@ -110,6 +111,7 @@ extension ThreatIcon {
         case .shahed: self = .shahed
         case .jetDrone: self = .jetDrone
         case .reconDrone: self = .reconDrone
+        case .molniya: self = .molniya
         case .drone: self = .drone
         case .fpv: self = .fpv
         case .guidedAerialBomb: self = .guidedAerialBomb
