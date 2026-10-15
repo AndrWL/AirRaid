@@ -6,7 +6,7 @@
 import Foundation
 @testable import AirRaid
 
-/// Shared moments for the feed tests: a fixed origin, so every date is an offset from it.
+/// Shared moments for the tests: a fixed origin, so every date is an offset from it.
 enum FeedFixtures {
 
     /// 2026-10-14 00:00:00 UTC.
@@ -14,79 +14,6 @@ enum FeedFixtures {
 
     static func date(_ offset: TimeInterval) -> Date {
         origin.addingTimeInterval(offset)
-    }
-}
-
-// MARK: - Threat
-
-extension Threat {
-
-    static func stub(
-        id: String = "t1",
-        kind: ThreatKind = .drone,
-        type: ThreatType? = .shahed,
-        count: Int? = nil,
-        level: ThreatLevel = .medium,
-        sourceCount: Int = 2,
-        regionID: String = "UA-32",
-        regionName: String = "Київська область",
-        positionName: String? = "Біла Церква",
-        targetName: String? = nil,
-        firstSeenAt: Date = FeedFixtures.origin,
-        updatedAt: Date? = nil
-    ) -> Threat {
-        let updatedAt = updatedAt ?? firstSeenAt
-        let coordinate = GeoCoordinate(latitude: 49.8, longitude: 30.1)
-        return Threat(
-            id: id,
-            kind: kind,
-            type: type,
-            count: count,
-            level: level,
-            confidence: 0.7,
-            sourceCount: sourceCount,
-            position: positionName.map { ThreatPlace(name: $0, coordinate: coordinate) },
-            target: targetName.map { ThreatPlace(name: $0, coordinate: coordinate) },
-            trail: [],
-            area: ThreatArea(name: regionName, regionID: regionID, center: coordinate),
-            positionQuality: .confirmed,
-            accuracyKm: 5,
-            heading: nil,
-            approachBearing: nil,
-            speedKmh: 150,
-            speedSource: .typical,
-            movedAt: updatedAt,
-            firstSeenAt: firstSeenAt,
-            updatedAt: updatedAt,
-            expiresAt: updatedAt.addingTimeInterval(1_800),
-            summary: nil
-        )
-    }
-}
-
-// MARK: - RegionAlert
-
-extension RegionAlert {
-
-    static func stub(
-        id: String = "a1",
-        kind: RegionAlertKind = .airRaid,
-        level: RegionAlertLevel? = nil,
-        scope: RegionAlertScope = .raion,
-        name: String = "Бучанський район",
-        regionID: String = "UA-32",
-        startedAt: Date = FeedFixtures.origin
-    ) -> RegionAlert {
-        RegionAlert(
-            id: id,
-            kind: kind,
-            level: level,
-            scope: scope,
-            name: name,
-            regionID: regionID,
-            district: nil,
-            startedAt: startedAt
-        )
     }
 }
 
