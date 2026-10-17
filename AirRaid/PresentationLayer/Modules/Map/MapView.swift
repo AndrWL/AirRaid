@@ -45,9 +45,10 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
                 onSelect: viewModel.didSelect,
                 onCenterChange: viewModel.didChangeMapCenter
             )
+            // Edge to edge under the status and tab bars; the overlays below stay inside the safe area, under the
+            // status bar on iPhone and the tab bar that floats at the top on iPad.
+            .ignoresSafeArea()
         }
-        // Edge to edge: the tab bar floats at the top on iPad and at the bottom on iPhone.
-        .ignoresSafeArea()
         .overlay(alignment: .top) {
             VStack(spacing: Spacing.small) {
                 if let notice = viewModel.connectionNotice {
@@ -95,15 +96,15 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         }
         .onChange(of: viewModel.namingPlaceID) { placeName = "" }
         .sensoryFeedback(.warning, trigger: viewModel.nearThreatAlertCount)
-        .alert("Доступ до локації вимкнено", isPresented: locationDeniedAlert) {
-            Button("Відкрити Налаштування") {
+        .alert("Доступ до геолокації вимкнено", isPresented: locationDeniedAlert) {
+            Button("Відкрити параметри iOS") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
                 }
             }
             Button("Скасувати", role: .cancel) {}
         } message: {
-            Text("Дозвольте AirRaid бачити локацію «під час використання», щоб показати вас на карті та відстань до загроз.")
+            Text("Дозвольте AirRaid бачити вашу геолокацію «під час використання», щоб показати вас на мапі й відстань до загроз.")
         }
         .sensoryFeedback(.selection, trigger: viewModel.selection) { _, newValue in newValue != nil }
         .task { await viewModel.onAppear() }
@@ -120,7 +121,7 @@ private extension MapView {
             VStack(spacing: Spacing.small) {
                 ForEach(viewModel.placeThreats(at: timeline.date)) { summary in
                     PlaceThreatBanner(summary: summary) {
-                        viewModel.didSelect(.threat(id: summary.threatID))
+                        viewModel.didTapPlaceThreatBanner(threatID: summary.threatID)
                     }
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
@@ -129,7 +130,8 @@ private extension MapView {
         }
     }
 
-    /// The legend, places and "to me" buttons on the right; above the map's attribution and the tab bar.
+    /// The legend, places and "to me" buttons on the right, above the tab bar; the map's logo and attribution sit on
+    /// the left.
     var bottomControls: some View {
         VStack {
             Spacer()
@@ -147,7 +149,7 @@ private extension MapView {
             }
         }
         .padding(.horizontal, Spacing.large)
-        .padding(.bottom, Constants.bottomControlsInset)
+        .padding(.bottom, Spacing.medium)
     }
 
     var legendButton: some View {
@@ -160,7 +162,7 @@ private extension MapView {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Як читати карту")
+        .accessibilityLabel("Як читати мапу")
     }
 
     var placesButton: some View {
@@ -187,7 +189,7 @@ private extension MapView {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Показати мене на карті")
+        .accessibilityLabel("Показати мене на мапі")
     }
 
     /// The view model owns the flag; the alert only reports its dismissal.
@@ -217,8 +219,6 @@ private enum Constants {
     static let nearestThreatRefreshInterval: TimeInterval = 15
     static let forecastRefreshInterval: TimeInterval = 5
     static let locateButtonSize: CGFloat = 48
-    /// Clears the map's logo and attribution button at the bottom edge.
-    static let bottomControlsInset: CGFloat = 40
 }
 
 #Preview {

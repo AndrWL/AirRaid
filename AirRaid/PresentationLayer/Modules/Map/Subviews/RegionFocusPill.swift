@@ -27,7 +27,7 @@ struct RegionFocusPill: View {
                     .contentShape(.rect)
             }
             .accessibilityLabel("Фокус: \(regionName)")
-            .accessibilityHint("Повернути карту на область")
+            .accessibilityHint("Повернути мапу на область")
 
             Button(action: onExit) {
                 Image(systemName: "xmark")

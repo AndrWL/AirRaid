@@ -63,7 +63,7 @@ private extension PlacePickerOverlay {
             Text(title)
                 .font(.app(.headline, weight: .semibold))
                 .foregroundStyle(.ink)
-            Text(isHome ? "Дім буде там, де вказує пін по центру." : "Місце буде там, де вказує пін по центру.")
+            Text(isHome ? "Дім буде там, де вказує пін у центрі." : "Місце буде там, де вказує пін у центрі.")
                 .font(.app(.footnote))
                 .foregroundStyle(.inkMuted)
             HStack(spacing: Spacing.small) {
@@ -99,9 +99,9 @@ private extension PlacePickerOverlay {
 
     var title: String {
         switch pick {
-        case .home: hasHome ? "Перемістіть карту, щоб змінити дім" : "Перемістіть карту, щоб поставити дім"
-        case .newPlace: "Перемістіть карту, щоб додати місце"
-        case .move: "Перемістіть карту, щоб змінити місце"
+        case .home: hasHome ? "Перемістіть мапу, щоб змінити дім" : "Перемістіть мапу, щоб поставити дім"
+        case .newPlace: "Перемістіть мапу, щоб додати місце"
+        case .move: "Перемістіть мапу, щоб змінити місце"
         }
     }
 }

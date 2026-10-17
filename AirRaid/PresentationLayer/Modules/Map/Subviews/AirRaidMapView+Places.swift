@@ -159,15 +159,4 @@ extension AirRaidMapView.Coordinator {
         if flyRequested, let request = view.flyRequest {
             fly(to: request.coordinate)
         }
-    }
-
-    /// Centres on the point, zooming in to about a raion unless the map is already closer.
-    func fly(to location: GeoCoordinate) {
-        guard let mapView else { return }
-        mapView.setCenter(
-            CLLocationCoordinate2D(location),
-            zoomLevel: max(mapView.zoomLevel, MapLayerStyle.userZoomLevel),
-            animated: true
-        )
-    }
-}
+    }}

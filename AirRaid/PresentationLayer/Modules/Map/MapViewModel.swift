@@ -8,6 +8,7 @@
 import Combine
 import Foundation
 import OSLog
+import UIKit
 
 /// The view model that combines static region outlines with the live air situation.
 @Observable
@@ -77,6 +78,18 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     /// "To me" was tapped before there was a fix; the camera flies once the first one arrives.
     @ObservationIgnored
     private var isLocatePending = false
+
+    /// The camera has not yet been put on the user or their home since launch; until then it shows the country.
+    @ObservationIgnored
+    private var isInitialCameraPending = true
+
+    /// Location permission is read asynchronously; until it is known, a home is not chosen over a fix still to come.
+    @ObservationIgnored
+    private var isAuthorizationKnown = false
+
+    /// Past this moment the user has had the map to themselves, so a late fix or home no longer moves it.
+    @ObservationIgnored
+    private let initialCameraDeadline = Date().addingTimeInterval(Constants.initialCameraTimeout)
 
     /// The point under the centre of the map, followed while picking a place; ignored for observation because it
     /// changes on every pan and nothing renders from it.
@@ -167,6 +180,15 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .sink { [weak self] state in
                 guard let self else { return }
                 connectionNotice = MapConnectionNotice(state: state, liveUntil: liveUntil)
+            }
+            .store(in: &cancellables)
+
+        // The connection is closed in the background on purpose, and the delayed banner may have come up meanwhile;
+        // back in the foreground the reconnect gets its own grace period instead of showing that stale banner.
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .sink { [weak self] _ in
+                guard let self, connectionNotice != .upgradeRequired else { return }
+                connectionNotice = nil
             }
             .store(in: &cancellables)
     }
@@ -312,6 +334,11 @@ extension MapViewModel: MapViewModelProtocol {
         case .place(let id): router.presentSheet(.placeDetails(id: id))
         }
     }
+
+    func didTapPlaceThreatBanner(threatID: String) {
+        guard placePick == nil else { return }
+        showThreat(id: threatID)
+    }
 }
 
 // MARK: - Private methods
@@ -343,6 +370,7 @@ private extension MapViewModel {
             .sink { [weak self] places in
                 self?.places = places
                 self?.updateNearThreats()
+                self?.updateInitialCamera()
             }
             .store(in: &cancellables)
 
@@ -351,6 +379,8 @@ private extension MapViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] authorization in
                 self?.locationAuthorization = authorization
+                self?.isAuthorizationKnown = true
+                self?.updateInitialCamera()
             }
             .store(in: &cancellables)
 
@@ -375,9 +405,32 @@ private extension MapViewModel {
         userLocation = location
         if let location, isLocatePending {
             isLocatePending = false
+            isInitialCameraPending = false
             fly(to: location)
         }
         updateNearThreats()
+        updateInitialCamera()
+    }
+
+    /// At launch, puts the camera on the user's location, or on their home when location is not allowed; a focused
+    /// region keeps its own fit. Once only, and only in the first seconds, so a late fix does not yank a map the user
+    /// is already looking at.
+    func updateInitialCamera() {
+        guard isInitialCameraPending else { return }
+        guard focusedRegionID == nil, placePick == nil, selection == nil, Date() < initialCameraDeadline else {
+            isInitialCameraPending = false
+            return
+        }
+        if let userLocation {
+            isInitialCameraPending = false
+            fly(to: userLocation)
+            return
+        }
+        // While location is allowed, the first fix is on its way and wins over the home.
+        guard isAuthorizationKnown, locationAuthorization != .authorized,
+              let home = places.first(where: { $0.kind == .home }) else { return }
+        isInitialCameraPending = false
+        fly(to: home.coordinate)
     }
 
     func fly(to coordinate: GeoCoordinate) {
@@ -395,11 +448,18 @@ private extension MapViewModel {
         case .pickPlace(let pick):
             didStartPicking(pick)
         case .showThreat(let id):
-            if let coordinate = threats.first(where: { $0.id == id })?.markerCoordinate {
-                fly(to: coordinate)
-            }
-            router.presentSheet(.threatDetails(id: id))
+            showThreat(id: id)
         }
+    }
+
+    /// Flies to the threat's pin, where the map draws it, and opens its sheet.
+    func showThreat(id: String) {
+        let coordinate = threats.first { $0.id == id }?.markerCoordinate(coverage: alertCoverage, districts: districts)
+        logger.debug("Show threat \(id, privacy: .public): on map \(coordinate != nil), sheet \(String(describing: self.router.activeSheet), privacy: .public)")
+        if let coordinate {
+            fly(to: coordinate)
+        }
+        router.presentSheet(.threatDetails(id: id))
     }
 
     /// Marks the threats inside a place's radius and sounds once for each that has just come in.
@@ -431,4 +491,5 @@ private enum Constants {
     static let subsystem = "AirRaid"
     static let category = "Map"
     static let noticeDelay: TimeInterval = 3
+    static let initialCameraTimeout: TimeInterval = 5
 }

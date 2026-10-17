@@ -63,7 +63,7 @@ struct PlaceThreatBanner: View {
 
 private extension PlaceThreatBanner {
 
-    /// «Шахед біля дому», «Шахед поруч з вами», «Шахед біля «Робота»».
+    /// «Шахед біля дому», «Шахед поруч із вами», «Шахед біля «Робота»».
     var titleText: String {
         "\(summary.title) \(summary.place.nearText)"
     }

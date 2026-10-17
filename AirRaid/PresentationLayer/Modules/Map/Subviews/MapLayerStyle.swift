@@ -14,13 +14,23 @@ enum MapLayerStyle {
         sw: CLLocationCoordinate2D(latitude: 44.3, longitude: 22.1),
         ne: CLLocationCoordinate2D(latitude: 52.4, longitude: 40.3)
     )
-    static let ukraineEdgePadding = UIEdgeInsets(top: 60, left: 8, bottom: 8, right: 8)
+    /// Wider on the left for Uzhhorod's label, which is centred on the city at the country's western edge; the width
+    /// limits the fit on a phone.
+    static let ukraineEdgePadding = UIEdgeInsets(top: 60, left: 40, bottom: 8, right: 8)
     /// Room for the chips and the focus pill above, and the tab bar below.
     static let focusEdgePadding = UIEdgeInsets(top: 150, left: 24, bottom: 120, right: 24)
     /// How far past the focused region's box the camera centre may be panned, as a share of the box.
     static let focusPanMargin: Double = 0.25
     /// About a raion across on a phone: close enough to see what is around the user.
     static let userZoomLevel: Double = 8.5
+    /// A little closer than the whole country, about an oblast across: where a selected threat is and what is around it.
+    static let selectionZoomLevel: Double = 6
+    /// The share of the map's height above a details sheet at its half height.
+    static let sheetFreeShare: CGFloat = 0.5
+    /// How far inside the area above the sheet a selected pin must be to count as visible.
+    static let revealMargin: CGFloat = 24
+    /// Beside MapLibre's logo, which takes the bottom-left corner at its default margins.
+    static let attributionButtonMargins = CGPoint(x: 100, y: 8)
 
     static let regionSourceID = "regions"
     static let districtSourceID = "districts"
