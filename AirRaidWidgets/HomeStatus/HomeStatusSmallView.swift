@@ -70,7 +70,14 @@ private extension HomeStatusSmallView {
         } else if let threat = home.nearestThreat {
             NearThreatRow(threat: threat, placeKind: home.placeKind, now: entry.date, style: .compact)
         } else if let threat = home.closestThreat {
-            NearThreatRow(threat: threat, placeKind: home.placeKind, now: entry.date, style: .compact, tone: .outside)
+            // Said in words, as in the Live Activity: the muted icon alone reads like a threat inside the radius.
+            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
+                Text("Поза радіусом \(Int(home.radiusKm)) км")
+                    .font(.app(.caption2))
+                    .foregroundStyle(Color.inkMuted)
+                    .lineLimit(1)
+                NearThreatRow(threat: threat, placeKind: home.placeKind, now: entry.date, style: .compact, tone: .outside)
+            }
         } else {
             Text("У радіусі \(Int(home.radiusKm)) км загроз немає")
                 .font(.app(.caption2))

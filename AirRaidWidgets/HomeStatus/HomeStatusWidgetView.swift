@@ -47,7 +47,7 @@ private extension HomeStatusWidgetView {
         case (.noPlace, _):
             WidgetMessageView(
                 systemImage: "house",
-                title: "Немає місця",
+                title: "Місце не позначено",
                 message: "Позначте дім на мапі або дозвольте геолокацію в AirRaid"
             )
         case (.noData, _):
