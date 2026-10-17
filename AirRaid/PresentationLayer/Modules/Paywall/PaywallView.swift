@@ -29,10 +29,15 @@ struct PaywallView<ViewModel: PaywallViewModelProtocol>: View {
             if viewModel.isPlusActive {
                 activeState
             } else {
-                store
+                switch viewModel.areProductsAvailable {
+                case true?: store
+                case false?: unavailableState
+                case nil: loadingState
+                }
             }
         }
         .background(Color.appBackground)
+        .task { await viewModel.loadProducts() }
         .overlay(alignment: .topTrailing) {
             CloseButton(action: onClose)
                 .padding(Spacing.large)
@@ -84,6 +89,41 @@ private extension PaywallView {
             }
         }
         .padding(.bottom, Spacing.small)
+    }
+
+    /// StoreKit's own fallback is in English and hides the features, so this one says what Плюс gives and why it
+    /// cannot be bought right now.
+    var unavailableState: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.large) {
+                PlusFeatureList()
+                InlineNote(
+                    "Підписка зараз недоступна в App Store. Перевірте з'єднання і спробуйте пізніше.",
+                    systemImage: "exclamationmark.triangle",
+                    tone: .warning
+                )
+                Button("Спробувати ще раз") {
+                    Task { await viewModel.loadProducts() }
+                }
+                .font(.app(.body, weight: .semibold))
+                .frame(maxWidth: .infinity)
+            }
+            .padding(Spacing.large)
+            .padding(.top, Spacing.xxLarge)
+        }
+        .safeAreaInset(edge: .bottom) {
+            restore
+        }
+    }
+
+    var loadingState: some View {
+        ScrollView {
+            PlusFeatureList()
+                .padding(Spacing.large)
+                .padding(.top, Spacing.xxLarge)
+            ProgressView()
+                .padding(Spacing.large)
+        }
     }
 
     var activeState: some View {
