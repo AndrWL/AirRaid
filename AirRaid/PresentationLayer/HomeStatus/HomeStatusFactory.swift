@@ -65,8 +65,14 @@ private extension HomeStatusFactory {
         among threats: [Threat],
         now: Date
     ) -> NearThreat? {
-        let inside = measured(threats.filter { $0.isNear([place]) }, from: place, now: now)
+        let inside = threats
+            .filter { $0.isNear(place) }
+            .map { threat in (threat, threat.nearProximity(to: place, at: now)) }
+            .sorted { $0.0.nearDistanceKm($0.1, to: place) < $1.0.nearDistanceKm($1.1, to: place) }
         guard let (threat, proximity) = inside.first else { return nil }
+        guard let proximity else {
+            return NearThreat(heading: threat, otherCount: inside.count - 1)
+        }
         return NearThreat(threat, proximity: proximity, place: place, otherCount: inside.count - 1, now: now)
     }
 
@@ -116,6 +122,27 @@ private extension NearThreat {
                 ? "±\(Int(proximity.uncertaintyKm.rounded())) км"
                 : DisplayTime.distance(proximity.distanceKm),
             arrivalAt: proximity.timeToArrival.map { now.addingTimeInterval($0) },
+            otherCount: otherCount
+        )
+    }
+}
+
+private extension NearThreat {
+
+    /// Only the target is known: «курсом на Вишневе» in place of a distance, and no arrival.
+    init(
+        heading threat: Threat,
+        otherCount: Int
+    ) {
+        let headingText = threat.headingText ?? ""
+        self.init(
+            id: threat.id,
+            title: threat.countedName,
+            shortTitle: threat.shortName,
+            iconName: ThreatIcon(threat).name,
+            distanceText: headingText,
+            shortDistanceText: threat.target.map { "→ \($0.name)" } ?? "",
+            arrivalAt: nil,
             otherCount: otherCount
         )
     }

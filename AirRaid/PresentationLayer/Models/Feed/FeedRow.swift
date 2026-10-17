@@ -133,6 +133,10 @@ private extension FeedRow {
         now: Date
     ) -> String? {
         guard let threat else { return nil }
+        // Without a position there is no distance; heading into a radius is still news.
+        if let place = places.first(where: threat.isHeading(into:)) {
+            return "ціль атаки \(place.nearText)"
+        }
         let nearest = places
             .compactMap { place in threat.proximity(to: place.coordinate, at: now).map { (place, $0) } }
             .min { $0.1.distanceKm < $1.1.distanceKm }

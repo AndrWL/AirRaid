@@ -69,9 +69,9 @@ struct ThreatIsNearTests {
         #expect(!isNear)
     }
 
-    @Test(arguments: [ThreatPositionQuality.targetOnly, .area])
-    func isNear_whenOnlyTargetOrAreaKnown_returnsFalseEvenOnThePlace(positionQuality: ThreatPositionQuality) {
-        let sut = makeSUT(distanceKm: 0, positionQuality: positionQuality, accuracyKm: 0)
+    @Test
+    func isNear_whenOnlyAreaKnown_returnsFalseEvenOnThePlace() {
+        let sut = makeSUT(distanceKm: 0, positionQuality: .area, accuracyKm: 0)
 
         let isNear = sut.isNear(Constants.place)
 
@@ -79,12 +79,40 @@ struct ThreatIsNearTests {
     }
 
     @Test
-    func isNear_whenNoPositionButTargetIsThePlace_returnsFalse() {
-        let sut = Threat.stub(positionName: nil, targetName: "Біла Церква", targetCoordinate: Constants.place.coordinate)
+    func isNear_whenTargetOnlyHeadsIntoRadius_returnsTrue() {
+        let sut = Threat.stub(
+            targetName: "Вишневе",
+            positionCoordinate: Constants.place.coordinate.moved(bearing: 0, distanceKm: 80),
+            targetCoordinate: Constants.place.coordinate.moved(bearing: 0, distanceKm: 8),
+            positionQuality: .targetOnly
+        )
+
+        let isNear = sut.isNear(Constants.place)
+
+        #expect(isNear)
+    }
+
+    @Test
+    func isNear_whenTargetOnlyHeadsOutsideRadius_returnsFalse() {
+        let sut = Threat.stub(
+            targetName: "Фастів",
+            positionCoordinate: Constants.place.coordinate,
+            targetCoordinate: Constants.place.coordinate.moved(bearing: 0, distanceKm: 40),
+            positionQuality: .targetOnly
+        )
 
         let isNear = sut.isNear(Constants.place)
 
         #expect(!isNear)
+    }
+
+    @Test
+    func isNear_whenNoPositionButTargetIsThePlace_returnsTrue() {
+        let sut = Threat.stub(positionName: nil, targetName: "Біла Церква", targetCoordinate: Constants.place.coordinate)
+
+        let isNear = sut.isNear(Constants.place)
+
+        #expect(isNear)
     }
 
     @Test
