@@ -23,6 +23,7 @@ struct RegionAlertRowView: View {
             StatusDot(dotTone)
             VStack(alignment: .leading, spacing: Spacing.xxSmall) {
                 Text(row.name)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.ink)
                 if let kindText = row.kindText {
                     Text(kindText)
@@ -41,6 +42,8 @@ struct RegionAlertRowView: View {
                     .animation(Motion.quick, value: row.durationText)
             }
             .monospacedDigit()
+            // Short and never cut; the name takes the rest of the row and wraps at whole words.
+            .fixedSize()
         }
         .accessibilityElement(children: .combine)
     }
