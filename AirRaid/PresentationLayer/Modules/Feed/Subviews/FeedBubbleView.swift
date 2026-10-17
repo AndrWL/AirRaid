@@ -12,6 +12,7 @@ struct FeedBubbleView: View {
 
     // MARK: - Variables
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let row: FeedRow
     private let onReadAloud: () -> Void
 
@@ -55,28 +56,50 @@ struct FeedBubbleView: View {
 
 private extension FeedBubbleView {
 
+    /// The icon, title and time in a row; at the largest text sizes the title gets a line of its own, or its words
+    /// would break mid-word.
+    @ViewBuilder
     var header: some View {
-        HStack(alignment: .top, spacing: Spacing.small) {
-            icon
-            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
-                Text(row.title)
-                    .font(.app(.headline, weight: .bold))
-                    .foregroundStyle(.ink)
-                if let subtitle = row.subtitle {
-                    Text(subtitle)
-                        .font(.app(.subheadline))
-                        .foregroundStyle(.inkMuted)
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: Spacing.xSmall) {
+                HStack(alignment: .top, spacing: Spacing.small) {
+                    icon
+                    Spacer(minLength: Spacing.small)
+                    timeColumn
                 }
+                titles
             }
-            Spacer(minLength: Spacing.small)
-            VStack(alignment: .trailing, spacing: Spacing.xxSmall) {
-                Text(row.timeText)
-                    .font(.app(.caption))
+        } else {
+            HStack(alignment: .top, spacing: Spacing.small) {
+                icon
+                titles
+                Spacer(minLength: Spacing.small)
+                timeColumn
+            }
+        }
+    }
+
+    var titles: some View {
+        VStack(alignment: .leading, spacing: Spacing.xxSmall) {
+            Text(row.title)
+                .font(.app(.headline, weight: .bold))
+                .foregroundStyle(.ink)
+            if let subtitle = row.subtitle {
+                Text(subtitle)
+                    .font(.app(.subheadline))
                     .foregroundStyle(.inkMuted)
-                if row.isActive {
-                    StatusDot(row.tone == .normal ? .alertYellow : .alertRed)
-                        .accessibilityLabel("Триває")
-                }
+            }
+        }
+    }
+
+    var timeColumn: some View {
+        VStack(alignment: .trailing, spacing: Spacing.xxSmall) {
+            Text(row.timeText)
+                .font(.app(.caption))
+                .foregroundStyle(.inkMuted)
+            if row.isActive {
+                StatusDot(row.tone == .normal ? .alertYellow : .alertRed)
+                    .accessibilityLabel("Триває")
             }
         }
     }
