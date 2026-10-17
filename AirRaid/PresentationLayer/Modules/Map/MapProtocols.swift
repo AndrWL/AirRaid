@@ -11,8 +11,8 @@ import SwiftUI
 /// Defines the state the Map screen renders: region outlines, which of them have an alert, and threat pins.
 protocol MapViewModelProtocol: BaseViewModelProtocol {
 
-    /// The MapLibre style of the base map.
-    var styleURL: URL { get }
+    /// The base map's look, as chosen in the settings; «Як у системі» is resolved by the view.
+    var mapStylePreference: MapStylePreference { get }
 
     /// Outlines of all regions; empty until loaded.
     var boundaries: [RegionBoundary] { get }

@@ -19,7 +19,7 @@ extension AirRaidMapView.Coordinator {
 
         let link = MLNLineStyleLayer(identifier: MapLayerStyle.forecastLinkLayerID, source: source)
         link.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.forecastPartKey, MapLayerStyle.forecastLinkPart)
-        link.lineColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        link.lineColor = NSExpression(forConstantValue: palette.track)
         link.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.forecastLinkOpacity)
         link.lineWidth = NSExpression(forConstantValue: MapLayerStyle.forecastLinkWidth)
         link.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.forecastLinkDashPattern)

@@ -38,7 +38,7 @@ struct MapCoordinatorView<Factory: MapFactoryProtocol>: View {
             placeSettingsRepository: appContainer.repositories.placeSettingsRepository,
             watchedPlacesProvider: appContainer.services.watchedPlacesProvider,
             alertSoundService: appContainer.services.alertSoundService,
-            styleURL: Self.makeStyleURL(),
+            mapStyleSettingsService: appContainer.services.mapStyleSettingsService,
             appStoreURL: AppEnvironment.appStoreURL
         )
 
@@ -111,12 +111,6 @@ private extension MapCoordinatorView {
             .id(route)
     }
 
-    static func makeStyleURL() -> URL {
-        guard let url = URL(string: AppEnvironment.mapStyleURLString) else {
-            fatalError("[MapCoordinatorView] Invalid map style URL: \(AppEnvironment.mapStyleURLString)")
-        }
-        return url
-    }
 }
 
 #Preview {

@@ -23,7 +23,8 @@ struct AirRaidMapView: UIViewRepresentable {
 
     // MARK: - Variables
 
-    let styleURL: URL
+    /// The base map; a new one reloads the style and installs the map's layers again in its palette.
+    let baseStyle: MapBaseStyle
     let boundaries: [RegionBoundary]
     let districts: [DistrictBoundary]
     let cities: [City]
@@ -69,7 +70,8 @@ struct AirRaidMapView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> MLNMapView {
-        let mapView = ResizingMapView(frame: .zero, styleURL: styleURL)
+        context.coordinator.baseStyle = baseStyle
+        let mapView = ResizingMapView(frame: .zero, styleURL: baseStyle.styleURL)
         mapView.delegate = context.coordinator
         context.coordinator.mapView = mapView
         mapView.allowsRotating = false
@@ -98,6 +100,10 @@ struct AirRaidMapView: UIViewRepresentable {
         context.coordinator.onSelect = onSelect
         context.coordinator.onCenterChange = onCenterChange
         context.coordinator.update(from: self)
+        if context.coordinator.baseStyle != baseStyle {
+            context.coordinator.baseStyle = baseStyle
+            mapView.styleURL = baseStyle.styleURL
+        }
     }
 }
 
@@ -157,6 +163,13 @@ extension AirRaidMapView {
 
         /// Dims every region but the focused one.
         private var focusDimFill: MLNFillStyleLayer?
+
+        /// The base map whose style is loaded or loading; the map's layers take its palette.
+        var baseStyle: MapBaseStyle = .dark
+
+        var palette: MapPalette {
+            MapPalette(baseStyle)
+        }
 
         /// Whether the style has loaded; the camera is fitted only after that, when the view has its size.
         private(set) var isStyleLoaded = false
@@ -247,13 +260,17 @@ extension AirRaidMapView {
 extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
 
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+        // A new base style replaces every layer, but the camera stays where the user left it.
+        let isFirstLoad = !isStyleLoaded
         // Here rather than in `makeUIView`: the view has its real size only by now, and fitting needs it.
         isStyleLoaded = true
-        if let location = pendingFlyLocation {
-            pendingFlyLocation = nil
-            showAtLaunch(location)
-        } else {
-            fitCamera(animated: false)
+        if isFirstLoad {
+            if let location = pendingFlyLocation {
+                pendingFlyLocation = nil
+                showAtLaunch(location)
+            } else {
+                fitCamera(animated: false)
+            }
         }
         installLayers(in: style)
         applyFocus()
@@ -326,8 +343,8 @@ private extension AirRaidMapView.Coordinator {
         self.threatSource = threatSource
         self.selectedTrackSource = selectedTrackSource
 
-        BaseMapRestyler.restyle(style)
-        basePlaceLabels = BaseMapRestyler.placeLabelLayers(in: style).map { ($0, $0.predicate) }
+        BaseMapRestyler.restyle(style, palette: palette)
+        basePlaceLabels = BaseMapRestyler.labelLayersInsideUkraine(in: style).map { ($0, $0.predicate) }
 
         installRegionLayers(in: style, regionSource: regionSource, districtSource: districtSource)
         installCityLayer(in: style, source: citySource)
@@ -344,8 +361,8 @@ private extension AirRaidMapView.Coordinator {
     ) {
         // Tints the whole country, so Ukraine stands out from the dark base map.
         let territoryFill = MLNFillStyleLayer(identifier: MapLayerStyle.territoryFillLayerID, source: regionSource)
-        territoryFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.territoryColor)
-        territoryFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.territoryFillOpacity)
+        territoryFill.fillColor = NSExpression(forConstantValue: palette.territory)
+        territoryFill.fillOpacity = NSExpression(forConstantValue: palette.territoryOpacity)
 
         let regionAlertFill = MapFeatureFactory.makeAlertFill(
             identifier: MapLayerStyle.regionAlertFillLayerID,
@@ -370,14 +387,14 @@ private extension AirRaidMapView.Coordinator {
         let districtOutline = MapFeatureFactory.makeOutline(
             identifier: MapLayerStyle.districtOutlineLayerID,
             source: districtSource,
-            color: .mapOutline,
+            color: palette.outline,
             opacity: MapLayerStyle.districtOutlineOpacity,
             width: MapLayerStyle.districtOutlineWidth
         )
         let outline = MapFeatureFactory.makeOutline(
             identifier: MapLayerStyle.outlineLayerID,
             source: regionSource,
-            color: .mapOutline,
+            color: palette.outline,
             opacity: MapLayerStyle.outlineOpacity,
             width: MapLayerStyle.outlineWidth
         )
@@ -396,7 +413,7 @@ private extension AirRaidMapView.Coordinator {
     /// Over the alert fills, so the rest of the country reads as background, but under the outlines.
     func makeFocusDim(source: MLNShapeSource) -> MLNFillStyleLayer {
         let dimFill = MLNFillStyleLayer(identifier: MapLayerStyle.focusDimLayerID, source: source)
-        dimFill.fillColor = NSExpression(forConstantValue: MapLayerStyle.focusDimColor)
+        dimFill.fillColor = NSExpression(forConstantValue: palette.focusDim)
         dimFill.fillOpacity = NSExpression(forConstantValue: MapLayerStyle.focusDimOpacity)
         dimFill.predicate = Self.matchesNoRegion
         focusDimFill = dimFill
@@ -408,7 +425,7 @@ private extension AirRaidMapView.Coordinator {
         let selectedOutline = MapFeatureFactory.makeOutline(
             identifier: MapLayerStyle.selectedRegionOutlineLayerID,
             source: source,
-            color: MapLayerStyle.selectedRegionColor,
+            color: palette.track,
             opacity: MapLayerStyle.selectedRegionOutlineOpacity,
             width: MapLayerStyle.selectedRegionOutlineWidth
         )
@@ -421,8 +438,8 @@ private extension AirRaidMapView.Coordinator {
         cityLabels.text = NSExpression(forKeyPath: MapLayerStyle.nameKey)
         cityLabels.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
         cityLabels.textFontSize = NSExpression(forConstantValue: MapLayerStyle.cityFontSize)
-        cityLabels.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
-        cityLabels.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        cityLabels.textColor = NSExpression(forConstantValue: palette.label)
+        cityLabels.textHaloColor = NSExpression(forConstantValue: palette.halo)
         cityLabels.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
         style.addLayer(cityLabels)
     }
@@ -453,7 +470,7 @@ private extension AirRaidMapView.Coordinator {
             attributes: [
                 .fontNamesAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelFontNames),
                 .fontScaleAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelScale),
-                .fontColorAttribute: NSExpression(forConstantValue: MapLayerStyle.captionLabelColor)
+                .fontColorAttribute: NSExpression(forConstantValue: palette.caption)
             ]
         )
         let captionName = MLNAttributedExpression(NSExpression(forKeyPath: MapLayerStyle.captionNameKey))
@@ -462,8 +479,8 @@ private extension AirRaidMapView.Coordinator {
         })
         threatPins.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
         threatPins.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
-        threatPins.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
-        threatPins.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        threatPins.textColor = NSExpression(forConstantValue: palette.label)
+        threatPins.textHaloColor = NSExpression(forConstantValue: palette.halo)
         threatPins.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
         threatPins.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
         threatPins.textOffset = NSExpression(
@@ -480,14 +497,14 @@ private extension AirRaidMapView.Coordinator {
     func installSelectedTrackLayers(in style: MLNStyle, source: MLNShapeSource) {
         let trail = MLNLineStyleLayer(identifier: MapLayerStyle.selectedTrailLayerID, source: source)
         trail.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.trailPart)
-        trail.lineColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        trail.lineColor = NSExpression(forConstantValue: palette.track)
         trail.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.trailOpacity)
         trail.lineWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
         trail.lineJoin = NSExpression(forConstantValue: MapLayerStyle.roundJoin)
 
         let forecast = MLNLineStyleLayer(identifier: MapLayerStyle.selectedForecastLayerID, source: source)
         forecast.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.forecastPart)
-        forecast.lineColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        forecast.lineColor = NSExpression(forConstantValue: palette.track)
         forecast.lineOpacity = NSExpression(forConstantValue: MapLayerStyle.forecastOpacity)
         forecast.lineWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
         forecast.lineDashPattern = NSExpression(forConstantValue: MapLayerStyle.forecastDashPattern)
@@ -496,7 +513,7 @@ private extension AirRaidMapView.Coordinator {
         targetDot.predicate = NSPredicate(format: "%K == %@", MapLayerStyle.trackPartKey, MapLayerStyle.targetPart)
         targetDot.circleRadius = NSExpression(forConstantValue: MapLayerStyle.targetDotRadius)
         targetDot.circleColor = NSExpression(forConstantValue: UIColor.clear)
-        targetDot.circleStrokeColor = NSExpression(forConstantValue: MapLayerStyle.trackColor)
+        targetDot.circleStrokeColor = NSExpression(forConstantValue: palette.track)
         targetDot.circleStrokeWidth = NSExpression(forConstantValue: MapLayerStyle.trackWidth)
         targetDot.circleStrokeOpacity = NSExpression(forConstantValue: MapLayerStyle.forecastOpacity)
 
@@ -684,7 +701,7 @@ private extension AirRaidMapView.Coordinator {
 #Preview {
     if let styleURL = URL(string: AppEnvironment.mapStyleURLString) {
         AirRaidMapView(
-            styleURL: styleURL,
+            baseStyle: .dark,
             boundaries: [],
             districts: [],
             cities: [],

@@ -16,7 +16,6 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
 
     // MARK: - Variables
 
-    let styleURL: URL
     let appStoreURL: URL?
     private(set) var boundaries: [RegionBoundary] = []
     private(set) var districts: [DistrictBoundary] = []
@@ -36,6 +35,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
     var namingPlaceID: SavedPlace.ID?
     private(set) var locationAuthorization: LocationAuthorization = .notDetermined
     private(set) var flyRequest: MapFlyRequest?
+    private(set) var mapStylePreference: MapStylePreference = .system
     private(set) var isLocationDeniedAlertPresented = false
 
     @ObservationIgnored
@@ -70,6 +70,9 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
 
     @ObservationIgnored
     private let alertSoundService: AlertSoundServiceProtocol
+
+    @ObservationIgnored
+    private let mapStyleSettingsService: MapStyleSettingsServiceProtocol
 
     /// Threats already announced by a sound, so one that stays near is announced once, not on every update.
     @ObservationIgnored
@@ -115,7 +118,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         placeSettingsRepository: PlaceSettingsRepositoryProtocol,
         watchedPlacesProvider: WatchedPlacesProviding,
         alertSoundService: AlertSoundServiceProtocol,
-        styleURL: URL,
+        mapStyleSettingsService: MapStyleSettingsServiceProtocol,
         appStoreURL: URL?
     ) {
         self.router = router
@@ -129,7 +132,7 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
         self.placeSettingsRepository = placeSettingsRepository
         self.watchedPlacesProvider = watchedPlacesProvider
         self.alertSoundService = alertSoundService
-        self.styleURL = styleURL
+        self.mapStyleSettingsService = mapStyleSettingsService
         self.appStoreURL = appStoreURL
     }
 
@@ -151,6 +154,14 @@ final class MapViewModel<Router: MapRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.trackLiveness(state)
+            }
+            .store(in: &cancellables)
+
+        mapStyleSettingsService.preferencePublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] preference in
+                self?.mapStylePreference = preference
             }
             .store(in: &cancellables)
 
