@@ -12,6 +12,7 @@ struct FeedView<ViewModel: FeedViewModelProtocol>: View {
 
     // MARK: - Variables
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let viewModel: ViewModel
 
     init(viewModel: ViewModel) {
@@ -42,6 +43,11 @@ struct FeedView<ViewModel: FeedViewModelProtocol>: View {
                         }
                         .accessibilityAddTraits(row.isOpenableOnMap ? .isButton : [])
                         .accessibilityHint(row.isOpenableOnMap ? "Показати на мапі" : "")
+                    }
+                    // At the largest text sizes the pinned header would cover most of the screen, so the home card and
+                    // the pinned threats scroll with the feed instead, under its newest bubble.
+                    if dynamicTypeSize.isAccessibilitySize {
+                        placeStatus
                     }
                 }
                 .padding(.horizontal, Spacing.large)
@@ -98,16 +104,24 @@ private extension FeedView {
             }
             .pickerStyle(.segmented)
             kindChips
-            if let status = viewModel.homeStatus {
-                FeedHomeCard(status: status)
-            }
-            ForEach(viewModel.pinnedRows) { row in
-                pinnedRow(row)
+            if !dynamicTypeSize.isAccessibilitySize {
+                placeStatus
             }
         }
         .padding(.horizontal, Spacing.large)
         .padding(.vertical, Spacing.small)
         .background(.bar)
+    }
+
+    /// The home card and the threats near the user's places.
+    @ViewBuilder
+    var placeStatus: some View {
+        if let status = viewModel.homeStatus {
+            FeedHomeCard(status: status)
+        }
+        ForEach(viewModel.pinnedRows) { row in
+            pinnedRow(row)
+        }
     }
 
     var kindChips: some View {
@@ -118,6 +132,8 @@ private extension FeedView {
                 }
             }
         }
+        // Chips scroll sideways, so they need not grow with the rest of the text.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
     func chip(_ filter: FeedKindFilter) -> some View {
@@ -148,17 +164,19 @@ private extension FeedView {
         Button {
             viewModel.didTapRow(id: row.id)
         } label: {
-            HStack(spacing: Spacing.small) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.small) {
                 Image(systemName: "pin.fill")
                     .foregroundStyle(.alertRedInk)
-                Text(row.title)
-                    .font(.app(.subheadline, weight: .bold))
-                    .foregroundStyle(.ink)
-                if let subtitle = row.proximityText ?? row.subtitle {
-                    Text(subtitle)
-                        .font(.app(.footnote))
-                        .foregroundStyle(.inkMuted)
-                        .lineLimit(1)
+                // The distance and time under the title: beside it they were cut off.
+                VStack(alignment: .leading, spacing: Spacing.xxSmall) {
+                    Text(row.title)
+                        .font(.app(.subheadline, weight: .bold))
+                        .foregroundStyle(.ink)
+                    if let subtitle = row.proximityText ?? row.subtitle {
+                        Text(subtitle)
+                            .font(.app(.footnote))
+                            .foregroundStyle(.inkMuted)
+                    }
                 }
                 Spacer(minLength: 0)
             }

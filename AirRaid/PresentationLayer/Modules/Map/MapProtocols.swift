@@ -120,6 +120,9 @@ protocol MapViewModelProtocol: BaseViewModelProtocol {
 
     /// Opens the sheet of the tapped threat or region, or closes it when the tap hit neither.
     func didSelect(_ selection: MapSelection?)
+
+    /// Flies to the threat named in a "near your place" banner and opens its sheet, as the feed does.
+    func didTapPlaceThreatBanner(threatID: String)
 }
 
 /// Defines the routing capabilities for the Map flow.

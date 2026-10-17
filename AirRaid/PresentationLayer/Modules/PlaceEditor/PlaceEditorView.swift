@@ -64,7 +64,7 @@ private extension PlaceEditorView {
         } header: {
             Text("Назва")
         } footer: {
-            footerText("Так місце підписано на мапі й в ефірі: «12 км від «Робота»». Без назви — населеним пунктом.")
+            footerText("Так місце підписано на мапі та в ефірі: «12 км від „Робота“». Без назви — назвою населеного пункту.")
         }
         .listRowBackground(Color.surface)
     }

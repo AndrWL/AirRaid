@@ -13,6 +13,7 @@ struct PlaceDetailsView<ViewModel: PlaceDetailsViewModelProtocol>: View {
 
     // MARK: - Variables
 
+    @State private var isRemoveConfirmationPresented = false
     private let viewModel: ViewModel
     private let onMove: () -> Void
     private let onSelectThreat: (String) -> Void
@@ -40,7 +41,7 @@ struct PlaceDetailsView<ViewModel: PlaceDetailsViewModelProtocol>: View {
             }
         }
         .background(Color.appBackground)
-        .overlay(alignment: .topTrailing) { closeButton }
+        .sheetCloseBar(action: onClose)
         .task { await viewModel.onAppear() }
     }
 }
@@ -55,6 +56,7 @@ private extension PlaceDetailsView {
             threatsSection(content)
             radiusSection(content)
             actionsSection(content)
+            removeSection(content)
             footer
         }
         .listSectionSpacing(.compact)
@@ -72,7 +74,6 @@ private extension PlaceDetailsView {
                     Image(systemName: content.kind.systemImage)
                         .foregroundStyle(content.kind.tint)
                 }
-                .padding(.trailing, Constants.closeButtonClearance)
                 if let street = content.street {
                     Text(street)
                         .font(.app(.callout))
@@ -135,11 +136,31 @@ private extension PlaceDetailsView {
     func actionsSection(_ content: PlaceDetailsContent) -> some View {
         Section {
             Button(action: onMove) {
-                Label("Змінити на карті", systemImage: "mappin.and.ellipse")
+                Label("Змінити на мапі", systemImage: "mappin.and.ellipse")
             }
+        }
+        .font(.app(.body, weight: .semibold))
+        .listRowBackground(Color.surface)
+    }
+
+    /// Apart from the other actions and confirmed first, as in the place editor: the radius and address go with it.
+    func removeSection(_ content: PlaceDetailsContent) -> some View {
+        Section {
             Button(content.kind == .home ? "Прибрати дім" : "Прибрати місце", role: .destructive) {
-                viewModel.didTapRemove()
-                onClose()
+                isRemoveConfirmationPresented = true
+            }
+            // On the button, so the popover points at it.
+            .confirmationDialog(
+                content.kind == .home ? "Прибрати дім?" : "Прибрати «\(content.title)»?",
+                isPresented: $isRemoveConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Прибрати", role: .destructive) {
+                    viewModel.didTapRemove()
+                    onClose()
+                }
+            } message: {
+                Text("AirRaid перестане стежити за загрозами в радіусі цього місця.")
             }
         }
         .font(.app(.body, weight: .semibold))
@@ -186,10 +207,6 @@ private extension PlaceDetailsView {
         .accessibilityElement(children: .combine)
     }
 
-    var closeButton: some View {
-        CloseButton(action: onClose)
-            .padding(Spacing.large)
-    }
 
     func badgeTone(of level: RegionAlertLevel?) -> Badge.Tone {
         switch level {
@@ -207,7 +224,6 @@ private enum Constants {
     static let threatGlyphSize: CGFloat = 22
     static let threatRowSpacing: CGFloat = 12
     /// Room on the right of the header for the close button overlay.
-    static let closeButtonClearance: CGFloat = 36
 }
 
 #Preview {

@@ -18,6 +18,7 @@ final class PaywallViewModel: BaseViewModel {
     private(set) var isPlusActive = false
     private(set) var isRestoring = false
     private(set) var restoreErrorText: String?
+    private(set) var areProductsAvailable: Bool?
 
     @ObservationIgnored
     private let entitlementService: EntitlementServiceProtocol
@@ -49,6 +50,10 @@ final class PaywallViewModel: BaseViewModel {
 
 extension PaywallViewModel: PaywallViewModelProtocol {
 
+    func loadProducts() async {
+        areProductsAvailable = await entitlementService.areProductsAvailable()
+    }
+
     func didTapRestore() async {
         isRestoring = true
         restoreErrorText = nil
@@ -58,6 +63,8 @@ extension PaywallViewModel: PaywallViewModelProtocol {
             if !isPlusActive {
                 restoreErrorText = "Активної підписки не знайдено."
             }
+        } catch RestorePurchasesError.cancelled {
+            // The user closed the sign-in themselves.
         } catch {
             restoreErrorText = "Не вдалося зв'язатися з App Store. Спробуйте пізніше."
         }

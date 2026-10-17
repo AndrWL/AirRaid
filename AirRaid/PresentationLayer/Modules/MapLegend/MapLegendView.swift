@@ -31,7 +31,7 @@ struct MapLegendView: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .background(Color.appBackground)
-        .overlay(alignment: .topTrailing) { closeButton }
+        .sheetCloseBar(action: onClose)
     }
 }
 
@@ -41,10 +41,9 @@ private extension MapLegendView {
 
     var header: some View {
         Section {
-            Text("Як читати карту")
+            Text("Як читати мапу")
                 .font(.app(.title2, weight: .bold))
                 .foregroundStyle(.ink)
-                .padding(.trailing, Constants.closeButtonClearance)
         }
         .listRowBackground(Color.surface)
     }
@@ -52,7 +51,7 @@ private extension MapLegendView {
     var disclaimerSection: some View {
         Section {
             InlineNote(
-                "Карта має лише інформаційний характер",
+                "Мапа має лише інформаційний характер",
                 systemImage: "exclamationmark.triangle",
                 tone: .warning
             )
@@ -73,7 +72,7 @@ private extension MapLegendView {
 
     var alertsSection: some View {
         Section {
-            row("Повітряна тривога", detail: "Область, район або місто") {
+            row("Повітряна тривога", detail: "Область, район, Київ або Севастополь") {
                 fillSample(.mapAlertRed, opacity: Constants.wholeAlertOpacity)
             }
             row("Тривога нижчого рівня", detail: "Наприклад, лише через БпЛА") {
@@ -234,10 +233,6 @@ private extension MapLegendView {
             .foregroundStyle(.inkMuted)
     }
 
-    var closeButton: some View {
-        CloseButton(action: onClose)
-            .padding(Spacing.large)
-    }
 }
 
 // MARK: - ThreatIcon
@@ -267,7 +262,6 @@ private extension ThreatIcon {
 // MARK: - Constants
 
 private enum Constants {
-    static let closeButtonClearance: CGFloat = 36
     static let sampleSize: CGFloat = 40
     // Match `MapLayerStyle`, which lives with MapLibre and is not visible here.
     static let wholeAlertOpacity: Double = 0.7

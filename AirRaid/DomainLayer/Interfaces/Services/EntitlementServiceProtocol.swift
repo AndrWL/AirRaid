@@ -18,6 +18,11 @@ protocol EntitlementServiceProtocol {
 
     /// Asks the App Store for the user's purchases again — «Відновити покупки».
     ///
-    /// - Throws: When the App Store cannot be reached or the user cancels the sign-in.
+    /// - Throws: ``RestorePurchasesError/cancelled`` when the user cancels the sign-in, or another error when the
+    ///   App Store cannot be reached.
     func restorePurchases() async throws
+
+    /// Whether the App Store offers any of the Плюс subscriptions here and now; `false` offline, in a storefront
+    /// without them, or when the request fails.
+    func areProductsAvailable() async -> Bool
 }

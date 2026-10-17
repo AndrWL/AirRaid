@@ -40,7 +40,7 @@ struct ThreatDetailsView<ViewModel: ThreatDetailsViewModelProtocol>: View {
                 )
             }
         }
-        .overlay(alignment: .topTrailing) { closeButton }
+        .sheetCloseBar(action: onClose)
     }
 }
 
@@ -98,7 +98,6 @@ private extension ThreatDetailsView {
                     }
                     confidenceBadge(content.confidence)
                 }
-                .padding(.trailing, Constants.closeButtonClearance)
             }
             if let summary = content.summary {
                 Text(summary)
@@ -192,7 +191,7 @@ private extension ThreatDetailsView {
     var disclaimer: some View {
         Section {
         } footer: {
-            Text("Дані зібрано з відкритих каналів моніторингу, положення та прогноз — орієнтовні. "
+            Text("Дані зібрано з відкритих каналів моніторингу; положення та прогноз орієнтовні. "
                 + "Не замінює офіційний сигнал повітряної тривоги.")
                 .font(.app(.footnote))
                 .foregroundStyle(.inkMuted)
@@ -226,10 +225,6 @@ private extension ThreatDetailsView {
         .accessibilityElement(children: .combine)
     }
 
-    var closeButton: some View {
-        CloseButton(action: onClose)
-            .padding(Spacing.large)
-    }
 
 }
 
@@ -242,7 +237,6 @@ private enum Constants {
     static let threatBadgeSize: CGFloat = 52
     static let countSpacing: CGFloat = 6
     /// Room on the right of the header for the close button overlay.
-    static let closeButtonClearance: CGFloat = 36
 }
 
 #Preview {

@@ -56,8 +56,8 @@ struct PlaceDetailsContent {
 
         self.threats = threats
             .filter { $0.isNear(place) }
-            .compactMap { threat in threat.proximity(to: place.coordinate, at: now).map { (threat, $0) } }
-            .sorted { $0.1.distanceKm < $1.1.distanceKm }
+            .map { threat in (threat, threat.nearProximity(to: place, at: now)) }
+            .sorted { $0.0.nearDistanceKm($0.1, to: place) < $1.0.nearDistanceKm($1.1, to: place) }
             .map { ThreatRow(threat: $0.0, proximity: $0.1, place: place) }
     }
 
@@ -82,17 +82,21 @@ extension PlaceDetailsContent {
         /// The asset name of the threat's silhouette.
         let iconName: String
 
-        /// «12 км від дому · ≈ 4 хв».
+        /// «12 км від дому · ≈ 4 хв», or «курсом на Вишневе» when only the target is known.
         let detail: String
 
         init(
             threat: Threat,
-            proximity: ThreatProximity,
+            proximity: ThreatProximity?,
             place: WatchedPlace
         ) {
             id = threat.id
             title = threat.countedName
             iconName = ThreatIcon(threat).name
+            guard let proximity else {
+                detail = threat.headingText ?? ""
+                return
+            }
             let distance = "\(DisplayTime.distance(proximity)) \(place.fromText)"
             detail = proximity.timeToArrival.map { "\(distance) · \(DisplayTime.estimate($0))" } ?? distance
         }

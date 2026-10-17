@@ -69,11 +69,18 @@ struct AirRaidMapView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> MLNMapView {
-        let mapView = MLNMapView(frame: .zero, styleURL: styleURL)
+        let mapView = ResizingMapView(frame: .zero, styleURL: styleURL)
         mapView.delegate = context.coordinator
         context.coordinator.mapView = mapView
         mapView.allowsRotating = false
         mapView.allowsTilting = false
+        // Both ornaments on the left, clear of the map buttons in the bottom-right corner.
+        mapView.attributionButtonPosition = .bottomLeft
+        mapView.attributionButtonMargins = MapLayerStyle.attributionButtonMargins
+        let coordinator = context.coordinator
+        mapView.onResize = { [weak coordinator] in
+            coordinator?.didResize()
+        }
 
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap))
         tap.delegate = context.coordinator
@@ -114,8 +121,12 @@ extension AirRaidMapView {
 
         var onSelect: (MapSelection?) -> Void = { _ in }
 
-        /// The base style's city label layers with their original filters, extended once cities are known.
-        private var baseCityLabels: [(layer: MLNSymbolStyleLayer, predicate: NSPredicate?)] = []
+        /// The base style's place label layers with their original filters, narrowed once the outlines and cities are
+        /// known.
+        private var basePlaceLabels: [(layer: MLNSymbolStyleLayer, predicate: NSPredicate?)] = []
+
+        /// Ukraine's outline as a `within` filter; `nil` until the outlines load.
+        private var insideUkraine: [Any]?
 
         private var boundaries: [RegionBoundary] = []
         private var districts: [DistrictBoundary] = []
@@ -148,7 +159,19 @@ extension AirRaidMapView {
         private var focusDimFill: MLNFillStyleLayer?
 
         /// Whether the style has loaded; the camera is fitted only after that, when the view has its size.
-        private var isStyleLoaded = false
+        private(set) var isStyleLoaded = false
+
+        /// A point asked for before the style loaded; the camera starts there instead of on the country.
+        var pendingFlyLocation: GeoCoordinate?
+
+        /// The camera still shows the fit for the country or the focused region, so a new size fits it again.
+        /// Cleared once the user moves the map or the camera flies somewhere.
+        var keepsFit = false
+
+        /// A threat, region or place sheet covers the lower half of the map.
+        var isDetailsSheetShown: Bool {
+            selection != nil
+        }
 
         /// Region features by region ID, rebuilt only when the outlines change.
         private var regionFeatures: [String: MLNMultiPolygonFeature] = [:]
@@ -183,6 +206,8 @@ extension AirRaidMapView {
 
             if boundariesChanged {
                 regionFeatures = MapFeatureFactory.makeRegionFeatures(from: boundaries)
+                insideUkraine = boundaries.isEmpty ? nil : BaseMapRestyler.withinExpression(boundaries.flatMap(\.polygons))
+                applyBaseLabelFilters()
             }
             if boundariesChanged || alertsChanged {
                 applyRegions()
@@ -198,6 +223,9 @@ extension AirRaidMapView {
             }
             if selectionChanged {
                 applySelectedRegion()
+                if !flyRequested, case .threat(let id) = selection {
+                    revealThreat(at: threats.first { $0.id == id }?.markerCoordinate(coverage: alertCoverage, districts: districts))
+                }
             }
             updateFocus(focusChanged: focusChanged, recenterRequested: recenterRequested, boundariesChanged: boundariesChanged)
             // An area-only threat is placed by the alerts, so its pin moves when they change.
@@ -221,7 +249,12 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         // Here rather than in `makeUIView`: the view has its real size only by now, and fitting needs it.
         isStyleLoaded = true
-        fitCamera(animated: false)
+        if let location = pendingFlyLocation {
+            pendingFlyLocation = nil
+            showAtLaunch(location)
+        } else {
+            fitCamera(animated: false)
+        }
         installLayers(in: style)
         applyFocus()
         applyRegions()
@@ -232,6 +265,16 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
         applyThreats()
         applySelectedTrack()
         applyForecast(threats: threats, at: forecastDate)
+    }
+
+    func mapView(
+        _ mapView: MLNMapView,
+        regionWillChangeWith reason: MLNCameraChangeReason,
+        animated: Bool
+    ) {
+        if !reason.isEmpty, !reason.contains(.programmatic) {
+            keepsFit = false
+        }
     }
 
     /// Also while the camera is still moving: "here" may be tapped before a fling has settled.
@@ -255,6 +298,17 @@ extension AirRaidMapView.Coordinator: MLNMapViewDelegate {
     }
 }
 
+// MARK: - Resize
+
+extension AirRaidMapView.Coordinator {
+
+    /// Fits the camera to the new size until the user has moved it.
+    func didResize() {
+        guard keepsFit else { return }
+        fitCamera(animated: false)
+    }
+}
+
 // MARK: - Private methods
 
 private extension AirRaidMapView.Coordinator {
@@ -273,7 +327,7 @@ private extension AirRaidMapView.Coordinator {
         self.selectedTrackSource = selectedTrackSource
 
         BaseMapRestyler.restyle(style)
-        baseCityLabels = BaseMapRestyler.cityLabelLayers(in: style).map { ($0, $0.predicate) }
+        basePlaceLabels = BaseMapRestyler.placeLabelLayers(in: style).map { ($0, $0.predicate) }
 
         installRegionLayers(in: style, regionSource: regionSource, districtSource: districtSource)
         installCityLayer(in: style, source: citySource)
@@ -467,12 +521,26 @@ private extension AirRaidMapView.Coordinator {
             return feature
         })
 
-        // The base map labels some of the same cities (Kyiv); drop those so each name appears once.
-        let names = cities.map(\.name)
-        let notOurCity = NSPredicate(format: "NOT (%K IN %@)", BaseMapRestyler.localNameKey, names)
-        for (layer, originalPredicate) in baseCityLabels {
-            layer.predicate = originalPredicate.map { NSCompoundPredicate(andPredicateWithSubpredicates: [$0, notOurCity]) }
-                ?? notOurCity
+        applyBaseLabelFilters()
+    }
+
+    /// Names on the base map only inside Ukraine: the cities and countries around it would only crowd the map. The
+    /// base map also labels some of the cities the map labels itself (Kyiv); those are dropped so each name appears
+    /// once. Until the outlines load every label stays, rather than the whole map going blank for a moment.
+    func applyBaseLabelFilters() {
+        let notOurCity: [Any] = ["!", ["in", ["get", BaseMapRestyler.localNameKey], ["literal", cities.map(\.name)]]]
+        for (layer, originalPredicate) in basePlaceLabels {
+            var conditions: [Any] = []
+            if let originalPredicate {
+                conditions.append(originalPredicate.mgl_jsonExpressionObject)
+            }
+            if let insideUkraine {
+                conditions.append(insideUkraine)
+            }
+            if BaseMapRestyler.isCityLabel(layer), !cities.isEmpty {
+                conditions.append(notOurCity)
+            }
+            layer.predicate = conditions.isEmpty ? nil : NSPredicate(mglJSONObject: ["all"] + conditions)
         }
     }
 
@@ -561,6 +629,7 @@ private extension AirRaidMapView.Coordinator {
     /// Fits the focused region, or the whole country without a focus.
     func fitCamera(animated: Bool) {
         guard isStyleLoaded, let mapView else { return }
+        keepsFit = true
         if let box = focusedRegion?.boundingBox {
             mapView.setVisibleCoordinateBounds(
                 MLNCoordinateBounds(sw: CLLocationCoordinate2D(box.southWest), ne: CLLocationCoordinate2D(box.northEast)),

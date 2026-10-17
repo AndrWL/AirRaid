@@ -52,7 +52,7 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
     private let versionInfo: AppVersionInfo
 
     @ObservationIgnored
-    private let feedbackEmail: String
+    let feedbackEmail: String
 
     @ObservationIgnored
     private let appStoreURL: URL?

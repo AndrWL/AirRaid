@@ -218,8 +218,18 @@ struct HomeStatusFactoryTests {
     }
 
     @Test
-    func make_whenThreatHasNoPosition_reportsNone() {
+    func make_whenOnlyAreaKnown_reportsNone() {
         let areaOnly = Threat.stub(positionName: nil, areaCenter: Constants.home, positionQuality: .area)
+        let situation = AirSituation(alerts: [], threats: [areaOnly])
+
+        let status = makeSUT(situation: situation)
+
+        #expect(status.nearestThreat == nil)
+        #expect(status.closestThreat == nil)
+    }
+
+    @Test
+    func make_whenTargetOnlyHeadsIntoRadius_reportsItByTarget() throws {
         let targetOnly = Threat.stub(
             id: "t2",
             positionName: nil,
@@ -227,11 +237,13 @@ struct HomeStatusFactoryTests {
             targetCoordinate: Constants.home,
             positionQuality: .targetOnly
         )
-        let situation = AirSituation(alerts: [], threats: [areaOnly, targetOnly])
+        let situation = AirSituation(alerts: [], threats: [targetOnly])
 
         let status = makeSUT(situation: situation)
 
-        #expect(status.nearestThreat == nil)
+        let threat = try #require(status.nearestThreat)
+        #expect(threat.distanceText == "курсом на Ірпінь")
+        #expect(threat.arrivalAt == nil)
         #expect(status.closestThreat == nil)
     }
 }

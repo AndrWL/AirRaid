@@ -49,7 +49,7 @@ enum MapConnectionNotice: Equatable {
     var subtitle: String? {
         switch self {
         case .connecting(let since), .offline(let since):
-            return since.map { "Дані станом на \($0.formatted(date: .omitted, time: .shortened))" }
+            return since.map { "Дані станом на \($0.formatted(DisplayTime.clockStyle))" }
         case .upgradeRequired:
             return UpgradeNotice.subtitle
         }

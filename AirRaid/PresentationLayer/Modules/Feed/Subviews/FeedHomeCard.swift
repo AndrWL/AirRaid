@@ -13,6 +13,7 @@ struct FeedHomeCard: View {
 
     // MARK: - Variables
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let status: HomeStatus
 
     init(status: HomeStatus) {
@@ -20,30 +21,25 @@ struct FeedHomeCard: View {
     }
 
     var body: some View {
-        HStack(spacing: Spacing.medium) {
-            Image(systemName: status.placeKind == .home ? "house.fill" : "location.fill")
-                .font(.app(.title3, weight: .semibold))
-                .foregroundStyle(status.alert == nil ? Color.allClearInk : Color.alertRedInk)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Spacing.xxSmall) {
-                Text(status.placeName)
-                    .font(.app(.subheadline, weight: .semibold))
-                    .foregroundStyle(.ink)
-                    .lineLimit(1)
-                Text(alertText)
-                    .font(.app(.footnote))
-                    .foregroundStyle(.inkMuted)
-                if let threat = status.nearestThreat {
-                    Text("\(threat.title) · \(threat.distanceText)")
-                        .font(.app(.footnote, weight: .semibold))
-                        .foregroundStyle(.alertRedInk)
+        Group {
+            // At the largest text sizes the texts get the card's full width, or the words break mid-word.
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spacing.small) {
+                    HStack {
+                        icon
+                        Spacer(minLength: 0)
+                        badge
+                    }
+                    texts
                 }
-            }
-            Spacer(minLength: 0)
-            if let alert = status.alert {
-                Badge("Тривога", tone: alert.level == .red ? .alertRed : .alertYellow)
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Badge("Спокійно", tone: .allClear)
+                HStack(spacing: Spacing.medium) {
+                    icon
+                    texts
+                    Spacer(minLength: 0)
+                    badge
+                }
             }
         }
         .padding(Spacing.medium)
@@ -55,6 +51,39 @@ struct FeedHomeCard: View {
 // MARK: - Private methods
 
 private extension FeedHomeCard {
+
+    var icon: some View {
+        Image(systemName: status.placeKind == .home ? "house.fill" : "location.fill")
+            .font(.app(.title3, weight: .semibold))
+            .foregroundStyle(status.alert == nil ? Color.allClearInk : Color.alertRedInk)
+            .accessibilityHidden(true)
+    }
+
+    var texts: some View {
+        VStack(alignment: .leading, spacing: Spacing.xxSmall) {
+            Text(status.placeName)
+                .font(.app(.subheadline, weight: .semibold))
+                .foregroundStyle(.ink)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            Text(alertText)
+                .font(.app(.footnote))
+                .foregroundStyle(.inkMuted)
+            if let threat = status.nearestThreat {
+                Text("\(threat.title) · \(threat.distanceText)")
+                    .font(.app(.footnote, weight: .semibold))
+                    .foregroundStyle(.alertRedInk)
+            }
+        }
+    }
+
+    @ViewBuilder
+    var badge: some View {
+        if let alert = status.alert {
+            Badge("Тривога", tone: alert.level == .red ? .alertRed : .alertYellow)
+        } else {
+            Badge("Спокійно", tone: .allClear)
+        }
+    }
 
     var alertText: String {
         guard let alert = status.alert else { return "Тривоги немає" }

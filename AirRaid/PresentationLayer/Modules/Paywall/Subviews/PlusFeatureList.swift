@@ -62,7 +62,7 @@ extension PremiumFeature {
         case .extraPlaces: "До \(PremiumLimits.plusPlaces) місць зі своїми назвами й радіусами: батьки, робота, школа."
         case .extendedHistory: "Безкоштовно ефір пам'ятає добу."
         case .feedFilters: "Лише ракети, лише КАБи, лише тривоги — без шуму."
-        case .nightReport: "Зранку: скільки тривало і що летіло біля ваших місць."
+        case .nightReport: "Зранку: скільки тривала тривога і що летіло біля ваших місць."
         case .voiceRules: "Що читати вголос, для яких місць і як швидко."
         }
     }

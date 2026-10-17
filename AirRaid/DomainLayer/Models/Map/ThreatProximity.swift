@@ -23,7 +23,8 @@ nonisolated struct ThreatProximity: Hashable, Sendable {
         uncertaintyKm > 0 && distanceKm < uncertaintyKm
     }
 
-    /// The time to cover that distance at the threat's speed; `nil` unless its course points at the user.
+    /// The time to cover that distance at the threat's speed; `nil` unless its course points at the user and, when its
+    /// target is known, the user is not past that target.
     let timeToArrival: TimeInterval?
 }
 
@@ -53,7 +54,8 @@ nonisolated extension Threat {
 nonisolated private extension Threat {
 
     /// Only for a moving threat whose course is within ``Constants/approachTolerance`` of the bearing to the user,
-    /// and while its forecast is still current.
+    /// and while its forecast is still current. A threat stops at its ``Threat/target``, so a user farther along the
+    /// course than ``Constants/targetReachKm`` past the target gets no arrival.
     func timeToArrival(
         from current: GeoCoordinate,
         to user: GeoCoordinate,
@@ -64,6 +66,9 @@ nonisolated private extension Threat {
         let bearing = current.initialBearing(to: user)
         let difference = abs((course - bearing + 540).truncatingRemainder(dividingBy: 360) - 180)
         guard difference <= Constants.approachTolerance else { return nil }
+        if let target, distanceKm > current.distance(to: target.coordinate) + Constants.targetReachKm {
+            return nil
+        }
         return distanceKm / speedKmh * Constants.secondsPerHour
     }
 }
@@ -73,5 +78,7 @@ nonisolated private extension Threat {
 nonisolated private enum Constants {
     /// Degrees either side of the bearing to the user that still count as flying their way.
     static let approachTolerance: Double = 30
+    /// How far past the target a place still counts as reached: a target names a town, not a point.
+    static let targetReachKm: Double = 10
     static let secondsPerHour: Double = 3_600
 }

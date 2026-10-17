@@ -22,7 +22,7 @@ struct NearestThreatSummary: Hashable, Identifiable {
     /// The asset name of the threat's silhouette.
     let iconName: String
 
-    /// «14 км від дому».
+    /// «14 км від дому», or «курсом на Вишневе» when only the target is known.
     let distanceText: String
 
     /// «≈ 4 хв»; `nil` unless the threat flies toward the place.
@@ -40,16 +40,16 @@ struct NearestThreatSummary: Hashable, Identifiable {
     init(
         threat: Threat,
         place: WatchedPlace,
-        proximity: ThreatProximity,
+        proximity: ThreatProximity?,
         otherCount: Int
     ) {
         self.place = place
         threatID = threat.id
         title = threat.countedName
         iconName = ThreatIcon(threat).name
-        distanceText = "\(DisplayTime.distance(proximity)) \(place.fromText)"
-        arrivalText = proximity.timeToArrival.map(DisplayTime.estimate)
-        distanceKm = proximity.distanceKm
+        distanceText = proximity.map { "\(DisplayTime.distance($0)) \(place.fromText)" } ?? threat.headingText ?? ""
+        arrivalText = proximity?.timeToArrival.map(DisplayTime.estimate)
+        distanceKm = threat.nearDistanceKm(proximity, to: place)
         self.otherCount = otherCount
     }
 }
@@ -72,8 +72,10 @@ extension NearestThreatSummary {
         let all = places.compactMap { place -> NearestThreatSummary? in
             let inside = threats
                 .filter { $0.isNear(place) }
-                .compactMap { threat in threat.proximity(to: place.coordinate, at: date).map { (threat, $0) } }
-            guard let nearest = inside.min(by: { $0.1.distanceKm < $1.1.distanceKm }) else { return nil }
+                .map { threat in (threat, threat.nearProximity(to: place, at: date)) }
+            guard let nearest = inside.min(by: {
+                $0.0.nearDistanceKm($0.1, to: place) < $1.0.nearDistanceKm($1.1, to: place)
+            }) else { return nil }
             return NearestThreatSummary(
                 threat: nearest.0,
                 place: place,

@@ -155,7 +155,7 @@ private extension VoiceSpeechRate {
     var title: String {
         switch self {
         case .slow: "Повільно"
-        case .normal: "Звично"
+        case .normal: "Нормально"
         case .fast: "Швидко"
         }
     }

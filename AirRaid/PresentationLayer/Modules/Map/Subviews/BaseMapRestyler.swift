@@ -14,7 +14,8 @@ import MapLibre
 enum BaseMapRestyler {
 
     /// Applies every tweak: hides admin lines and region names the app draws itself, switches place names
-    /// to Ukrainian in normal case, and lightens roads that the dark style draws almost black.
+    /// to Ukrainian in normal case and the map's label colours, and lightens roads that the dark style draws almost
+    /// black.
     static func restyle(_ style: MLNStyle) {
         for identifier in Constants.hiddenLayerIDs {
             style.layer(withIdentifier: identifier)?.isVisible = false
@@ -28,9 +29,29 @@ enum BaseMapRestyler {
         }
     }
 
-    /// The base style's city label layers, whose filters the map extends to avoid duplicate labels.
-    static func cityLabelLayers(in style: MLNStyle) -> [MLNSymbolStyleLayer] {
-        Constants.cityLabelLayerIDs.compactMap { style.layer(withIdentifier: $0) as? MLNSymbolStyleLayer }
+    /// The base style's place labels — countries, cities, towns, villages — whose filters the map narrows to Ukraine
+    /// and, for cities, to the ones it does not label itself.
+    static func placeLabelLayers(in style: MLNStyle) -> [MLNSymbolStyleLayer] {
+        style.layers
+            .compactMap { $0 as? MLNSymbolStyleLayer }
+            .filter { $0.identifier.hasPrefix(Constants.placeLabelPrefix) }
+    }
+
+    /// Whether the layer labels the cities the map may also label itself.
+    static func isCityLabel(_ layer: MLNSymbolStyleLayer) -> Bool {
+        Constants.cityLabelLayerIDs.contains(layer.identifier)
+    }
+
+    /// A style filter passing only features inside the polygons, as a JSON expression: `within` has no `NSPredicate`
+    /// form.
+    static func withinExpression(_ polygons: [GeoPolygon]) -> [Any] {
+        let coordinates = polygons.map { polygon in
+            ([polygon.exterior] + polygon.holes).map { ring in
+                // GeoJSON rings are closed: the first point repeats at the end.
+                (ring + ring.prefix(ring.first == ring.last ? 0 : 1)).map { [$0.longitude, $0.latitude] }
+            }
+        }
+        return ["within", ["type": "MultiPolygon", "coordinates": coordinates] as [String: Any]]
     }
 
     /// The attribute holding a place's local name — Ukrainian for places in Ukraine.
@@ -49,9 +70,14 @@ private extension BaseMapRestyler {
             ["get", localNameKey]
         ])
         label.textTransform = NSExpression(forConstantValue: Constants.noTextTransform)
-        if Constants.cityLabelLayerIDs.contains(label.identifier) {
-            label.textColor = NSExpression(forConstantValue: UIColor.white)
-        }
+        // The style's grey names fade into the yellow and red alert fills; the map's own light text on a dark halo
+        // reads on any of them.
+        label.textColor = NSExpression(forConstantValue: UIColor.mapLabel)
+        label.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        label.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
+        label.textHaloBlur = NSExpression(forConstantValue: 0)
+        // A step behind the map's own labels: the regional centres and threat captions stay the brightest.
+        label.textOpacity = NSExpression(forConstantValue: Constants.placeLabelOpacity)
     }
 
     /// Casings stay dark so the light road keeps an edge against the fills.
@@ -77,6 +103,7 @@ private enum Constants {
     static let subtleSuffix = "_subtle"
     static let ukrainianNameKey = "name:uk"
     static let noTextTransform = "none"
+    static let placeLabelOpacity: Double = 0.8
 
     static let roadColor = UIColor(white: 0.75, alpha: 1)
     static let roadCasingColor = UIColor(white: 0.2, alpha: 1)

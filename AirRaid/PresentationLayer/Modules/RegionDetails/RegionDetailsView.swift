@@ -35,7 +35,7 @@ struct RegionDetailsView<ViewModel: RegionDetailsViewModelProtocol>: View {
             }
         }
         .background(Color.appBackground)
-        .overlay(alignment: .topTrailing) { closeButton }
+        .sheetCloseBar(action: onClose)
         .task { await viewModel.onAppear() }
     }
 }
@@ -65,7 +65,6 @@ private extension RegionDetailsView {
                 Text(content.title)
                     .font(.app(.title2, weight: .bold))
                     .foregroundStyle(.ink)
-                    .padding(.trailing, Constants.closeButtonClearance)
                 HStack(spacing: Spacing.small) {
                     Badge(content.status.title, tone: badgeTone(of: content.status))
                     if let durationText = content.durationText {
@@ -139,17 +138,13 @@ private extension RegionDetailsView {
             }
         } label: {
             Label(
-                viewModel.isFocused ? "Показати всю Україну" : "Лише ця область на карті",
+                viewModel.isFocused ? "Показати всю Україну" : "Лише ця область на мапі",
                 systemImage: viewModel.isFocused ? "arrow.up.left.and.arrow.down.right" : "scope"
             )
             .font(.app(.body, weight: .semibold))
         }
     }
 
-    var closeButton: some View {
-        CloseButton(action: onClose)
-            .padding(Spacing.large)
-    }
 
     func badgeTone(of status: RegionAlertStatus) -> Badge.Tone {
         switch status.level {
@@ -167,7 +162,6 @@ private enum Constants {
     static let threatGlyphSize: CGFloat = 22
     static let threatRowSpacing: CGFloat = 12
     /// Room on the right of the header for the close button overlay.
-    static let closeButtonClearance: CGFloat = 36
     /// Keeps previews from touching the app's own focus.
     static let previewDefaults = UserDefaults(suiteName: "preview") ?? .standard
 }

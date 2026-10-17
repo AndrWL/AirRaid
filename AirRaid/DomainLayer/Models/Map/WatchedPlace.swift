@@ -88,17 +88,22 @@ nonisolated enum WatchedPlaceKind: Hashable, Sendable {
 
 nonisolated extension Threat {
 
-    /// Whether the threat's last reported position is inside the radius of any of the places.
+    /// Whether the threat's last reported position is inside the radius of any of the places, or, when only its target
+    /// is known, whether it is heading into that radius.
     ///
     /// The reported position only, never the forecast: a red pin and a sound must not rest on a guess. An approximate
     /// position counts only when its uncertainty fits the radius: «Київ, ±62 km» says nothing about a 10 km circle,
-    /// it is the city's centre standing in for somewhere in the region.
+    /// it is the city's centre standing in for somewhere in the region. A report of only «курсом на Вишневе» is about
+    /// the place itself when Вишневе is inside the radius, so it counts by its target (``isHeading(into:)``).
     func isNear(_ places: [WatchedPlace]) -> Bool {
         places.contains(where: isNear)
     }
 
     /// Whether the threat's last reported position is inside the place's radius, by the rule of ``isNear(_:)``.
     func isNear(_ place: WatchedPlace) -> Bool {
+        if isHeading(into: place) {
+            return true
+        }
         guard let position else { return false }
         switch positionQuality {
         case .confirmed:
@@ -108,5 +113,12 @@ nonisolated extension Threat {
         case .targetOnly, .area:
             return false
         }
+    }
+
+    /// Whether only the threat's target is known and it lies inside the place's radius: there is no position to
+    /// measure a distance from, only where the threat is flying.
+    func isHeading(into place: WatchedPlace) -> Bool {
+        guard positionQuality != .area, position == nil || positionQuality == .targetOnly, let target else { return false }
+        return place.contains(target.coordinate)
     }
 }

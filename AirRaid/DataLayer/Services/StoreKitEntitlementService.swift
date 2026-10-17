@@ -59,8 +59,21 @@ extension StoreKitEntitlementService: EntitlementServiceProtocol {
     }
 
     func restorePurchases() async throws {
-        try await AppStore.sync()
+        do {
+            try await AppStore.sync()
+        } catch StoreKitError.userCancelled {
+            throw RestorePurchasesError.cancelled
+        }
         await refresh()
+    }
+
+    func areProductsAvailable() async -> Bool {
+        do {
+            return try await !Product.products(for: productIDs).isEmpty
+        } catch {
+            logger.error("Failed to load products: \(String(describing: error), privacy: .public)")
+            return false
+        }
     }
 }
 

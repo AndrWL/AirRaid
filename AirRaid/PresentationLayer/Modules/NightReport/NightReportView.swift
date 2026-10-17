@@ -102,7 +102,7 @@ private extension NightReportView {
                 .font(.app(.headline, weight: .semibold))
                 .foregroundStyle(.ink)
             if content.nearbyThreats.isEmpty {
-                Text("Нічого в ваших областях")
+                Text("Нічого у ваших областях")
                     .font(.app(.subheadline))
                     .foregroundStyle(.inkMuted)
             }

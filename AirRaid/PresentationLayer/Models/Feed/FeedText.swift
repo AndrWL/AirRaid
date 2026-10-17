@@ -203,7 +203,7 @@ private extension ThreatType {
         case .reconDrone: "Розвідувальний безпілотник"
         case .molniya: "Безпілотник Молнія"
         case .drone: "Безпілотник"
-        case .fpv: "FPV дрон"
+        case .fpv: "FPV-дрон"
         case .guidedAerialBomb: "Керовані авіабомби"
         case .cruiseMissile: "Крилата ракета"
         case .highSpeedTarget: "Швидкісна ціль"
@@ -219,7 +219,7 @@ private extension ThreatKind {
     var spokenName: String {
         switch self {
         case .drone: "Безпілотник"
-        case .fpv: "FPV дрон"
+        case .fpv: "FPV-дрон"
         case .guidedAerialBomb: "Керовані авіабомби"
         case .missile: "Ракета"
         case .ballisticMissile: "Балістика"

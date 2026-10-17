@@ -55,7 +55,7 @@ extension WatchedPlace {
     /// «біля вас», «біля дому», «біля «Робота»».
     var nearText: String {
         switch kind {
-        case .currentLocation: return "поруч з вами"
+        case .currentLocation: return "поруч із вами"
         case .home: return "біля дому"
         case .custom: return "біля «\(title)»"
         }
