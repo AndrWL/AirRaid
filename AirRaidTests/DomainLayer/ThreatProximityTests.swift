@@ -68,6 +68,25 @@ struct ThreatProximityTests {
     }
 
     @Test
+    func proximity_whenUserBeyondTarget_hasNoArrival() throws {
+        let sut = makeSUT(target: Constants.user.moved(bearing: 0, distanceKm: 15))
+
+        let proximity = try #require(sut.proximity(to: Constants.user, at: FeedFixtures.origin))
+
+        #expect(abs(proximity.distanceKm - 30) < Constants.toleranceKm)
+        #expect(proximity.timeToArrival == nil)
+    }
+
+    @Test
+    func proximity_whenUserJustBeyondTarget_estimatesArrival() throws {
+        let sut = makeSUT(target: Constants.user.moved(bearing: 0, distanceKm: 5))
+
+        let proximity = try #require(sut.proximity(to: Constants.user, at: FeedFixtures.origin))
+
+        #expect(proximity.timeToArrival != nil)
+    }
+
+    @Test
     func proximity_whenNotMoving_measuresFromPositionWithoutArrival() throws {
         let sut = makeSUT(heading: 180, speedKmh: 0)
 
