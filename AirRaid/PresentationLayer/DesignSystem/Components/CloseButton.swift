@@ -28,6 +28,28 @@ struct CloseButton: View {
     }
 }
 
+// MARK: - View
+
+extension View {
+
+    /// Pins a ``CloseButton`` above the sheet's scrolling content, on a strip of the sheet's background: rows scroll
+    /// under the strip instead of under the button and the grabber.
+    func sheetCloseBar(action: @escaping () -> Void) -> some View {
+        // The bar already keeps the content off the sheet's top edge.
+        contentMargins(.top, Spacing.xSmall, for: .scrollContent)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack {
+                    Spacer()
+                    CloseButton(action: action)
+                }
+                .padding(.horizontal, Spacing.large)
+                .padding(.top, Spacing.large)
+                .padding(.bottom, Spacing.xSmall)
+                .background(Color.appBackground)
+            }
+    }
+}
+
 #Preview {
     CloseButton {}
         .padding()
