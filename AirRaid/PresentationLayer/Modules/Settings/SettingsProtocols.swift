@@ -46,6 +46,9 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     /// A `mailto:` link with the version and iOS in the body; `nil` if it could not be built.
     var feedbackURL: URL? { get }
 
+    /// The address behind ``feedbackURL``, offered to copy when no mail app can open the link.
+    var feedbackEmail: String { get }
+
     /// Reads the notification and Live Activity permissions again (the user may have changed them in the Settings app)
     /// and loads the outlines that name the places' regions. Safe to call on every appearance.
     func onAppear() async

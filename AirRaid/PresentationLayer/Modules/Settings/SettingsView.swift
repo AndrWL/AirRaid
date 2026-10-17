@@ -13,6 +13,7 @@ struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
     // MARK: - Variables
 
     private let viewModel: ViewModel
+    @State private var isMailUnavailableAlertPresented = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -33,6 +34,14 @@ struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
         .scrollContentBackground(.hidden)
         .background(Color.appBackground)
         .navigationTitle("Налаштування")
+        .alert("Не вдалося відкрити Пошту", isPresented: $isMailUnavailableAlertPresented) {
+            Button("Скопіювати адресу") {
+                UIPasteboard.general.string = viewModel.feedbackEmail
+            }
+            Button("Закрити", role: .cancel) {}
+        } message: {
+            Text("Напишіть на \(viewModel.feedbackEmail) з будь-якої поштової програми.")
+        }
         // Again on every return to the app: the permission may have just been changed in the Settings app.
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -209,7 +218,12 @@ private extension SettingsView {
             }
             if let feedbackURL = viewModel.feedbackURL {
                 Button {
-                    openURL(feedbackURL)
+                    // Without a mail account nothing opens `mailto:`, and the tap would do nothing at all.
+                    openURL(feedbackURL) { accepted in
+                        if !accepted {
+                            isMailUnavailableAlertPresented = true
+                        }
+                    }
                 } label: {
                     Label("Написати розробнику", systemImage: "envelope")
                 }
@@ -296,10 +310,10 @@ private extension SettingsView {
 
     var placesFooter: String {
         if viewModel.isAtPlaceLimit {
-            return "Це найбільше місць, які стежить AirRaid. Приберіть одне, щоб додати інше."
+            return "Це максимум місць, за якими стежить AirRaid. Приберіть одне, щоб додати інше."
         }
         if viewModel.isPlusActive {
-            return "Загрози в радіусі кожного місця з'являються в картці на мапі й в ефірі «Мої місця». "
+            return "Загрози в радіусі кожного місця з'являються в картці на мапі та в ефірі «Мої місця». "
                 + "Місця зберігаються лише на цьому пристрої."
         }
         return "Дім і ваша геолокація — безкоштовно. З Плюсом — до \(PremiumLimits.plusPlaces) місць: батьки, робота, школа. "
