@@ -98,8 +98,6 @@ enum MapLayerStyle {
     static let mapAlignment = "map"
     static let topAnchor = "top"
 
-    static let territoryColor = UIColor.mapTerritory
-    static let territoryFillOpacity: Double = 0.55
     static let redAlertColor = UIColor.mapAlertRed
     static let yellowAlertColor = UIColor.mapAlertYellow
     static let wholeAlertFillOpacity: Double = 0.7
@@ -108,7 +106,6 @@ enum MapLayerStyle {
     static let outlineWidth: Double = 0.8
     static let districtOutlineOpacity: Double = 0.2
     static let districtOutlineWidth: Double = 0.5
-    static let selectedRegionColor = UIColor.mapTrack
     static let selectedRegionOutlineOpacity: Double = 0.9
     static let selectedRegionOutlineWidth: Double = 2
 
@@ -120,7 +117,6 @@ enum MapLayerStyle {
     static let threatCaptionFontSize: Double = 11
     static let outsideAlertOpacity: Double = 0.4
     static let outsideFocusOpacity: Double = 0.25
-    static let focusDimColor = UIColor.mapDim
     static let focusDimOpacity: Double = 0.7
     /// The user's location is blue like the system's blue dot; the home is orange (#FF8000), so the two never read as one;
     /// the other places are violet, apart from both and from the alert colours.
@@ -163,11 +159,9 @@ enum MapLayerStyle {
     static let homeIconRim: CGFloat = 2.5
     static let captionLabelFontNames = ["Noto Sans Regular"]
     static let captionLabelScale: Double = 0.8
-    static let captionLabelColor = UIColor.mapCaption
     /// Below the pin, in ems of the caption font; the selected pin is drawn larger, so its caption sits lower.
     static let threatCaptionOffset = CGVector(dx: 0, dy: 1.3)
     static let selectedThreatCaptionOffset = CGVector(dx: 0, dy: 1.8)
-    static let trackColor = UIColor.mapTrack
     static let trailOpacity: Double = 0.7
     static let forecastOpacity: Double = 0.55
     static let trackWidth: Double = 2

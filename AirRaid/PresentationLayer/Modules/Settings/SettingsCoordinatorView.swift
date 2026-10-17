@@ -32,6 +32,7 @@ struct SettingsCoordinatorView<Factory: SettingsFactoryProtocol>: View {
             regionBoundaryRepository: appContainer.repositories.regionBoundaryRepository,
             alertSoundService: appContainer.services.alertSoundService,
             liveActivitySettingsService: appContainer.services.liveActivitySettingsService,
+            mapStyleSettingsService: appContainer.services.mapStyleSettingsService,
             notificationPermissionService: appContainer.services.notificationPermissionService,
             realtimeService: appContainer.services.realtimeService,
             versionInfo: .current(),

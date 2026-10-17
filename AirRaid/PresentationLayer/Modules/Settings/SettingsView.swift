@@ -27,6 +27,7 @@ struct SettingsView<ViewModel: SettingsViewModelProtocol>: View {
             placesSection
             feedSection
             liveActivitySection
+            mapSection
             soundSection
             aboutSection
         }
@@ -167,6 +168,31 @@ private extension SettingsView {
             Text("Екран блокування")
         } footer: {
             footerText("Під час тривоги або коли загроза в радіусі, AirRaid показує її на екрані блокування та в Dynamic Island. Поки оновлюється лише тоді, коли AirRaid відкритий.")
+        }
+        .listRowBackground(Color.surface)
+    }
+
+    var mapSection: some View {
+        Section {
+            Picker(
+                "Стиль мапи",
+                selection: Binding(
+                    get: { viewModel.mapStylePreference },
+                    set: { viewModel.didSelectMapStyle($0) }
+                )
+            ) {
+                ForEach(viewModel.mapStylePreferences, id: \.self) { preference in
+                    Label(preference.title, systemImage: preference.systemImage)
+                        .foregroundStyle(.ink)
+                        .tag(preference)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } header: {
+            Text("Мапа")
+        } footer: {
+            footerText("На темній мапі заливка тривог видна найкраще. Детальна показує ліси, воду й забудову і темніє разом із темою iPhone.")
         }
         .listRowBackground(Color.surface)
     }
@@ -360,6 +386,7 @@ private extension SettingsView {
                 regionBoundaryRepository: RegionBoundaryRepository(),
                 alertSoundService: AlertSoundService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                 liveActivitySettingsService: LiveActivitySettingsService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
+                mapStyleSettingsService: MapStyleSettingsService(defaults: UserDefaults(suiteName: "preview") ?? .standard),
                 notificationPermissionService: NotificationPermissionService(),
                 realtimeService: container.services.realtimeService,
                 versionInfo: AppVersionInfo(version: "1.0", build: "1", osVersion: "26.0"),

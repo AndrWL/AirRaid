@@ -13,6 +13,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
     // MARK: - Variables
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.openURL) private var openURL
     @State private var placeName = ""
     private let viewModel: ViewModel
@@ -27,7 +28,7 @@ struct MapView<ViewModel: MapViewModelProtocol>: View {
         // Ghosts of reliable threats move on between reports; the rest of the map updates only with the data.
         TimelineView(.periodic(from: .now, by: Constants.forecastRefreshInterval)) { timeline in
             AirRaidMapView(
-                styleURL: viewModel.styleURL,
+                baseStyle: MapBaseStyle(viewModel.mapStylePreference, colorScheme: colorScheme),
                 boundaries: viewModel.boundaries,
                 districts: viewModel.districts,
                 cities: viewModel.cities,
@@ -225,25 +226,21 @@ private enum Constants {
     let container = DIAppContainer()
     container.setup()
 
-    return Group {
-        if let styleURL = URL(string: AppEnvironment.mapStyleURLString) {
-            MapView(
-                viewModel: MapViewModel(
-                    router: MapRouter(stackRouter: StackRouter(), intentChannel: MapIntentChannel()),
-                    regionBoundaryRepository: RegionBoundaryRepository(),
-                    districtBoundaryRepository: DistrictBoundaryRepository(),
-                    cityRepository: CityRepository(),
-                    airSituationRepository: DemoAirSituationRepository(),
-                    realtimeService: container.services.realtimeService,
-                    focusedRegionRepository: container.repositories.focusedRegionRepository,
-                    userLocationService: container.services.userLocationService,
-                    placeSettingsRepository: container.repositories.placeSettingsRepository,
-                    watchedPlacesProvider: container.services.watchedPlacesProvider,
-                    alertSoundService: container.services.alertSoundService,
-                    styleURL: styleURL,
-                    appStoreURL: AppEnvironment.appStoreURL
-                )
-            )
-        }
-    }
+    return MapView(
+        viewModel: MapViewModel(
+            router: MapRouter(stackRouter: StackRouter(), intentChannel: MapIntentChannel()),
+            regionBoundaryRepository: RegionBoundaryRepository(),
+            districtBoundaryRepository: DistrictBoundaryRepository(),
+            cityRepository: CityRepository(),
+            airSituationRepository: DemoAirSituationRepository(),
+            realtimeService: container.services.realtimeService,
+            focusedRegionRepository: container.repositories.focusedRegionRepository,
+            userLocationService: container.services.userLocationService,
+            placeSettingsRepository: container.repositories.placeSettingsRepository,
+            watchedPlacesProvider: container.services.watchedPlacesProvider,
+            alertSoundService: container.services.alertSoundService,
+            mapStyleSettingsService: container.services.mapStyleSettingsService,
+            appStoreURL: AppEnvironment.appStoreURL
+        )
+    )
 }

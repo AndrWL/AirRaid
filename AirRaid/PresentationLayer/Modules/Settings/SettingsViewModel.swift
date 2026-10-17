@@ -15,10 +15,12 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
     // MARK: - Variables
 
     let soundModes = AlertSoundMode.allCases
+    let mapStylePreferences = MapStylePreference.allCases
     private(set) var notificationAuthorization: NotificationAuthorization?
     private(set) var placeSettings: PlaceSettings = .initial
     private(set) var isPlusActive = false
     private(set) var soundMode: AlertSoundMode = .sound
+    private(set) var mapStylePreference: MapStylePreference = .system
     private(set) var isLiveActivityEnabled = true
     private(set) var isLiveActivityAllowedBySystem: Bool?
     private(set) var boundaries: [RegionBoundary] = []
@@ -43,6 +45,9 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
     private let liveActivitySettingsService: LiveActivitySettingsServiceProtocol
 
     @ObservationIgnored
+    private let mapStyleSettingsService: MapStyleSettingsServiceProtocol
+
+    @ObservationIgnored
     private let notificationPermissionService: NotificationPermissionServiceProtocol
 
     @ObservationIgnored
@@ -64,6 +69,7 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
         regionBoundaryRepository: RegionBoundaryRepositoryProtocol,
         alertSoundService: AlertSoundServiceProtocol,
         liveActivitySettingsService: LiveActivitySettingsServiceProtocol,
+        mapStyleSettingsService: MapStyleSettingsServiceProtocol,
         notificationPermissionService: NotificationPermissionServiceProtocol,
         realtimeService: RealtimeServiceProtocol,
         versionInfo: AppVersionInfo,
@@ -76,6 +82,7 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
         self.regionBoundaryRepository = regionBoundaryRepository
         self.alertSoundService = alertSoundService
         self.liveActivitySettingsService = liveActivitySettingsService
+        self.mapStyleSettingsService = mapStyleSettingsService
         self.notificationPermissionService = notificationPermissionService
         self.realtimeService = realtimeService
         self.versionInfo = versionInfo
@@ -107,6 +114,14 @@ final class SettingsViewModel<Router: SettingsRouterProtocol>: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] mode in
                 self?.soundMode = mode
+            }
+            .store(in: &cancellables)
+
+        mapStyleSettingsService.preferencePublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] preference in
+                self?.mapStylePreference = preference
             }
             .store(in: &cancellables)
 
@@ -211,6 +226,11 @@ extension SettingsViewModel: SettingsViewModelProtocol {
         soundMode = mode
         alertSoundService.setMode(mode)
         alertSoundService.playSample(of: mode)
+    }
+
+    func didSelectMapStyle(_ preference: MapStylePreference) {
+        mapStylePreference = preference
+        mapStyleSettingsService.setPreference(preference)
     }
 
     func didTapPlaySample() {

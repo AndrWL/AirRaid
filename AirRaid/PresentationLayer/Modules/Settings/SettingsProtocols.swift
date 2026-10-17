@@ -29,6 +29,11 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
 
     var soundModes: [AlertSoundMode] { get }
 
+    var mapStylePreferences: [MapStylePreference] { get }
+
+    /// The base map's look.
+    var mapStylePreference: MapStylePreference { get }
+
     var soundMode: AlertSoundMode { get }
 
     /// The user's choice for the Live Activity on the lock screen and in the Dynamic Island.
@@ -68,6 +73,8 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     func didToggleLiveActivity(_ isEnabled: Bool)
 
     func didSelectSoundMode(_ mode: AlertSoundMode)
+
+    func didSelectMapStyle(_ preference: MapStylePreference)
 
     /// Plays the selected mode's signal once.
     func didTapPlaySample()

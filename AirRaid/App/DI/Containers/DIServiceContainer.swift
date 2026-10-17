@@ -50,6 +50,7 @@ extension DIServiceContainer: DIAssembling {
         registerAlertSoundService()
         registerNotificationPermissionService()
         registerLiveActivitySettingsService()
+        registerMapStyleSettingsService()
         registerHomeStatusBroadcaster(with: appContainer)
         registerEntitlementService()
         registerWatchedPlacesProvider(with: appContainer)
@@ -90,6 +91,10 @@ extension DIServiceContainer: DIServiceContaining {
 
     var liveActivitySettingsService: LiveActivitySettingsServiceProtocol {
         return container.resolve(LiveActivitySettingsServiceProtocol.self)
+    }
+
+    var mapStyleSettingsService: MapStyleSettingsServiceProtocol {
+        return container.resolve(MapStyleSettingsServiceProtocol.self)
     }
 
     var homeStatusBroadcaster: HomeStatusBroadcasting {
@@ -248,6 +253,13 @@ private extension DIServiceContainer {
     func registerLiveActivitySettingsService() {
         container.register(LiveActivitySettingsServiceProtocol.self, lifetime: .singleton) { _ in
             LiveActivitySettingsService()
+        }
+    }
+
+    /// A singleton so the map hears the style the settings just picked.
+    func registerMapStyleSettingsService() {
+        container.register(MapStyleSettingsServiceProtocol.self, lifetime: .singleton) { _ in
+            MapStyleSettingsService()
         }
     }
 

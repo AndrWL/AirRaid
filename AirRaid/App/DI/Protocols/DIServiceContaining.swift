@@ -54,6 +54,9 @@ protocol DIServiceContaining {
     /// Whether the Live Activity may run, as chosen in the settings.
     var liveActivitySettingsService: LiveActivitySettingsServiceProtocol { get }
 
+    /// The base map's look, as chosen in the settings.
+    var mapStyleSettingsService: MapStyleSettingsServiceProtocol { get }
+
     /// Keeps the home screen widgets and the Live Activity in step with the home's status.
     var homeStatusBroadcaster: HomeStatusBroadcasting { get }
 

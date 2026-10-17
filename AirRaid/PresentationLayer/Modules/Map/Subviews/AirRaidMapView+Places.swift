@@ -57,7 +57,7 @@ extension AirRaidMapView.Coordinator {
         pins.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
         pins.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
         pins.textColor = Self.placeColorExpression
-        pins.textHaloColor = NSExpression(forConstantValue: UIColor.mapHalo)
+        pins.textHaloColor = NSExpression(forConstantValue: palette.halo)
         pins.textHaloWidth = NSExpression(forConstantValue: MapLayerStyle.cityHaloWidth)
         pins.textAnchor = NSExpression(forConstantValue: MapLayerStyle.topAnchor)
         pins.textOffset = NSExpression(forConstantValue: NSValue(cgVector: MapLayerStyle.pinCaptionOffset))

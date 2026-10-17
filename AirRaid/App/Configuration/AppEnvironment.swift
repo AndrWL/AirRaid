@@ -36,11 +36,13 @@ nonisolated enum AppEnvironment {
         #endif
     }
 
-    /// The MapLibre style for the base map. OpenFreeMap: free, no API key.
+    /// The MapLibre styles for the base map. OpenFreeMap: free, no API key.
     ///
     /// - Note: `AirRaidMapView` restyles labels by OpenMapTiles layer IDs (`place_*`), so another
     ///   OpenMapTiles-based style keeps working; a style with a different schema loses those tweaks.
     static let mapStyleURLString = "https://tiles.openfreemap.org/styles/dark"
+    static let lightMapStyleURLString = "https://tiles.openfreemap.org/styles/positron"
+    static let detailedMapStyleURLString = "https://tiles.openfreemap.org/styles/liberty"
 
     /// Where «Написати розробнику» in the settings sends its email.
     static let feedbackEmail = "andrewlebedev13@gmail.com"
