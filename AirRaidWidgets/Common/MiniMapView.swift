@@ -61,7 +61,7 @@ private extension MiniMapView {
 // MARK: - MiniMapAreaShape
 
 /// The rings of one area scaled into the frame; holes are cut by the even-odd fill.
-private struct MiniMapAreaShape: Shape {
+nonisolated private struct MiniMapAreaShape: Shape {
 
     let area: MiniMapArea
 
