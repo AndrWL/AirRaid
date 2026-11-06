@@ -13,7 +13,7 @@ enum DisplayTime {
     /// «11:42».
     static let clockStyle = Date.FormatStyle(locale: Constants.locale).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
 
-    /// «1 год 52 хв», «20 хв», «2 д 5 год», «12 д», «понад 3 міс.», «понад 4 р.»; whole minutes, since seconds would only
+    /// Minutes, hours and minutes, days and hours, days, then "over N months" and "over N years"; whole minutes, since seconds would only
     /// flicker, and a rough length past a month — an alert in a frontline oblast can last for years.
     static func duration(_ interval: TimeInterval) -> String {
         let minutes = Int(interval / 60)
@@ -28,26 +28,26 @@ enum DisplayTime {
         return rest > 0 ? "\(hours) год \(rest) хв" : "\(hours) год"
     }
 
-    /// «≈ 14 хв», «менше хвилини» — an estimated time left.
+    /// An estimated time left: about N minutes, or less than a minute.
     static func estimate(_ interval: TimeInterval) -> String {
         guard interval >= 60 else { return "менше хвилини" }
         return "≈ \(duration(interval))"
     }
 
-    /// «42 км», or «у межах ±62 км» when the position is too rough for a distance to mean anything.
+    /// The distance in kilometres, or "within ±N km" when the position is too rough for a distance to mean anything.
     static func distance(_ proximity: ThreatProximity) -> String {
         proximity.isWithinUncertainty
             ? "у межах ±\(Int(proximity.uncertaintyKm.rounded())) км"
             : distance(proximity.distanceKm)
     }
 
-    /// «42 км», «менше 1 км» — whole kilometres: the threat's position is an estimate, decimals would overstate it.
+    /// Whole kilometres, or "less than 1 km": the threat's position is an estimate, decimals would overstate it.
     static func distance(_ kilometres: Double) -> String {
         guard kilometres >= 1 else { return "менше 1 км" }
         return "\(Int(kilometres.rounded())) км"
     }
 
-    /// «з 10:28» today, «з 3 жовт., 22:10» earlier this year, «з 04.04.2022» before that.
+    /// "Since" with the time today, the day and time earlier this year, the full date before that.
     static func since(
         _ date: Date,
         now: Date

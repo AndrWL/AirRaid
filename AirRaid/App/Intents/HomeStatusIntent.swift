@@ -9,7 +9,7 @@ import AppIntents
 import Foundation
 import HomeStatusKit
 
-/// «Що в ефірі?» for Siri, Shortcuts and the Action button: the home's status, said without opening the app.
+/// "What's on air?" for Siri, Shortcuts and the Action button: the home's status, said without opening the app.
 ///
 /// Reads the snapshot the widgets read, so it answers even when the app is not running — and says so when that
 /// snapshot is old, since the app updates it only while open.

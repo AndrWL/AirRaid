@@ -19,7 +19,7 @@ extension Threat {
         isHeading(into: place) ? nil : proximity(to: place.coordinate, at: date)
     }
 
-    /// «курсом на Вишневе» — said in place of a distance when only the target is known.
+    /// "Heading for <target>" — said in place of a distance when only the target is known.
     var headingText: String? {
         target.map { "курсом на \($0.name)" }
     }

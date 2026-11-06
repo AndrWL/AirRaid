@@ -311,7 +311,7 @@ private extension SettingsView {
         .accessibilityHint("Назва, радіус, перемістити чи прибрати")
     }
 
-    /// The street, else the locality and region; «Адресу визначаємо…» while neither is known.
+    /// The street, else the locality and region; a "finding the address" note while neither is known.
     func placeDetail(_ place: SettingsPlaceContent) -> String? {
         if let street = place.street {
             return [street, place.placeLine].compactMap { $0 }.joined(separator: " · ")
@@ -319,7 +319,7 @@ private extension SettingsView {
         return place.placeLine ?? "Адресу визначаємо…"
     }
 
-    /// «Додати місце» with a Плюс badge: without Плюс it opens the subscription.
+    /// "Add place" with a Plus badge: without Plus it opens the subscription.
     var addPlaceButton: some View {
         Button(action: viewModel.didTapAddPlace) {
             HStack {

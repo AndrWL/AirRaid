@@ -43,13 +43,13 @@ public struct HomeStatusSnapshot: Codable, Hashable, Sendable {
 /// The home pin when there is one, otherwise the user's last known location.
 public struct HomeStatus: Codable, Hashable, Sendable {
 
-    /// Which place this is, for its symbol and wording («від дому», «від вас»).
+    /// Which place this is, for its symbol and wording ("from home", "from you").
     public let placeKind: StatusPlaceKind
 
-    /// «Ірпінь», «Дім» until the address is known, «Моя геолокація».
+    /// The locality, "Home" until the address is known, or "My location".
     public let placeName: String
 
-    /// «Київська область»; `nil` when the home is outside every oblast outline.
+    /// The oblast's name; `nil` when the home is outside every oblast outline.
     public let regionName: String?
 
     /// The air raid alert at the home's point, or `nil` when there is none.
@@ -134,19 +134,19 @@ public struct NearThreat: Codable, Hashable, Sendable {
     /// Stays the same across updates of the same threat.
     public let id: String
 
-    /// «Шахед ×3».
+    /// The threat's name with its count.
     public let title: String
 
-    /// «Шахед», «FPV», «Реакт.» — a few letters for the Dynamic Island's compact corner.
+    /// The type in a few letters, for the Dynamic Island's compact corner.
     public let shortTitle: String
 
     /// The asset name of the threat's silhouette, `threat-<type>`.
     public let iconName: String
 
-    /// «14 км від дому», «у межах ±20 км від вас»; as of ``HomeStatusSnapshot/updatedAt``.
+    /// The distance from the place, or "within ±N km" for a rough position; as of ``HomeStatusSnapshot/updatedAt``.
     public let distanceText: String
 
-    /// «14 км», «±20 км» — for the Dynamic Island's compact corner.
+    /// The distance, or "±N km", for the Dynamic Island's compact corner.
     public let shortDistanceText: String
 
     /// When the forecast puts the threat over the place, or `nil` unless it flies toward it.

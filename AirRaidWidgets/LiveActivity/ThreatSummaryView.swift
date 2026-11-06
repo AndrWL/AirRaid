@@ -8,8 +8,8 @@
 import HomeStatusKit
 import SwiftUI
 
-/// The threat part of the Live Activity: the threat in the radius, else the closest one beyond it under a «поза
-/// радіусом» note, else a line saying the sky around is clear.
+/// The threat part of the Live Activity: the threat in the radius, else the closest one beyond it under an "outside the
+/// radius" note, else a line saying the sky around is clear.
 struct ThreatSummaryView: View {
 
     // MARK: - Variables

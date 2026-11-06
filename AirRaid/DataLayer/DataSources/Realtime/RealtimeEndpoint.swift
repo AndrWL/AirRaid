@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Builds the WebSocket address of the «Небо» API: `wss://<server>/v1/ws[?since=<version>]`.
+/// Builds the WebSocket address of the Nebo API: `wss://<server>/v1/ws[?since=<version>]`.
 ///
 /// The server address and `since` change between attempts, so the address is rebuilt before every connection
 /// attempt. Credentials go in the `Authorization` header, not the URL, which ends up in tunnel logs.

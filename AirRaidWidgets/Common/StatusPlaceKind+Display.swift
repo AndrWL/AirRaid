@@ -17,7 +17,7 @@ extension StatusPlaceKind {
         }
     }
 
-    /// «може бути біля дому», «може бути у вас» — over the forecast arrival time.
+    /// "May reach home", "may reach you" — over the forecast arrival time.
     var arrivalLabel: String {
         switch self {
         case .home: return "може бути біля дому"
@@ -25,7 +25,7 @@ extension StatusPlaceKind {
         }
     }
 
-    /// «біля дому», «біля вас».
+    /// "Near home", "near you".
     var nearText: String {
         switch self {
         case .home: return "біля дому"

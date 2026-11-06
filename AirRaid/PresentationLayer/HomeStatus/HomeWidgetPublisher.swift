@@ -14,7 +14,7 @@ import WidgetKit
 ///
 /// A reload redraws every widget the user placed, and reloads from the background count against a daily budget, so
 /// it happens only when the content changes — plus every ``Constants/keepFreshInterval`` while the app is live, so
-/// the widget's «дані від …» note never appears over data that is in fact current.
+/// the widget's "data as of …" note never appears over data that is in fact current.
 final class HomeWidgetPublisher {
 
     // MARK: - Variables

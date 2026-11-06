@@ -20,7 +20,7 @@ enum SettingsRoute: Hashable {
 /// Defines the sheets of the Settings tab.
 enum SettingsSheetRoute: Identifiable {
 
-    /// AirRaid Плюс: the subscription, its status and restoring it.
+    /// AirRaid Plus: the subscription, its status and restoring it.
     case paywall
 
     var id: Self { self }

@@ -11,7 +11,7 @@ nonisolated struct DistrictBoundaryPropertiesDTO: Decodable, Sendable {
     /// The COD-AB raion code, e.g. `UA0502`.
     let id: String
 
-    /// The Ukrainian raion name without «район», e.g. `Гайсинський`.
+    /// The Ukrainian raion name without the word for "raion", e.g. `Haisynskyi`.
     let name: String
 
     /// The oblast's ISO 3166-2 code, e.g. `UA-05`.

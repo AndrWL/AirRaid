@@ -7,7 +7,7 @@ import SwiftUI
 import Testing
 @testable import AirRaid
 
-/// Tests for ``MapBaseStyle``: «Як у системі» and «Детальна» follow the appearance, «Темна» and «Світла» ignore it.
+/// Tests for ``MapBaseStyle``: "Match system" and "Detailed" follow the appearance, "Dark" and "Light" ignore it.
 @MainActor
 @Suite
 struct MapBaseStyleTests {

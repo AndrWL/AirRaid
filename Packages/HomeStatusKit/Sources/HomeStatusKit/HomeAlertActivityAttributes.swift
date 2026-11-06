@@ -12,7 +12,7 @@ import Foundation
 /// The Live Activity shown on the lock screen and in the Dynamic Island while the home (or, without a home, the user's
 /// location) is under an air raid alert.
 ///
-/// The app starts it when the alert begins, updates it while it is open and ends it with «Відбій» when the alert is
+/// The app starts it when the alert begins, updates it while it is open and ends it with the all clear when the alert is
 /// lifted. It shows moments (since when, the forecast arrival) rather than timers, so it stays true between updates.
 public struct HomeAlertActivityAttributes: ActivityAttributes {
 
@@ -21,7 +21,7 @@ public struct HomeAlertActivityAttributes: ActivityAttributes {
     /// The home, or the user's location while there is no home; fixed for the activity's lifetime.
     public let placeKind: StatusPlaceKind
 
-    /// «Ірпінь», «Дім» until the address is known, «Моя геолокація»; fixed for the activity's lifetime.
+    /// The locality, "Home" until the address is known, or "My location"; fixed for the activity's lifetime.
     public let placeName: String
 
     public init(
@@ -55,7 +55,7 @@ public struct HomeAlertActivityState: Codable, Hashable, Sendable {
     /// The radius the place is watched in, in kilometres.
     public let radiusKm: Double
 
-    /// The activity's last state after the alert was lifted: «Відбій».
+    /// The activity's last state after the alert was lifted: the all clear.
     public let isAllClear: Bool
 
     public init(

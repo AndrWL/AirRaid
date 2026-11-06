@@ -12,7 +12,7 @@ import Foundation
 /// - Note: `nonisolated` because the target defaults to MainActor and DI factories read these off the main actor.
 nonisolated enum AppEnvironment {
 
-    /// The config Worker that publishes the current «Небо» API server address.
+    /// The config Worker that publishes the current Nebo API server address.
     ///
     /// The server runs behind a temporary Cloudflare tunnel whose address changes on every restart; the backend
     /// re-publishes it here, so builds keep working without a rebuild. See ``ServerConfigService``.
@@ -44,16 +44,16 @@ nonisolated enum AppEnvironment {
     static let lightMapStyleURLString = "https://tiles.openfreemap.org/styles/positron"
     static let detailedMapStyleURLString = "https://tiles.openfreemap.org/styles/liberty"
 
-    /// Where «Написати розробнику» in the settings sends its email.
+    /// Where "Message the developer" in the settings sends its email.
     static let feedbackEmail = "andrewlebedev13@gmail.com"
 
-    /// The app's App Store page, opened by «Оновити» once the server refuses this version (`426`).
+    /// The app's App Store page, opened by "Update" once the server refuses this version (`426`).
     ///
     /// `nil` until the app has an App Store ID, which hides the button: the prompt to update stays, without a link.
     /// Set it to `URL(string: "https://apps.apple.com/app/id<App Store ID>")`.
     static let appStoreURL: URL? = nil
 
-    /// The AirRaid Плюс subscriptions, monthly first. One subscription group in App Store Connect; locally they come
+    /// The AirRaid Plus subscriptions, monthly first. One subscription group in App Store Connect; locally they come
     /// from `Config/AirRaidPlus.storekit`, selected in the scheme's Run options.
     static let plusProductIDs = [
         "com.andriilebediev.airraid.plus.monthly",

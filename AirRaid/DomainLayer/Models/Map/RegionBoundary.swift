@@ -13,7 +13,7 @@ nonisolated struct RegionBoundary: Identifiable, Hashable, Sendable {
     /// Alerts reference regions by this code, so whatever source the backend uses must be mapped to it.
     let id: String
 
-    /// The Ukrainian name, e.g. «Київська область» or «Київ».
+    /// The Ukrainian name of the oblast, or of Kyiv or Sevastopol.
     let name: String
 
     /// One or more polygons — a region can have exclaves.

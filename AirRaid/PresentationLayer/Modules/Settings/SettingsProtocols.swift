@@ -21,10 +21,10 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
 
     var isPlusActive: Bool { get }
 
-    /// «2 з 10» — how many saved places Плюс allows; `nil` without Плюс.
+    /// "N of 10" — how many saved places Plus allows; `nil` without Plus.
     var placeCountText: String? { get }
 
-    /// With Плюс at ``PremiumLimits/plusPlaces`` saved places, so no more can be added.
+    /// With Plus at ``PremiumLimits/plusPlaces`` saved places, so no more can be added.
     var isAtPlaceLimit: Bool { get }
 
     var soundModes: [AlertSoundMode] { get }
@@ -64,7 +64,7 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     /// Switches to the map with the home picker.
     func didTapPickHomeOnMap()
 
-    /// Switches to the map to add a place with Плюс, or opens the paywall without it.
+    /// Switches to the map to add a place with Plus, or opens the paywall without it.
     func didTapAddPlace()
 
     /// Opens the place's own screen: name, radius, moving and removing it.
@@ -82,7 +82,7 @@ protocol SettingsViewModelProtocol: BaseViewModelProtocol {
     /// Opens the voice feed's settings.
     func didTapVoiceSettings()
 
-    /// Opens AirRaid Плюс: the subscription, or its status for a subscriber.
+    /// Opens AirRaid Plus: the subscription, or its status for a subscriber.
     func didTapPlus()
 }
 

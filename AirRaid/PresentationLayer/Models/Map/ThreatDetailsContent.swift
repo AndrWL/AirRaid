@@ -32,7 +32,7 @@ struct ThreatDetailsContent {
 
     let confidence: Confidence
 
-    /// «Підтвердили 4 канали».
+    /// How many channels confirmed the report.
     let sourcesText: String
 
     /// The last confirmed place, or `nil` when only the target or the region is known.
@@ -50,19 +50,19 @@ struct ThreatDetailsContent {
     /// in the wrong oblast, which is also why the map fades such a pin.
     let noAlertNote: String?
 
-    /// «Пд-Зх (215°)» from ``Threat/course``; `nil` when the course is unknown.
+    /// The compass point and degrees from ``Threat/course``; `nil` when the course is unknown.
     let courseText: String?
 
-    /// «Пн-Сх»; `nil` when unknown.
+    /// The compass point the threat approaches from; `nil` when unknown.
     let approachText: String?
 
-    /// «~180 км/год»; `nil` when the threat is not moved between reports.
+    /// The approximate speed in km/h; `nil` when the threat is not moved between reports.
     let speedText: String?
 
     /// The speed is typical for the type rather than measured along the track.
     let isSpeedEstimated: Bool
 
-    /// «≈ 12 хв»; `nil` when there is no target or the forecast has run out.
+    /// The estimated time to the target; `nil` when there is no target or the forecast has run out.
     let timeToTargetText: String?
 
     /// The distance from each of the user's places to the threat's estimated position; empty without places or
@@ -72,7 +72,7 @@ struct ThreatDetailsContent {
     /// «11:42».
     let firstSeenText: String
 
-    /// «2 хв тому».
+    /// How long ago the report was updated.
     let updatedText: String
 
     /// Set when the data is old or the threat has disappeared, so the sheet does not pass it off as current.
@@ -136,7 +136,7 @@ extension ThreatDetailsContent {
 
         let level: ThreatLevel
 
-        /// «Висока».
+        /// The confidence level's name.
         let label: String
 
         /// The level only, no percentage: a number like «71 %» reads as more precise than an aggregate of
@@ -161,16 +161,16 @@ extension ThreatDetailsContent {
 
         let place: WatchedPlace
 
-        /// «Від вас», «Від дому», «Від «Робота»».
+        /// "From you", "From home", or from the custom place by its name.
         let distanceLabel: String
 
-        /// «42 км».
+        /// The distance in kilometres.
         let distanceText: String
 
-        /// «Може бути у вас».
+        /// "May reach you", or the place, before the time of arrival.
         let arrivalLabel: String
 
-        /// «≈ 14 хв»; `nil` unless the threat flies toward the place.
+        /// The estimated arrival; `nil` unless the threat flies toward the place.
         let arrivalText: String?
 
         var id: String { place.id }

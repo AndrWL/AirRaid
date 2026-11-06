@@ -45,7 +45,7 @@ enum MapConnectionNotice: Equatable {
         }
     }
 
-    /// «Дані станом на 12:34», or what to do; `nil` when there is nothing to add.
+    /// Since when the data is current, or what to do; `nil` when there is nothing to add.
     var subtitle: String? {
         switch self {
         case .connecting(let since), .offline(let since):

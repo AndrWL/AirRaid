@@ -26,17 +26,17 @@ protocol FeedViewModelProtocol: BaseViewModelProtocol {
 
     var isPlusActive: Bool { get }
 
-    /// The bubble before which the «Непрочитані» divider goes; `nil` when everything was seen.
+    /// The bubble before which the "Unread" divider goes; `nil` when everything was seen.
     var firstUnreadID: String? { get }
 
-    /// How many older bubbles only Плюс shows.
+    /// How many older bubbles only Plus shows.
     var hiddenHistoryCount: Int { get }
 
     var isVoiceLive: Bool { get }
 
     var isSpeaking: Bool { get }
 
-    /// Whether the user has no place yet, so «Мої місця» can show only country-wide reports.
+    /// Whether the user has no place yet, so "My places" can show only country-wide reports.
     var hasNoPlaces: Bool { get }
 
     /// Set while the server refuses this app version, so no new bubbles can arrive; `nil` otherwise.
@@ -48,7 +48,7 @@ protocol FeedViewModelProtocol: BaseViewModelProtocol {
 
     func didSelectScope(_ scope: FeedScope)
 
-    /// Opens the paywall instead for anything but ``FeedKindFilter/all`` without Плюс.
+    /// Opens the paywall instead for anything but ``FeedKindFilter/all`` without Plus.
     func didSelectKindFilter(_ filter: FeedKindFilter)
 
     /// Opens a threat that is still on the map.

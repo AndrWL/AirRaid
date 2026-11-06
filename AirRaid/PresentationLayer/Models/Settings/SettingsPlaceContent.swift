@@ -14,18 +14,18 @@ struct SettingsPlaceContent: Hashable, Identifiable {
 
     let kind: WatchedPlaceKind
 
-    /// «Дім», «Робота», «Ірпінь».
+    /// "Home", or a custom place by its name or locality.
     let title: String
 
-    /// «вулиця Соборна, 12»; `nil` until the geocoder names it, or off a named street.
+    /// The street and house number; `nil` until the geocoder names it, or off a named street.
     let street: String?
 
-    /// «Ірпінь · Київська область»; `nil` until either is known.
+    /// The locality and the oblast; `nil` until either is known.
     let placeLine: String?
 
     let radiusKm: Double
 
-    /// A custom place kept while Плюс is off: saved, but not watched.
+    /// A custom place kept while Plus is off: saved, but not watched.
     let isPaused: Bool
 
     init(
@@ -38,7 +38,7 @@ struct SettingsPlaceContent: Hashable, Identifiable {
         title = place.title
         street = place.address?.street
         // A place named by its locality does not repeat it underneath.
-        // Nor the city that is its own region: «Київ», not «Київ · Київ».
+        // Nor the city that is its own region: "Kyiv", not "Kyiv · Kyiv".
         let locality = place.address?.locality == title ? nil : place.address?.locality
         var parts = [locality, regionName].compactMap { $0 }
         if parts.count == 2, parts[0] == parts[1] {

@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-/// A capsule with a short state word: confidence, alert level, data state, or the «оцінка» tag.
+/// A capsule with a short state word: confidence, alert level, data state, or the "estimate" tag.
 ///
 /// Confidence never borrows alert colours: its strength grows by fill (`neutral` → `accentSoft` → `accent`).
 struct Badge: View {
 
     /// What the badge says, which decides its colours.
     enum Tone {
-        /// Low confidence; the «оцінка» tag.
+        /// Low confidence; the "estimate" tag.
         case neutral
         /// Medium confidence.
         case accentSoft

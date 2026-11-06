@@ -60,13 +60,13 @@ protocol DIServiceContaining {
     /// Keeps the home screen widgets and the Live Activity in step with the home's status.
     var homeStatusBroadcaster: HomeStatusBroadcasting { get }
 
-    /// The places threats are watched around, with Плюс deciding the custom ones.
+    /// The places threats are watched around, with Plus deciding the custom ones.
     var watchedPlacesProvider: WatchedPlacesProviding { get }
 
-    /// The oblasts of the user's places, for «Мої місця».
+    /// The oblasts of the user's places, for the "My places" feed filter.
     var watchedRegionsProvider: WatchedRegionsProviding { get }
 
-    /// Whether the user has AirRaid Плюс.
+    /// Whether the user has AirRaid Plus.
     var entitlementService: EntitlementServiceProtocol { get }
 
     /// What the voice feed reads and how.

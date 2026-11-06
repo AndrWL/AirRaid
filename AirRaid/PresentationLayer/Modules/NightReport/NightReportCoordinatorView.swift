@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// The coordinator view for the night report sheet. AirRaid Плюс: the feed opens the paywall without it.
+/// The coordinator view for the night report sheet. AirRaid Plus: the feed opens the paywall without it.
 struct NightReportCoordinatorView: View {
 
     // MARK: - Variables

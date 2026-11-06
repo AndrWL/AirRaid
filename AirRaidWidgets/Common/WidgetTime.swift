@@ -16,7 +16,7 @@ enum WidgetTime {
     /// «11:42».
     static let clockStyle = Date.FormatStyle(locale: Constants.locale).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
 
-    /// «з 10:28» today, «з 3 жовт.» earlier.
+    /// "Since" with the time today, with the day earlier.
     static func since(
         _ date: Date,
         now: Date
@@ -28,7 +28,7 @@ enum WidgetTime {
     }
 
     /// «≈ 10:42» — when the forecast puts the threat over the place; the «≈» marks it as an estimate, the way the app
-    /// tags computed values «оцінка».
+    /// tags computed values as an estimate.
     static func arrival(_ date: Date) -> String {
         "≈ \(date.formatted(clockStyle))"
     }

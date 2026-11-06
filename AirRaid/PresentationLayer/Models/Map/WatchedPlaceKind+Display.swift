@@ -9,7 +9,7 @@ import SwiftUI
 
 extension WatchedPlaceKind {
 
-    /// «Моя геолокація», «Дім», «Місце» — a custom place without a name yet.
+    /// "My location", "Home", or "Place" for a custom place without a name yet.
     var title: String {
         switch self {
         case .currentLocation: return "Моя геолокація"
@@ -38,12 +38,12 @@ extension WatchedPlaceKind {
 
 extension WatchedPlace {
 
-    /// «Моя геолокація», «Дім», «Робота».
+    /// "My location", "Home", or the custom place's name.
     var title: String {
         name ?? kind.title
     }
 
-    /// «від вас», «від дому», «від «Робота»» — after a distance.
+    /// "From you", "from home", or from the custom place by its name — after a distance.
     var fromText: String {
         switch kind {
         case .currentLocation: return "від вас"
@@ -52,7 +52,7 @@ extension WatchedPlace {
         }
     }
 
-    /// «біля вас», «біля дому», «біля «Робота»».
+    /// "Near you", "near home", or near the custom place by its name.
     var nearText: String {
         switch kind {
         case .currentLocation: return "поруч із вами"
@@ -61,7 +61,7 @@ extension WatchedPlace {
         }
     }
 
-    /// «Може бути у вас», «Може бути біля дому» — before a time of arrival.
+    /// "May reach you", "may reach home" — before a time of arrival.
     var arrivalLabel: String {
         switch kind {
         case .currentLocation: return "Може бути у вас"
@@ -72,7 +72,7 @@ extension WatchedPlace {
 
 extension SavedPlace {
 
-    /// «Дім», «Робота», «Ірпінь» — a custom place by its locality until it has a name.
+    /// "Home", or a custom place by its name, else by its locality until it has a name.
     var title: String {
         WatchedPlace(self).title
     }

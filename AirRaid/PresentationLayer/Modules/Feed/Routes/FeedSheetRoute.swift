@@ -8,7 +8,7 @@
 /// Defines the sheets of the Feed tab.
 enum FeedSheetRoute: Identifiable {
 
-    /// AirRaid Плюс: what it adds and the subscription.
+    /// AirRaid Plus: what it adds and the subscription.
     case paywall
 
     /// The last night around the user's places.

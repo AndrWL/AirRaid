@@ -12,10 +12,10 @@ protocol VoiceSettingsViewModelProtocol: BaseViewModelProtocol {
 
     var settings: VoiceSettings { get }
 
-    /// The rules (priority, places, speed) are Плюс; without it they show the defaults, locked.
+    /// The rules (priority, places, speed) are Plus; without it they show the defaults, locked.
     var isPlusActive: Bool { get }
 
-    /// The sound mode is not «Звук», so the voice feed stays silent.
+    /// The sound mode is not "Sound", so the voice feed stays silent.
     var isMutedBySoundMode: Bool { get }
 
     var priorityOptions: [FeedPriority] { get }

@@ -13,12 +13,12 @@ extension Threat {
         type?.displayName ?? kind.displayName
     }
 
-    /// «Шахед», «FPV», «Реакт.» — at most about six letters, for the Dynamic Island's compact corner.
+    /// The type in about six letters at most, abbreviated if needed, for the Dynamic Island's compact corner.
     var shortName: String {
         type?.shortName ?? kind.shortName
     }
 
-    /// «Шахед ×3» when the channels name more than one target, otherwise just ``displayName``.
+    /// The name with "×N" when the channels name more than one target, otherwise just ``displayName``.
     var countedName: String {
         guard let count, count > 1 else { return displayName }
         return "\(displayName) ×\(count)"
@@ -39,10 +39,10 @@ extension Threat {
 
 // MARK: - ThreatMapCaption
 
-/// Two lines under a pin: a small label («курсом на») over the place name («Кобеляки»).
+/// Two lines under a pin: a small label ("heading for") over the place name.
 ///
 /// The name stays in the nominative, as the backend sends it, so it reads as a value under a label rather than
-/// as a phrase («курсом на Кобеляки» would need the accusative for «Звенигородка»).
+/// as a phrase (in Ukrainian "heading for" would need the place name in the accusative).
 struct ThreatMapCaption: Hashable {
     let label: String
     let name: String

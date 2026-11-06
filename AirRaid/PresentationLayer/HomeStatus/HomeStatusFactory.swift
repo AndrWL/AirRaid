@@ -129,7 +129,7 @@ private extension NearThreat {
 
 private extension NearThreat {
 
-    /// Only the target is known: «курсом на Вишневе» in place of a distance, and no arrival.
+    /// Only the target is known: "heading for <target>" in place of a distance, and no arrival.
     init(
         heading threat: Threat,
         otherCount: Int

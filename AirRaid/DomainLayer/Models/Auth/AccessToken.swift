@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// A short-lived bearer token for the «Небо» API.
+/// A short-lived bearer token for the Nebo API.
 ///
 /// Dates are on the device clock, computed from the server's `expiresIn` at receipt, so a skewed clock does not
 /// make the app refresh too late.

@@ -11,7 +11,7 @@ import HomeStatusKit
 /// Runs the Live Activity that follows an air raid alert at the home, or at the user's location without a home.
 protocol HomeAlertActivityControlling {
 
-    /// Starts the activity when an alert at the home begins, updates it while it lasts and ends it with «Відбій».
+    /// Starts the activity when an alert at the home begins, updates it while it lasts and ends it with the all clear.
     ///
     /// - Parameters:
     ///   - status: The watched place's status (the home, else the user's location), or `nil` when there is neither —

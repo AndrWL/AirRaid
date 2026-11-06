@@ -38,12 +38,12 @@ extension HomeAlertLevel {
 
 extension Optional where Wrapped == HomeAlert {
 
-    /// «Повітряна тривога» or «Тривоги немає», as the app's home sheet reads.
+    /// An air raid alert or no alert, as the app's home sheet reads.
     var title: String {
         self == nil ? "Тривоги немає" : "Повітряна тривога"
     }
 
-    /// One word for the tightest spots: «Тривога», «Тихо».
+    /// One word for the tightest spots: alert or quiet.
     var shortTitle: String {
         self == nil ? "Тихо" : "Тривога"
     }

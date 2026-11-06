@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Defines the state of the AirRaid Плюс sheet.
+/// Defines the state of the AirRaid Plus sheet.
 protocol PaywallViewModelProtocol: BaseViewModelProtocol {
 
     /// The subscriptions the store view offers.

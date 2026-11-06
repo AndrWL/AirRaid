@@ -5,7 +5,7 @@
 //  Created by ANDRII LEBEDIEV on 08.10.2026.
 //
 
-/// An official alert (alerts.in.ua) as the «Небо» API relays it.
+/// An official alert (alerts.in.ua) as the Nebo API relays it.
 ///
 /// `threats` and `oblast_uid` are not decoded yet: the map only needs where and since when.
 nonisolated struct RegionAlertDTO: Decodable, Sendable {
@@ -19,7 +19,7 @@ nonisolated struct RegionAlertDTO: Decodable, Sendable {
     let locationType: String
     let name: String
     let oblast: String?
-    /// The raion a hromada lies in, e.g. «Нікопольський район»; `null` for oblasts, raions, and cities.
+    /// The raion a hromada lies in, e.g. Nikopol Raion; `null` for oblasts, raions, and cities.
     let raion: String?
     /// The oblast's ISO 3166-2:UA code, as for events.
     let code: String

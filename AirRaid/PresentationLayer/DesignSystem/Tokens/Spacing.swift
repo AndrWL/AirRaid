@@ -16,7 +16,7 @@ enum Spacing {
     static let xxSmall: CGFloat = 2
     /// Between a title and its badge; vertical badge padding.
     static let xSmall: CGFloat = 4
-    /// Horizontal badge padding; between a value and its «оцінка» tag; from the safe area to a banner.
+    /// Horizontal badge padding; between a value and its "estimate" tag; from the safe area to a banner.
     static let small: CGFloat = 8
     /// Between a glyph and its text in a row or a banner.
     static let medium: CGFloat = 12

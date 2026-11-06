@@ -39,7 +39,7 @@ nonisolated extension Threat {
     /// The direction of travel in degrees clockwise from north, the same one ``predictedCoordinate(at:)`` moves along:
     /// toward the ``target`` when both it and the ``position`` are known, otherwise the reported ``heading``.
     ///
-    /// Channels often name only "Семенівка → Кобеляки" and no heading; the pin must still point at the target.
+    /// Channels often name only "Semenivka → Kobeliaky" and no heading; the pin must still point at the target.
     var course: Double? {
         if let position, let target, position.coordinate != target.coordinate {
             let bearing = position.coordinate.initialBearing(to: target.coordinate)

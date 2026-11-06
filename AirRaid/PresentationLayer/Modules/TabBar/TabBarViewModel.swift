@@ -44,7 +44,7 @@ final class TabBarViewModel: BaseViewModel {
     ///   - realtimeService: The live connection every tab reads from.
     ///   - homeStatusBroadcaster: Feeds the widgets and the Live Activity from the same connection.
     ///   - feedRepository: The feed, started with the connection; also the source of the tab's badge.
-    ///   - entitlementService: AirRaid Плюс, started at launch.
+    ///   - entitlementService: AirRaid Plus, started at launch.
     init(
         router: TabBarRouterProtocol,
         realtimeService: RealtimeServiceProtocol,

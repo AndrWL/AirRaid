@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Supplies bearer tokens for the «Небо» API and reacts when the server refuses one.
+/// Supplies bearer tokens for the Nebo API and reacts when the server refuses one.
 nonisolated protocol AuthTokenProviding: Sendable {
 
     /// A token valid for the next request or connection attempt.

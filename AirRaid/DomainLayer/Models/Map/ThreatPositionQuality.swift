@@ -14,7 +14,7 @@ nonisolated enum ThreatPositionQuality: Sendable {
     /// An approximate place, e.g. "north of the city".
     case approximate
 
-    /// Only the destination is known ("курсом на").
+    /// Only the destination is known ("heading for").
     case targetOnly
 
     /// Only the region is known.

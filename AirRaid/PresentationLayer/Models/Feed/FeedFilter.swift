@@ -21,7 +21,7 @@ enum FeedScope: CaseIterable, Hashable {
     }
 }
 
-/// What kind of bubbles the feed shows. Anything but ``all`` is AirRaid Плюс.
+/// What kind of bubbles the feed shows. Anything but ``all`` is AirRaid Plus.
 enum FeedKindFilter: CaseIterable, Hashable {
 
     case all

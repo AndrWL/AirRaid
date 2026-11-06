@@ -9,7 +9,7 @@ import Combine
 import Foundation
 import OSLog
 
-/// The live air situation from the «Небо» API, kept in sync over ``RealtimeServiceProtocol``.
+/// The live air situation from the Nebo API, kept in sync over ``RealtimeServiceProtocol``.
 ///
 /// Strategy: network-only, in memory. Holds every active event by `id`, every official alert by `uid`, plus the last
 /// applied `version`:

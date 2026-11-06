@@ -27,7 +27,7 @@ nonisolated struct FeedItem: Identifiable, Hashable, Sendable {
 
     var priority: FeedPriority
 
-    /// Every oblast the bubble touched, for the «Мої місця» filter.
+    /// Every oblast the bubble touched, for the "My places" filter.
     var regionIDs: Set<String>
 
     /// What happened, oldest first; at most ``FeedItem/maxLines``, the oldest dropped first.

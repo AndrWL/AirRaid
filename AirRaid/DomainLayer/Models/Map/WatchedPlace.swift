@@ -34,7 +34,7 @@ nonisolated struct WatchedPlace: Hashable, Sendable, Identifiable {
     }
 
     /// The places to watch: the current location while it is known, the home once it is set, and the custom places
-    /// while AirRaid Плюс is active — kept but paused without it.
+    /// while AirRaid Plus is active — kept but paused without it.
     static func places(
         currentLocation: GeoCoordinate?,
         settings: PlaceSettings,
@@ -92,9 +92,9 @@ nonisolated extension Threat {
     /// is known, whether it is heading into that radius.
     ///
     /// The reported position only, never the forecast: a red pin and a sound must not rest on a guess. An approximate
-    /// position counts only when its uncertainty fits the radius: «Київ, ±62 km» says nothing about a 10 km circle,
-    /// it is the city's centre standing in for somewhere in the region. A report of only «курсом на Вишневе» is about
-    /// the place itself when Вишневе is inside the radius, so it counts by its target (``isHeading(into:)``).
+    /// position counts only when its uncertainty fits the radius: "Kyiv, ±62 km" says nothing about a 10 km circle,
+    /// it is the city's centre standing in for somewhere in the region. A report of only "heading for Vyshneve" is about
+    /// the place itself when Vyshneve is inside the radius, so it counts by its target (``isHeading(into:)``).
     func isNear(_ places: [WatchedPlace]) -> Bool {
         places.contains(where: isNear)
     }

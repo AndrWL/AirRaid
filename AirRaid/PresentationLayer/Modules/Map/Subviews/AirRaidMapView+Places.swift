@@ -52,7 +52,7 @@ extension AirRaidMapView.Coordinator {
         )
         pins.iconAllowsOverlap = NSExpression(forConstantValue: true)
         pins.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        // «Дім · Ірпінь», «Робота» under the pin, like a threat's caption; hidden rather than overlapping other labels.
+        // "Home · <locality>", or a custom place's name, under the pin, like a threat's caption; hidden rather than overlapping other labels.
         pins.text = NSExpression(forKeyPath: MapLayerStyle.pinCaptionKey)
         pins.textFontNames = NSExpression(forConstantValue: MapLayerStyle.cityFontNames)
         pins.textFontSize = NSExpression(forConstantValue: MapLayerStyle.threatCaptionFontSize)
@@ -130,7 +130,7 @@ extension AirRaidMapView.Coordinator {
         }
     }
 
-    /// «Дім · Ірпінь» for the home; a custom place by its name.
+    /// "Home · <locality>" for the home; a custom place by its name.
     static func caption(of place: WatchedPlace) -> String {
         guard place.kind == .home else { return place.title }
         return place.address?.locality.map { "\(place.title) · \($0)" } ?? place.title

@@ -11,7 +11,7 @@ import OSLog
 
 /// The feed, built on the device from the air situation's changes and kept in a file.
 ///
-/// Strategy: the «Небо» API has no feed history yet, so the feed is what this device saw. Each batch of
+/// Strategy: the Nebo API has no feed history yet, so the feed is what this device saw. Each batch of
 /// ``AirSituationEvent``s goes through ``FeedBuilder``; then bubbles whose threat or alert is gone from the situation
 /// are closed (they ended while the app was closed), and bubbles that ended more than ``PremiumLimits/plusHistory``
 /// ago are dropped. The file is written a few seconds after the last change.

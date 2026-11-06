@@ -286,7 +286,7 @@ private enum Constants {
     static let crimeaID = "UA-43"
     static let bucha = DistrictKey(regionID: "UA-32", name: "Бучанський")
 
-    /// Kyiv Oblast as a square, split into a western (Бучанський) and an eastern (Обухівський) raion.
+    /// Kyiv Oblast as a square, split into a western (Bucha) and an eastern (Obukhiv) raion.
     static let oblast = RegionBoundary.stub(polygons: [MapFixtures.rectangle(south: 49, west: 29, north: 51, east: 31)])
     static let raions = [
         DistrictBoundary.stub(name: "Бучанський", polygons: [MapFixtures.rectangle(south: 49, west: 29, north: 51, east: 30)]),

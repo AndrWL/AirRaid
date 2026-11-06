@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// The user's watched places — their location, their home and, with Плюс, their other places — with the radius around
+/// The user's watched places — their location, their home and, with Plus, their other places — with the radius around
 /// each: threats inside it show up in the card over the map.
 struct PlacesView<ViewModel: PlacesViewModelProtocol>: View {
 
