@@ -63,12 +63,12 @@ struct PlaceThreatBanner: View {
 
 private extension PlaceThreatBanner {
 
-    /// «Шахед біля дому», «Шахед поруч із вами», «Шахед біля «Робота»».
+    /// The threat's name near the place: near home, near you, or near the custom place by its name.
     var titleText: String {
         "\(summary.title) \(summary.place.nearText)"
     }
 
-    /// «14 км від дому · ≈ 4 хв · ще 2».
+    /// The distance, the estimated arrival and how many more threats are in the radius.
     var detailText: String {
         var parts = [summary.distanceText]
         if let arrivalText = summary.arrivalText {

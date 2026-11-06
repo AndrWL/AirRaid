@@ -16,16 +16,16 @@ struct NearestThreatSummary: Hashable, Identifiable {
 
     let threatID: String
 
-    /// «Шахед», «Шахед ×3».
+    /// The threat's name, with its count when there are several.
     let title: String
 
     /// The asset name of the threat's silhouette.
     let iconName: String
 
-    /// «14 км від дому», or «курсом на Вишневе» when only the target is known.
+    /// The distance from the place, or "heading for <target>" when only the target is known.
     let distanceText: String
 
-    /// «≈ 4 хв»; `nil` unless the threat flies toward the place.
+    /// The estimated arrival; `nil` unless the threat flies toward the place.
     let arrivalText: String?
 
     /// How many more threats are inside this place's radius; `0` when this is the only one.

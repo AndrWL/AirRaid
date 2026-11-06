@@ -10,10 +10,9 @@ import Foundation
 /// outlines in degrees, so whether a point is inside one is obvious.
 enum MapFixtures {
 
-    /// Біла Церква, where `Threat.stub` puts a threat by default.
+    /// Bila Tserkva, where `Threat.stub` puts a threat by default.
     static let bilaTserkva = GeoCoordinate(latitude: 49.8, longitude: 30.1)
 
-    /// Київ.
     static let kyiv = GeoCoordinate(latitude: 50.45, longitude: 30.52)
 
     /// A square outline of `halfSize` degrees either side of `center`.

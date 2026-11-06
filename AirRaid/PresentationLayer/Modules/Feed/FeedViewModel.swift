@@ -11,7 +11,7 @@ import HomeStatusKit
 
 /// The view model of the Feed tab.
 ///
-/// Rows are rebuilt from the kept bubbles whenever the feed, the live situation, the places, the filters or Плюс
+/// Rows are rebuilt from the kept bubbles whenever the feed, the live situation, the places, the filters or Plus
 /// change, and every ``Constants/refreshInterval`` for the distances, which move with the forecast.
 @Observable
 final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
@@ -69,7 +69,7 @@ final class FeedViewModel<Router: FeedRouterProtocol>: BaseViewModel {
     @ObservationIgnored
     private var lastReadAt: Date?
 
-    /// What was read before this visit: the «Непрочитані» divider stays put while the user scrolls.
+    /// What was read before this visit: the "Unread" divider stays put while the user scrolls.
     @ObservationIgnored
     private var readAnchor: Date?
 

@@ -13,7 +13,7 @@ enum PlacePick: Hashable {
     /// Sets the home, or moves it when there is one.
     case home
 
-    /// Adds a custom place; the caller has checked AirRaid Плюс and the limit.
+    /// Adds a custom place; the caller has checked AirRaid Plus and the limit.
     case newPlace
 
     /// Moves the saved place with this id.

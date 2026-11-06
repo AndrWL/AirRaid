@@ -26,7 +26,7 @@ struct FeedView<ViewModel: FeedViewModelProtocol>: View {
                     if viewModel.hiddenHistoryCount > 0 {
                         historyUpsell
                     }
-                    // «Поки тихо» would be wrong while no data arrives; the update banner says why it is empty.
+                    // "All quiet" would be wrong while no data arrives; the update banner says why it is empty.
                     if viewModel.rows.isEmpty, viewModel.upgradeNotice == nil {
                         emptyState
                     }

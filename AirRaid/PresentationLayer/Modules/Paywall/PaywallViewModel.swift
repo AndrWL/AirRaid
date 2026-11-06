@@ -8,7 +8,7 @@
 import Combine
 import Foundation
 
-/// The view model of the AirRaid Плюс sheet. The purchase itself is StoreKit's store view; this follows the result.
+/// The view model of the AirRaid Plus sheet. The purchase itself is StoreKit's store view; this follows the result.
 @Observable
 final class PaywallViewModel: BaseViewModel {
 

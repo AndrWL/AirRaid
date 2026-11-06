@@ -14,7 +14,7 @@ struct InlineNote: View {
     enum Tone {
         /// Stale data, an imprecise position, a threat without an official alert.
         case warning
-        /// An all-clear empty state such as «Тривоги немає».
+        /// An all-clear empty state such as "No alert".
         case allClear
     }
 

@@ -35,7 +35,7 @@ struct FeedRow: Identifiable, Hashable {
 
     let title: String
 
-    /// The current state: «Ніжин → Бровари».
+    /// The current state, e.g. where the threat is and where it heads.
     let subtitle: String?
 
     /// An asset name for a threat, `nil` for an alert (``systemImage`` then).
@@ -47,13 +47,13 @@ struct FeedRow: Identifiable, Hashable {
 
     let isActive: Bool
 
-    /// «02:44», or «13 жовт., 02:44» before today.
+    /// The time, with the day before today.
     let timeText: String
 
-    /// «≈ 12 км від дому · може бути біля дому ≈ 8 хв» — live, for an active threat with a known position.
+    /// The distance to the place and the estimated arrival — live, for an active threat with a known position.
     let proximityText: String?
 
-    /// «ще 4 рядки раніше».
+    /// How many earlier lines were dropped.
     let droppedLinesText: String?
 
     let lines: [Line]
@@ -126,7 +126,7 @@ private extension FeedRow {
         }
     }
 
-    /// «12 км від «Робота» · у радіусі» — from the nearest of the places.
+    /// The distance from the nearest of the places, and whether the threat is inside its radius.
     static func proximityText(
         threat: Threat?,
         places: [WatchedPlace],

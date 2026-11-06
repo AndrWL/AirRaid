@@ -8,10 +8,10 @@
 import HomeStatusKit
 import SwiftUI
 
-/// The activity's three moods: an alert at the place, a threat in its radius with no alert there, and «Відбій».
+/// The activity's three moods: an alert at the place, a threat in its radius with no alert there, and the all clear.
 extension HomeAlertActivityState {
 
-    /// «Повітряна тривога», «Загроза поруч», «Відбій тривоги».
+    /// An air raid alert, a threat nearby, or the all clear.
     var headline: String {
         if isAllClear {
             return "Відбій тривоги"
@@ -19,7 +19,7 @@ extension HomeAlertActivityState {
         return alert == nil ? "Загроза поруч" : "Повітряна тривога"
     }
 
-    /// «Тривога», «Загроза», «Відбій» — for the Dynamic Island.
+    /// One word each for alert, threat and all clear — for the Dynamic Island.
     var shortHeadline: String {
         if isAllClear {
             return "Відбій"
@@ -27,7 +27,7 @@ extension HomeAlertActivityState {
         return alert == nil ? "Загроза" : "Тривога"
     }
 
-    /// The alert's level, red for a threat with no alert, green for «Відбій».
+    /// The alert's level, red for a threat with no alert, green for the all clear.
     var color: Color {
         if isAllClear {
             return .allClear

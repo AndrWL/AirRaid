@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// The coordinator view for the AirRaid Плюс sheet, presented from the feed and the settings.
+/// The coordinator view for the AirRaid Plus sheet, presented from the feed and the settings.
 struct PaywallCoordinatorView: View {
 
     // MARK: - Variables

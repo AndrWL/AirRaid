@@ -19,7 +19,7 @@ import OSLog
 ///
 /// The status is only as fresh as the connection: ``HomeStatusSnapshot/updatedAt`` is the last moment the app was
 /// connected, so the widget can tell old data from current. Before the first snapshot from the server nothing is
-/// published — the empty initial situation would read as «Тривоги немає».
+/// published — the empty initial situation would read as "No alert".
 final class HomeStatusBroadcaster {
 
     // MARK: - Variables

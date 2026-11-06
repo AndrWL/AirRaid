@@ -13,15 +13,15 @@ struct PlaceDetailsContent {
 
     // MARK: - Variables
 
-    /// «Дім», «Робота».
+    /// "Home", or the custom place's name.
     let title: String
 
     let kind: WatchedPlaceKind
 
-    /// «вулиця Соборна, 12»; `nil` until the address is known.
+    /// The street and house number; `nil` until the address is known.
     let street: String?
 
-    /// «Ірпінь · Київська область»; `nil` until either is known.
+    /// The locality and the oblast; `nil` until either is known.
     let placeLine: String?
 
     /// The air raid alert at the place's own point: its oblast, or the raion it is in.
@@ -44,7 +44,7 @@ struct PlaceDetailsContent {
         kind = place.kind
         street = place.address?.street
         // A named custom place shows its locality under the name; one named by its locality does not repeat it.
-        // Nor the city that is its own region: «Київ», not «Київ · Київ».
+        // Nor the city that is its own region: "Kyiv", not "Kyiv · Kyiv".
         let locality = place.address?.locality == title ? nil : place.address?.locality
         var parts = [locality, regionName].compactMap { $0 }
         if parts.count == 2, parts[0] == parts[1] {
@@ -61,7 +61,7 @@ struct PlaceDetailsContent {
             .map { ThreatRow(threat: $0.0, proximity: $0.1, place: place) }
     }
 
-    /// «Повітряна тривога», «Тривоги немає».
+    /// An air raid alert, or no alert.
     var alertTitle: String {
         alertLevel == nil ? "Тривоги немає" : "Повітряна тривога"
     }
@@ -76,13 +76,13 @@ extension PlaceDetailsContent {
 
         let id: String
 
-        /// «Шахед ×3».
+        /// The threat's name with its count.
         let title: String
 
         /// The asset name of the threat's silhouette.
         let iconName: String
 
-        /// «12 км від дому · ≈ 4 хв», or «курсом на Вишневе» when only the target is known.
+        /// The distance and the estimated arrival, or "heading for <target>" when only the target is known.
         let detail: String
 
         init(

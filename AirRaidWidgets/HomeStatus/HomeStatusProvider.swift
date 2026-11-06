@@ -14,7 +14,7 @@ import WidgetKit
 ///
 /// The timeline is static (`.never`): the app reloads it whenever the status changes. Extra entries only re-render it
 /// at moments that change what it shows by themselves — when the forecast arrival passes, when the data turns stale and
-/// at midnight, when «з 10:28» has to become «з 14 жовт.».
+/// at midnight, when "since" a time has to become "since" a day.
 nonisolated struct HomeStatusProvider: TimelineProvider {
 
     func placeholder(in context: Context) -> HomeStatusEntry {

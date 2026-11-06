@@ -204,7 +204,7 @@ extension SettingsViewModel: SettingsViewModelProtocol {
     }
 
     func didTapAddPlace() {
-        // The free plan is the home alone; the button is disabled at Плюс's own limit.
+        // The free plan is the home alone; the button is disabled at Plus's own limit.
         guard isPlusActive else {
             router.presentSheet(.paywall)
             return

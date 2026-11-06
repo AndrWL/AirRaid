@@ -32,7 +32,7 @@ struct PlaceEditorView<ViewModel: PlaceEditorViewModelProtocol>: View {
         .navigationTitle(viewModel.place?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.onAppear() }
-        // A name typed and left without «Готово» is still kept.
+        // A name typed and left without "Done" is still kept.
         .onDisappear(perform: viewModel.didCommitName)
     }
 }

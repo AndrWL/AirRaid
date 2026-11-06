@@ -13,7 +13,7 @@ enum FeedText {
 
     // MARK: - Screen
 
-    /// «Шахед ×3», «Повітряна тривога».
+    /// The threat's name with its count, or the alert kind.
     static func title(of item: FeedItem) -> String {
         switch item.content {
         case .threat(let threat):
@@ -25,7 +25,7 @@ enum FeedText {
         }
     }
 
-    /// The bubble's current state under the title: «Ніжин → Бровари», «2 громади · триває».
+    /// The bubble's current state under the title: the threat's route, or how many hromadas are alerted and whether it lasts.
     static func subtitle(of item: FeedItem) -> String? {
         switch item.content {
         case .threat(let threat):
@@ -102,7 +102,7 @@ enum FeedText {
 
     // MARK: - Helpers
 
-    /// «1 година 52 хвилини» — whole words, the voice reads «год» as a syllable.
+    /// Hours and minutes in whole words: the voice reads the short unit for hours as a syllable.
     static func spokenDuration(_ interval: TimeInterval) -> String {
         let minutes = max(Int(interval / 60), 1)
         let hours = minutes / 60
@@ -113,7 +113,7 @@ enum FeedText {
         return rest > 0 ? "\(hourText) \(minuteText)" : hourText
     }
 
-    /// «1 джерело», «3 джерела», «5 джерел».
+    /// The Ukrainian plural form for the count: one, few (2–4) or many.
     static func plural(
         _ count: Int,
         one: String,
@@ -158,7 +158,7 @@ private extension FeedText {
 
 extension RegionAlertKind {
 
-    /// «Повітряна тривога», «Загроза артобстрілу».
+    /// The alert kind's title in the feed, e.g. an air raid or artillery alert.
     var feedTitle: String {
         switch self {
         case .airRaid: "Повітряна тривога"
@@ -195,7 +195,7 @@ private extension ThreatCloseReason {
 
 private extension ThreatType {
 
-    /// The name said aloud: words, not letters — «КАБ» is read as one, «БпЛА» is not.
+    /// The name said aloud: words, not letters — the guided-bomb acronym is read as one word, the drone one is not.
     var spokenName: String {
         switch self {
         case .shahed: "Шахед"

@@ -8,7 +8,7 @@
 import StoreKit
 import SwiftUI
 
-/// The AirRaid Плюс sheet: the features, then StoreKit's own store view with prices from the App Store.
+/// The AirRaid Plus sheet: the features, then StoreKit's own store view with prices from the App Store.
 struct PaywallView<ViewModel: PaywallViewModelProtocol>: View {
 
     // MARK: - Variables
@@ -91,7 +91,7 @@ private extension PaywallView {
         .padding(.bottom, Spacing.small)
     }
 
-    /// StoreKit's own fallback is in English and hides the features, so this one says what Плюс gives and why it
+    /// StoreKit's own fallback is in English and hides the features, so this one says what Plus gives and why it
     /// cannot be bought right now.
     var unavailableState: some View {
         ScrollView {

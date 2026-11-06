@@ -29,7 +29,7 @@ enum HomeAlertIslandViews {
         }
     }
 
-    /// The compact trailing text: the threat's short name with its distance — «FPV 45 км», red inside the radius, white
+    /// The compact trailing text: the threat's short name with its distance, e.g. "FPV 45 km", red inside the radius, white
     /// beyond it; with no threat, the mood in one word.
     ///
     /// No times: «10:42» right of the status bar clock reads as the time of day, not as an arrival or an alert's start.
@@ -102,7 +102,7 @@ enum HomeAlertIslandViews {
 private enum Constants {
     static let glyphSize: CGFloat = 20
     static let dotSize: CGFloat = 12
-    /// «Шахед 45 км», «Реакт. ≈ 12:34» in the compact footnote.
+    /// A short name with a distance or an arrival time in the compact footnote.
     static let compactTextWidth: CGFloat = 96
     static let compactMinimumScale: CGFloat = 0.75
 }

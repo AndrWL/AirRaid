@@ -16,7 +16,7 @@ nonisolated extension Threat {
 
     /// A confirmed position, a speed measured along the track, and a course the track agrees with: the last leg of the
     /// track (at least two points) points within ``Constants/maxCourseDeviation`` of where the forecast moves the
-    /// threat. A report like "Семенівка → Кобеляки" sets the course to the target even when the track says otherwise.
+    /// threat. A report like "Semenivka → Kobeliaky" sets the course to the target even when the track says otherwise.
     var hasReliableForecast: Bool {
         guard
             positionQuality == .confirmed,

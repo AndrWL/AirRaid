@@ -24,10 +24,10 @@ protocol PlacesViewModelProtocol: BaseViewModelProtocol {
     /// The home's id, or `nil` while no home is set.
     var homeID: SavedPlace.ID? { get }
 
-    /// «Полтавська область» — where the home pin is; `nil` without a home or outside Ukraine.
+    /// The oblast the home pin is in; `nil` without a home or outside Ukraine.
     var homeRegionName: String? { get }
 
-    /// The custom places, each with its radius; empty without Плюс (they are paused, not lost).
+    /// The custom places, each with its radius; empty without Plus (they are paused, not lost).
     var customPlaces: [SavedPlace] { get }
 
     /// Whether the user's location is known, so the home can be put there.

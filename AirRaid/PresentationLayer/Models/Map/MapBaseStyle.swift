@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// The base map actually drawn: the user's ``MapStylePreference`` with «Як у системі» resolved by the appearance.
+/// The base map actually drawn: the user's ``MapStylePreference`` with "Match system" resolved by the appearance.
 enum MapBaseStyle: Hashable {
     case dark
     case light

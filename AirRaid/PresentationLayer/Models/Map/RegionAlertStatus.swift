@@ -29,7 +29,7 @@ enum RegionAlertStatus: Hashable {
         self = level.map(Self.partial) ?? .clear
     }
 
-    /// «Повітряна тривога», «Тривога в частині області», «Тривоги немає».
+    /// An air raid alert, an alert in part of the oblast, or no alert.
     var title: String {
         switch self {
         case .whole: return "Повітряна тривога"

@@ -13,12 +13,12 @@ struct RegionDetailsContent {
 
     // MARK: - Variables
 
-    /// «Полтавська область», «Київ».
+    /// The oblast's name, or Kyiv's.
     let title: String
 
     let status: RegionAlertStatus
 
-    /// «Триває 1 год 12 хв» since the earliest air raid alert in the region; `nil` when there is none.
+    /// How long the earliest air raid alert in the region has lasted; `nil` when there is none.
     let durationText: String?
 
     /// Every official alert in the region, earliest first.
@@ -55,10 +55,10 @@ extension RegionDetailsContent {
 
         let id: String
 
-        /// «Шахед ×3».
+        /// The threat's name with its count.
         let title: String
 
-        /// «курсом на Кобеляки»; `nil` when only the region is known.
+        /// "Heading for <target>"; `nil` when only the region is known.
         let detail: String?
 
         /// The asset name of the threat's silhouette.

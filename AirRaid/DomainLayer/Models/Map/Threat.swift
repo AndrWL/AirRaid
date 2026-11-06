@@ -37,7 +37,7 @@ nonisolated struct Threat: Identifiable, Hashable, Sendable {
     /// The last confirmed location, or `nil` when only the ``target`` or the ``area`` is known.
     let position: ThreatPlace?
 
-    /// Where the threat is heading ("курсом на"); may come together with ``position``.
+    /// Where the threat is heading ("heading for"); may come together with ``position``.
     let target: ThreatPlace?
 
     /// Earlier locations, oldest first, up to 20 points.

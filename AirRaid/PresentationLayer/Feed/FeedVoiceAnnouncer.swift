@@ -12,13 +12,13 @@ import UIKit
 /// Reads the feed aloud, like a radio of the monitoring channels.
 ///
 /// Rules for a new line:
-/// - only while the voice feed is on and the sound mode is «Звук» (vibration and «Вимкнено» keep it silent);
+/// - only while the voice feed is on and the sound mode is "Sound" (vibration and "Off" keep it silent);
 /// - nothing older than ``Constants/freshness``: a reconnect replays the night, the voice must not;
 /// - not below ``VoiceSettings/minimumPriority``; a threat inside a place's radius is always critical and interrupts;
-/// - with «Мої місця», only bubbles in the oblasts of the user's places, country-wide reports and near threats;
+/// - with "My places", only bubbles in the oblasts of the user's places, country-wide reports and near threats;
 /// - endings (all-clears, closed tracks) only when ``VoiceSettings/readsEndings``.
 ///
-/// Without Плюс the rules are the defaults (normal priority and up, «Мої місця», normal speed); endings and keeping the
+/// Without Plus the rules are the defaults (normal priority and up, "My places", normal speed); endings and keeping the
 /// screen awake are the user's choice either way.
 ///
 /// - Note: iOS suspends the app soon after the screen locks with nothing playing, so the feed is meant to be listened
@@ -101,7 +101,7 @@ extension FeedVoiceAnnouncer: FeedVoiceAnnouncing {
 
 private extension FeedVoiceAnnouncer {
 
-    /// The user's settings with Плюс, the defaults for what only Плюс may change otherwise.
+    /// The user's settings with Plus, the defaults for what only Plus may change otherwise.
     var effectiveSettings: VoiceSettings {
         guard !isPlusActive else { return settings }
         var effective = VoiceSettings.default

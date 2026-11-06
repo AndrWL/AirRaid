@@ -17,11 +17,11 @@ import OSLog
 /// - a threat inside the place's radius, with no alert or under an old one: in a frontline hromada the alert lasts for
 ///   days, and the threat is the news, not the alert.
 ///
-/// It ends with «Відбій» when the alert that started it is lifted, and quietly once the radius has been clear for
+/// It ends with the all clear when the alert that started it is lifted, and quietly once the radius has been clear for
 /// ``Constants/clearLinger`` (so a threat on the edge does not make it blink). An activity the user swiped away is not
 /// brought back for the same trigger; a new alert or a new threat gets a new one.
 ///
-/// The user can turn it off in the settings: every one on screen goes at once, «Відбій» included, and none starts until
+/// The user can turn it off in the settings: every one on screen goes at once, the all clear included, and none starts until
 /// it is back on.
 ///
 /// Updates come from the app only (no push token yet), so between launches it stays as the app last saw it; the
@@ -101,7 +101,7 @@ extension HomeAlertActivityController: HomeAlertActivityControlling {
         self.isEnabled = isEnabled
         guard !isEnabled else { return }
         end(finalState: nil)
-        // A lifted alert's «Відбій» is no longer followed but lingers on the lock screen; ending it again takes it off.
+        // A lifted alert's all clear is no longer followed but lingers on the lock screen; ending it again takes it off.
         for id in Activity<HomeAlertActivityAttributes>.activities.map(\.id) {
             Task {
                 await Self.end(activityID: id, finalState: nil, dismissAt: nil)
@@ -129,7 +129,7 @@ private extension HomeAlertActivityController {
         return status.nearestThreat.map { "threat:\($0.id)" }
     }
 
-    /// Nothing keeps the activity any more: «Відбій» when the alert was lifted, otherwise it ends once the radius has
+    /// Nothing keeps the activity any more: the all clear when the alert was lifted, otherwise it ends once the radius has
     /// stayed clear for a while.
     func wind(
         down state: HomeAlertActivityState,
@@ -209,7 +209,7 @@ private extension HomeAlertActivityController {
         }
     }
 
-    /// Ends the running activity, showing `finalState` until `dismissAt` — «Відбій» for a lifted alert; without a
+    /// Ends the running activity, showing `finalState` until `dismissAt` — the all clear for a lifted alert; without a
     /// moment it goes at once.
     func end(
         finalState: HomeAlertActivityState?,
@@ -289,7 +289,7 @@ private enum Constants {
     static let clearLinger: TimeInterval = 5 * 60
     static let staleAfter: TimeInterval = 15 * 60
     static let keepFreshInterval: TimeInterval = 10 * 60
-    /// How long «Відбій» stays on the lock screen.
+    /// How long the all clear stays on the lock screen.
     static let allClearLinger: TimeInterval = 15 * 60
     static let alertRelevance: Double = 50
     static let threatRelevance: Double = 100

@@ -10,7 +10,7 @@ import Foundation
 import OSLog
 import StoreKit
 
-/// AirRaid Плюс from StoreKit 2: the current entitlements at launch, then every transaction as it comes.
+/// AirRaid Plus from StoreKit 2: the current entitlements at launch, then every transaction as it comes.
 ///
 /// Checked on the device only, from transactions StoreKit has already verified (JWS). Enough for convenience
 /// features; anything the server would serve to subscribers only will need the App Store Server API there.
@@ -24,7 +24,7 @@ final class StoreKitEntitlementService {
 
     private var updatesTask: Task<Void, Never>?
 
-    /// - Parameter productIDs: The subscriptions that unlock Плюс.
+    /// - Parameter productIDs: The subscriptions that unlock Plus.
     init(productIDs: Set<String>) {
         self.productIDs = productIDs
     }

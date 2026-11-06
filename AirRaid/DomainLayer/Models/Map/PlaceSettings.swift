@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// The user's watched places as they set them up: the saved places (the home and, with AirRaid Плюс, more) and the
+/// The user's watched places as they set them up: the saved places (the home and, with AirRaid Plus, more) and the
 /// radius around the current location.
 nonisolated struct PlaceSettings: Hashable, Sendable {
 
@@ -118,6 +118,6 @@ nonisolated enum SavedPlaceKind: String, Hashable, Sendable {
     /// The one place the widgets, the Live Activity and the free plan follow.
     case home
 
-    /// One more place, with AirRaid Плюс.
+    /// One more place, with AirRaid Plus.
     case custom
 }

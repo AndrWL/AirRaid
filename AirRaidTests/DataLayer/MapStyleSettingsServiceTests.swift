@@ -8,7 +8,7 @@ import Foundation
 import Testing
 @testable import AirRaid
 
-/// Tests for ``MapStyleSettingsService``: «Як у системі» until the user picks a style, and the pick kept across launches.
+/// Tests for ``MapStyleSettingsService``: "Match system" until the user picks a style, and the pick kept across launches.
 @MainActor
 @Suite
 struct MapStyleSettingsServiceTests {

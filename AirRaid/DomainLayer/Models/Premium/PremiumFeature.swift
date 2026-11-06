@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// What AirRaid Плюс adds. Convenience only: alerts, threats, the live feed and warnings near the home stay free.
+/// What AirRaid Plus adds. Convenience only: alerts, threats, the live feed and warnings near the home stay free.
 ///
 /// Every check goes through ``EntitlementServiceProtocol/isPlusActivePublisher`` and this list, never a scattered flag,
 /// so moving a feature across the line is a change in one place.
@@ -19,7 +19,7 @@ nonisolated enum PremiumFeature: CaseIterable, Sendable {
     /// The feed's history past ``PremiumLimits/freeHistory``, up to ``PremiumLimits/plusHistory``.
     case extendedHistory
 
-    /// Filtering the feed by threat kind on top of «Мої місця / Вся Україна».
+    /// Filtering the feed by threat kind on top of "My places / All Ukraine".
     case feedFilters
 
     /// The morning report of the night around the user's places.
@@ -41,6 +41,6 @@ nonisolated enum PremiumLimits {
     /// How many saved places the free plan watches: the home. The current location is always watched on top.
     static let freePlaces = 1
 
-    /// How many saved places Плюс watches, the home included.
+    /// How many saved places Plus watches, the home included.
     static let plusPlaces = 10
 }

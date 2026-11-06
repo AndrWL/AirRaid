@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// What AirRaid Плюс adds, and what stays free — said first, so nobody thinks safety is for sale.
+/// What AirRaid Plus adds, and what stays free — said first, so nobody thinks safety is for sale.
 struct PlusFeatureList: View {
 
     var body: some View {

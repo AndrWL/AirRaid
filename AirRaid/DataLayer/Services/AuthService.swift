@@ -10,7 +10,7 @@ import DeviceCheck
 import Foundation
 import OSLog
 
-/// Default ``AuthTokenProviding``: App Attest installations and short-lived bearer tokens from the «Небо» API.
+/// Default ``AuthTokenProviding``: App Attest installations and short-lived bearer tokens from the Nebo API.
 ///
 /// ## Getting a token
 ///

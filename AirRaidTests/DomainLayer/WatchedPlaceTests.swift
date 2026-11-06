@@ -9,7 +9,7 @@ import Testing
 
 /// Tests for ``WatchedPlace/places(currentLocation:settings:includesCustomPlaces:)`` and ``WatchedPlace/init(_:)``.
 ///
-/// Covers the current location always first with its own radius, the free plan watching only the home, Плюс
+/// Covers the current location always first with its own radius, the free plan watching only the home, Plus
 /// watching up to ``PremiumLimits/plusPlaces`` saved places, and how a saved place becomes a watched one.
 @Suite
 struct WatchedPlaceTests {

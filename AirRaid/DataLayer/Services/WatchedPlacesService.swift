@@ -8,7 +8,7 @@
 import Combine
 import Foundation
 
-/// Builds the watched places from the location, the saved places and AirRaid Плюс.
+/// Builds the watched places from the location, the saved places and AirRaid Plus.
 final class WatchedPlacesService {
 
     // MARK: - Variables
@@ -51,7 +51,7 @@ extension WatchedPlacesService: WatchedPlacesProviding {
 #if DEBUG
 extension WatchedPlacesService {
 
-    /// The places stored in the preview suite, without Плюс.
+    /// The places stored in the preview suite, without Plus.
     static var preview: WatchedPlacesService {
         WatchedPlacesService(
             placeSettingsRepository: PlaceSettingsRepository(defaults: UserDefaults(suiteName: "preview") ?? .standard),

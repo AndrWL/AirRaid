@@ -20,13 +20,13 @@ struct NightReportContent: Hashable {
         let count: Int
     }
 
-    /// «Ніч на 14 жовтня».
+    /// The night's title with its date.
     let title: String
 
     /// «20:00 – 08:00».
     let periodText: String
 
-    /// The total time under an air raid alert in the user's oblasts, merged across places: «4 год 12 хв».
+    /// The total time under an air raid alert in the user's oblasts, merged across places, in hours and minutes.
     let alertDurationText: String?
 
     /// The same, in seconds; `0` without an alert.

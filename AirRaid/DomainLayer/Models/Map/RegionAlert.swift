@@ -25,7 +25,7 @@ nonisolated struct RegionAlert: Identifiable, Hashable, Sendable {
     /// How much of the region the alert covers.
     let scope: RegionAlertScope
 
-    /// The place name as published, e.g. «Бучанський район».
+    /// The place name as published, e.g. Bucha Raion.
     let name: String
 
     /// The ISO 3166-2 code of the oblast the place is in, matching ``RegionBoundary/id``.

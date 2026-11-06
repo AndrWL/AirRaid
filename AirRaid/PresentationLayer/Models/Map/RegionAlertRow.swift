@@ -14,19 +14,19 @@ struct RegionAlertRow: Identifiable, Hashable {
 
     let id: String
 
-    /// «Полтавський район».
+    /// The alerted place as published, e.g. Poltava Raion.
     let name: String
 
-    /// The alert kind when it is not a plain air raid, e.g. «Загроза артобстрілу».
+    /// The alert kind when it is not a plain air raid, e.g. an artillery alert.
     let kindText: String?
 
     /// `nil` for alerts other than air raids, which have no level.
     let level: RegionAlertLevel?
 
-    /// «з 10:28»; with the date when the alert began on another day.
+    /// "Since" with the time; with the date when the alert began on another day.
     let startedText: String
 
-    /// «1 год 52 хв».
+    /// How long the alert has lasted.
     let durationText: String
 
     init(
